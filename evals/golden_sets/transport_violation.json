@@ -1,0 +1,13 @@
+{
+  "name": "transport_violation_touched",
+  "pr_class": "app_code",
+  "agents": ["audit"],
+  "files": {
+    "engine/handler.py": "from constellation_node_sdk import PacketEnvelope\n\n\ndef handle(p):\n    return PacketEnvelope()\n"
+  },
+  "changed_files": ["engine/handler.py"],
+  "expected": {
+    "categories": ["transport"],
+    "min_findings": 1
+  }
+}

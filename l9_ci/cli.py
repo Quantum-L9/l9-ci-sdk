@@ -22,10 +22,42 @@ from l9_ci.governance import banned_imports, terminology_guard
 from l9_ci.scanners import deprecated_api, packet_envelope
 from l9_ci.pipeline.runner import format_results, results_exit_code, run_pipeline
 from l9_ci.agent_payload import AgentPayloadError, render_agent_payload
+from l9_ci.review import render_comment, run_review
 
 
 def _paths(values: list[str]) -> list[Path]:
     return [Path(v) for v in values]
+
+
+class PathSafetyError(ValueError):
+    """Raised when a CLI-supplied path escapes the allowed base directory."""
+
+
+def _safe_path(value: str, *, base: Path | None = None) -> Path:
+    """Validate a CLI-supplied path before any filesystem access.
+
+    CLI arguments are attacker-influenced (an LLM or automation may pass a
+    crafted ``--root``/``--emit-json``/``--diff-path`` etc.). Constructing a
+    ``Path`` straight from that input and touching the filesystem allows path
+    traversal outside the working tree. This helper enforces that a *relative*
+    path stays within ``base`` (defaulting to the current working directory)
+    once resolved, rejecting ``..`` escapes with :class:`PathSafetyError`.
+
+    Absolute paths are treated as an explicit, intentional target (e.g. a CI
+    runner writing to a scratch dir) and are resolved but not confined to the
+    base. The function performs no I/O itself, so callers can safely use the
+    returned path.
+    """
+    candidate = Path(value)
+    if candidate.is_absolute():
+        return candidate.resolve()
+    root = (base or Path.cwd()).resolve()
+    resolved = (root / candidate).resolve()
+    if resolved != root and root not in resolved.parents:
+        raise PathSafetyError(
+            f"refusing path {value!r}: resolves to {resolved} which escapes {root}"
+        )
+    return resolved
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -107,6 +139,26 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("init-repo")
     p.add_argument("path", nargs="?", default=".")
     p.add_argument("--force", action="store_true", help="Overwrite existing bootstrap files")
+
+    p = sub.add_parser("review")
+    p.add_argument("--root", default=".")
+    p.add_argument("--changed-file", action="append", default=[], help="Changed file path")
+    p.add_argument("--changed-files-file", help="File with changed file paths, one per line")
+    p.add_argument("--agent", action="append", default=[], help="Review agent to run (default: audit)")
+    p.add_argument("--agent-mode", action="append", default=[], help="agent=mode (shadow|advisory|blocking)")
+    p.add_argument("--pr-class", default="unknown_diff")
+    p.add_argument("--blocking-policy", help="Path to blocking-policy.yaml (review_blocking_promotions)")
+    p.add_argument("--file-mode", choices=["auto", "git_tracked", "working_tree", "filesystem"], default="git_tracked")
+    p.add_argument("--trace-id", default="")
+    p.add_argument("--emit-json", help="Write the review report JSON")
+    p.add_argument("--emit-comment", help="Write the rendered PR comment markdown")
+    p.add_argument("--diff-path", help="Path to the PR unified diff (for the llm agent)")
+    p.add_argument("--shim", help="Path to the Node LLM-Router shim")
+    p.add_argument("--strict", action="store_true", help="Exit non-zero on effective blocking findings")
+
+    p = sub.add_parser("review-eval")
+    p.add_argument("--golden-dir", default="evals/golden_sets")
+    p.add_argument("--emit-json", help="Write the eval report JSON")
 
     args = parser.parse_args(argv)
 
@@ -250,6 +302,89 @@ def main(argv: list[str] | None = None) -> int:
         result = init_repo(Path(args.path), force=args.force)
         print(format_result(result))
         return 0
+
+    if args.command == "review":
+        import json as _json
+
+        changed = _collect_values(args.changed_file, args.changed_files_file)
+        agents = args.agent or ["audit"]
+        valid_modes = {"shadow", "advisory", "blocking"}
+        modes: dict[str, str] = {}
+        for pair in args.agent_mode:
+            if "=" not in pair:
+                print(
+                    f"error: --agent-mode expects 'agent=mode', got {pair!r}",
+                    file=sys.stderr,
+                )
+                return 2
+            key, value = pair.split("=", 1)
+            key, value = key.strip(), value.strip()
+            if value not in valid_modes:
+                print(
+                    f"error: --agent-mode {pair!r} has invalid mode {value!r}; "
+                    f"expected one of {sorted(valid_modes)}",
+                    file=sys.stderr,
+                )
+                return 2
+            modes[key] = value
+        # The deterministic ``audit`` agent defaults to advisory so the review
+        # command is useful out-of-the-box (run_review otherwise defaults agents
+        # to shadow, surfacing nothing). An explicit --agent-mode audit=... wins.
+        if "audit" in agents:
+            modes.setdefault("audit", "advisory")
+        promotions: set[str] = set()
+        if args.blocking_policy:
+            import yaml
+
+            data = yaml.safe_load(_safe_path(args.blocking_policy).read_text(encoding="utf-8")) or {}
+            promotions = set(data.get("review_blocking_promotions", []) or [])
+        diff_text = ""
+        if args.diff_path:
+            diff_file = _safe_path(args.diff_path)
+            if diff_file.exists():
+                diff_text = diff_file.read_text(encoding="utf-8", errors="replace")
+        report = run_review(
+            _safe_path(args.root),
+            changed,
+            pr_class=args.pr_class,
+            agents=agents,
+            agent_modes=modes,  # type: ignore[arg-type]
+            promotions=promotions,
+            file_mode=args.file_mode,
+            trace_id=args.trace_id,
+            diff_text=diff_text,
+            shim_path=args.shim,
+        )
+        if args.emit_json:
+            out = _safe_path(args.emit_json)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(_json.dumps(report.to_dict(), indent=2), encoding="utf-8")
+        if args.emit_comment:
+            out = _safe_path(args.emit_comment)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(render_comment(report), encoding="utf-8")
+        print(
+            f"review: {report.blocking_count} blocking, "
+            f"{report.advisory_count} advisory, {report.shadow_count} shadow"
+        )
+        return 1 if (args.strict and report.blocking_count) else 0
+
+    if args.command == "review-eval":
+        import json as _json
+
+        from l9_ci.review.evals import run_evals
+
+        eval_report = run_evals(_safe_path(args.golden_dir))
+        for case in eval_report.cases:
+            status = "PASS" if case["passed"] else "FAIL"
+            print(f"  {status} {case['name']} ({case['finding_count']} findings) {case['reasons']}")
+        if args.emit_json:
+            _safe_path(args.emit_json).write_text(_json.dumps(eval_report.to_dict(), indent=2), encoding="utf-8")
+        print(
+            f"review-eval: {'PASS' if eval_report.passed else 'FAIL'} "
+            f"({len(eval_report.cases)} cases, {len(eval_report.hard_failures)} hard failures)"
+        )
+        return 0 if eval_report.passed else 1
 
     return 2
 

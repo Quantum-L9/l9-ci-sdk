@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from l9_ci.cli import main
+import json
+
+import pytest
+
+from l9_ci.cli import PathSafetyError, _safe_path, main
 from l9_ci.governance import banned_imports, terminology_guard
 from l9_ci.scanners import secrets_policy
 
@@ -66,9 +70,74 @@ def test_cli_scanner_commands(tmp_path: Path, capsys) -> None:
     assert "PacketEnvelope" in capsys.readouterr().err
 
 
+def test_cli_review_defaults_audit_to_advisory(tmp_path: Path, capsys) -> None:
+    # Out-of-the-box the deterministic audit agent should surface advisory
+    # findings, not silently default to shadow (which prints 0 advisory).
+    (tmp_path / "bad.py").write_text("from x import PacketEnvelope\n", encoding="utf-8")
+    out_json = tmp_path / "report.json"
+    code = main(
+        [
+            "review",
+            "--root",
+            str(tmp_path),
+            "--changed-file",
+            "bad.py",
+            "--file-mode",
+            "filesystem",
+            "--emit-json",
+            str(out_json),
+        ]
+    )
+    assert code == 0
+    report = json.loads(out_json.read_text(encoding="utf-8"))
+    assert report["advisory_count"] >= 1
+    assert report["blocking_count"] == 0
+    assert "advisory" in capsys.readouterr().out
+
+
+def test_cli_review_explicit_shadow_overrides_default(tmp_path: Path) -> None:
+    # An explicit --agent-mode audit=shadow must win over the advisory default.
+    (tmp_path / "bad.py").write_text("from x import PacketEnvelope\n", encoding="utf-8")
+    out_json = tmp_path / "report.json"
+    code = main(
+        [
+            "review",
+            "--root",
+            str(tmp_path),
+            "--changed-file",
+            "bad.py",
+            "--file-mode",
+            "filesystem",
+            "--agent-mode",
+            "audit=shadow",
+            "--emit-json",
+            str(out_json),
+        ]
+    )
+    assert code == 0
+    report = json.loads(out_json.read_text(encoding="utf-8"))
+    assert report["advisory_count"] == 0
+    assert report["shadow_count"] >= 1
+
+
 def test_cli_deprecated_fix_zero_on_change(tmp_path: Path) -> None:
     target = tmp_path / "bad.py"
     target.write_text("from engine.config.loader import DomainSpecLoader\nloader = DomainSpecLoader(SPEC_PATH)\n", encoding="utf-8")
     code = main(["fix-deprecated-api", str(tmp_path), "--zero-on-change"])
     assert code == 0
     assert "DomainPackLoader(config_path=str(SPEC_PATH))" in target.read_text(encoding="utf-8")
+
+
+def test_safe_path_accepts_in_tree_relative(tmp_path: Path) -> None:
+    resolved = _safe_path("sub/report.json", base=tmp_path)
+    assert resolved == (tmp_path / "sub" / "report.json").resolve()
+
+
+def test_safe_path_rejects_traversal(tmp_path: Path) -> None:
+    with pytest.raises(PathSafetyError):
+        _safe_path("../../etc/passwd", base=tmp_path)
+
+
+def test_safe_path_allows_absolute(tmp_path: Path) -> None:
+    target = tmp_path / "out.json"
+    assert _safe_path(str(target)) == target.resolve()

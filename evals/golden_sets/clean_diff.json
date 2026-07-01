@@ -1,0 +1,13 @@
+{
+  "name": "clean_transport_packet",
+  "pr_class": "app_code",
+  "agents": ["audit"],
+  "files": {
+    "engine/handler.py": "from constellation_node_sdk.transport.models import TransportPacket\n\n\nasync def handle(packet: TransportPacket) -> TransportPacket:\n    return packet.derive(update={})\n"
+  },
+  "changed_files": ["engine/handler.py"],
+  "expected": {
+    "categories": [],
+    "min_findings": 0
+  }
+}
