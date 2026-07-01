@@ -121,7 +121,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--trace-id", default="")
     p.add_argument("--emit-json", help="Write the review report JSON")
     p.add_argument("--emit-comment", help="Write the rendered PR comment markdown")
+    p.add_argument("--diff-path", help="Path to the PR unified diff (for the llm agent)")
+    p.add_argument("--shim", help="Path to the Node LLM-Router shim")
     p.add_argument("--strict", action="store_true", help="Exit non-zero on effective blocking findings")
+
+    p = sub.add_parser("review-eval")
+    p.add_argument("--golden-dir", default="evals/golden_sets")
+    p.add_argument("--emit-json", help="Write the eval report JSON")
 
     args = parser.parse_args(argv)
 
@@ -282,6 +288,9 @@ def main(argv: list[str] | None = None) -> int:
 
             data = yaml.safe_load(Path(args.blocking_policy).read_text(encoding="utf-8")) or {}
             promotions = set(data.get("review_blocking_promotions", []) or [])
+        diff_text = ""
+        if args.diff_path and Path(args.diff_path).exists():
+            diff_text = Path(args.diff_path).read_text(encoding="utf-8", errors="replace")
         report = run_review(
             Path(args.root),
             changed,
@@ -291,6 +300,8 @@ def main(argv: list[str] | None = None) -> int:
             promotions=promotions,
             file_mode=args.file_mode,
             trace_id=args.trace_id,
+            diff_text=diff_text,
+            shim_path=args.shim,
         )
         if args.emit_json:
             out = Path(args.emit_json)
@@ -305,6 +316,23 @@ def main(argv: list[str] | None = None) -> int:
             f"{report.advisory_count} advisory, {report.shadow_count} shadow"
         )
         return 1 if (args.strict and report.blocking_count) else 0
+
+    if args.command == "review-eval":
+        import json as _json
+
+        from l9_ci.review.evals import run_evals
+
+        eval_report = run_evals(Path(args.golden_dir))
+        for case in eval_report.cases:
+            status = "PASS" if case["passed"] else "FAIL"
+            print(f"  {status} {case['name']} ({case['finding_count']} findings) {case['reasons']}")
+        if args.emit_json:
+            Path(args.emit_json).write_text(_json.dumps(eval_report.to_dict(), indent=2), encoding="utf-8")
+        print(
+            f"review-eval: {'PASS' if eval_report.passed else 'FAIL'} "
+            f"({len(eval_report.cases)} cases, {len(eval_report.hard_failures)} hard failures)"
+        )
+        return 0 if eval_report.passed else 1
 
     return 2
 
