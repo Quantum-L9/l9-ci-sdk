@@ -90,6 +90,10 @@ jobs:
     permissions:
       # OIDC token for PyPI Trusted Publishing — no API token is stored anywhere.
       id-token: write
+      # actions/download-artifact@v4 fetches the build artifact from the current
+      # run via the Actions API, which requires actions: read when the job
+      # overrides the default (restricted) permission set.
+      actions: read
     steps:
       - name: Download distribution artifact
         uses: actions/download-artifact@v4
