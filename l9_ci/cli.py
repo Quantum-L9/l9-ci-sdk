@@ -277,11 +277,25 @@ def main(argv: list[str] | None = None) -> int:
 
         changed = _collect_values(args.changed_file, args.changed_files_file)
         agents = args.agent or ["audit"]
+        valid_modes = {"shadow", "advisory", "blocking"}
         modes: dict[str, str] = {}
         for pair in args.agent_mode:
-            if "=" in pair:
-                key, value = pair.split("=", 1)
-                modes[key.strip()] = value.strip()
+            if "=" not in pair:
+                print(
+                    f"error: --agent-mode expects 'agent=mode', got {pair!r}",
+                    file=sys.stderr,
+                )
+                return 2
+            key, value = pair.split("=", 1)
+            key, value = key.strip(), value.strip()
+            if value not in valid_modes:
+                print(
+                    f"error: --agent-mode {pair!r} has invalid mode {value!r}; "
+                    f"expected one of {sorted(valid_modes)}",
+                    file=sys.stderr,
+                )
+                return 2
+            modes[key] = value
         # The deterministic ``audit`` agent defaults to advisory so the review
         # command is useful out-of-the-box (run_review otherwise defaults agents
         # to shadow, surfacing nothing). An explicit --agent-mode audit=... wins.

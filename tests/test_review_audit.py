@@ -88,3 +88,14 @@ def test_comment_truncates_to_limit(tmp_path: Path) -> None:
     report = run_review(tmp_path, ["bad.py"], agent_modes={"audit": "advisory"}, file_mode="filesystem")
     body = render_comment(report, max_chars=200)
     assert len(body) <= 200
+
+
+def test_comment_truncation_never_exceeds_small_limits(tmp_path: Path) -> None:
+    # Regression: for small max_chars (< the truncation suffix length) the old
+    # slice `body[:max_chars - 160]` went negative and returned a body LONGER
+    # than max_chars. Output must be <= max_chars for any positive max_chars.
+    _make_repo(tmp_path)
+    report = run_review(tmp_path, ["bad.py"], agent_modes={"audit": "advisory"}, file_mode="filesystem")
+    for limit in (1, 10, 50, 100, 135, 160, 500):
+        body = render_comment(report, max_chars=limit)
+        assert len(body) <= limit, f"body len {len(body)} exceeded max_chars={limit}"

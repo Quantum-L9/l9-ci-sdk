@@ -72,9 +72,14 @@ def render_comment(report: ReviewReport, *, max_chars: int = MAX_COMMENT_CHARS) 
 
     body = "\n".join(lines) + "\n"
     if len(body) > max_chars:
-        body = (
-            body[: max_chars - 160]
-            + "\n\n... truncated due to GitHub comment limit; see the uploaded "
-            + "agent-review-payload artifact ...\n"
+        suffix = (
+            "\n\n... truncated due to GitHub comment limit; see the uploaded "
+            "agent-review-payload artifact ...\n"
         )
+        # Guarantee the result is always <= max_chars for any positive
+        # max_chars, even when max_chars is smaller than the suffix itself.
+        if max_chars <= len(suffix):
+            body = suffix[:max_chars]
+        else:
+            body = body[: max_chars - len(suffix)] + suffix
     return body
