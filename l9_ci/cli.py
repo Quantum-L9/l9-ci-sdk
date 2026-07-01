@@ -22,6 +22,7 @@ from l9_ci.governance import banned_imports, terminology_guard
 from l9_ci.scanners import deprecated_api, packet_envelope
 from l9_ci.pipeline.runner import format_results, results_exit_code, run_pipeline
 from l9_ci.agent_payload import AgentPayloadError, render_agent_payload
+from l9_ci.review import render_comment, run_review
 
 
 def _paths(values: list[str]) -> list[Path]:
@@ -107,6 +108,20 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("init-repo")
     p.add_argument("path", nargs="?", default=".")
     p.add_argument("--force", action="store_true", help="Overwrite existing bootstrap files")
+
+    p = sub.add_parser("review")
+    p.add_argument("--root", default=".")
+    p.add_argument("--changed-file", action="append", default=[], help="Changed file path")
+    p.add_argument("--changed-files-file", help="File with changed file paths, one per line")
+    p.add_argument("--agent", action="append", default=[], help="Review agent to run (default: audit)")
+    p.add_argument("--agent-mode", action="append", default=[], help="agent=mode (shadow|advisory|blocking)")
+    p.add_argument("--pr-class", default="unknown_diff")
+    p.add_argument("--blocking-policy", help="Path to blocking-policy.yaml (review_blocking_promotions)")
+    p.add_argument("--file-mode", choices=["auto", "git_tracked", "working_tree", "filesystem"], default="git_tracked")
+    p.add_argument("--trace-id", default="")
+    p.add_argument("--emit-json", help="Write the review report JSON")
+    p.add_argument("--emit-comment", help="Write the rendered PR comment markdown")
+    p.add_argument("--strict", action="store_true", help="Exit non-zero on effective blocking findings")
 
     args = parser.parse_args(argv)
 
@@ -250,6 +265,46 @@ def main(argv: list[str] | None = None) -> int:
         result = init_repo(Path(args.path), force=args.force)
         print(format_result(result))
         return 0
+
+    if args.command == "review":
+        import json as _json
+
+        changed = _collect_values(args.changed_file, args.changed_files_file)
+        agents = args.agent or ["audit"]
+        modes: dict[str, str] = {}
+        for pair in args.agent_mode:
+            if "=" in pair:
+                key, value = pair.split("=", 1)
+                modes[key.strip()] = value.strip()
+        promotions: set[str] = set()
+        if args.blocking_policy:
+            import yaml
+
+            data = yaml.safe_load(Path(args.blocking_policy).read_text(encoding="utf-8")) or {}
+            promotions = set(data.get("review_blocking_promotions", []) or [])
+        report = run_review(
+            Path(args.root),
+            changed,
+            pr_class=args.pr_class,
+            agents=agents,
+            agent_modes=modes,  # type: ignore[arg-type]
+            promotions=promotions,
+            file_mode=args.file_mode,
+            trace_id=args.trace_id,
+        )
+        if args.emit_json:
+            out = Path(args.emit_json)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(_json.dumps(report.to_dict(), indent=2), encoding="utf-8")
+        if args.emit_comment:
+            out = Path(args.emit_comment)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(render_comment(report), encoding="utf-8")
+        print(
+            f"review: {report.blocking_count} blocking, "
+            f"{report.advisory_count} advisory, {report.shadow_count} shadow"
+        )
+        return 1 if (args.strict and report.blocking_count) else 0
 
     return 2
 
