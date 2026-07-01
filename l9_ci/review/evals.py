@@ -79,24 +79,29 @@ def _run_case(case: dict[str, Any]) -> CaseResult:
     if not structured_valid:
         reasons.append("schema_invalid")
 
+    # Read findings defensively: when the report is schema-invalid ``findings``
+    # may be absent, so fall back to an empty list instead of raising KeyError
+    # (schema-invalid is a deterministic hard-fail, not a harness crash).
+    findings = data.get("findings", [])
+
     # regression: expected categories must appear.
-    got_categories = {f["category"] for f in data["findings"]}
+    got_categories = {f["category"] for f in findings}
     want_categories = set(expected.get("categories", []))
     categories_present = want_categories.issubset(got_categories)
     if not categories_present:
         reasons.append(f"missing_categories:{sorted(want_categories - got_categories)}")
 
     min_findings = int(expected.get("min_findings", 0))
-    if len(data["findings"]) < min_findings:
-        reasons.append(f"too_few_findings:{len(data['findings'])}<{min_findings}")
+    if len(findings) < min_findings:
+        reasons.append(f"too_few_findings:{len(findings)}<{min_findings}")
 
-    passed = structured_valid and categories_present and len(data["findings"]) >= min_findings
+    passed = structured_valid and categories_present and len(findings) >= min_findings
     return CaseResult(
         name=name,
         passed=passed,
         structured_output_valid=structured_valid,
         categories_present=categories_present,
-        finding_count=len(data["findings"]),
+        finding_count=len(findings),
         reasons=reasons,
     )
 

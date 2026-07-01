@@ -72,8 +72,9 @@ def run_review(
             continue
         entry = DETERMINISTIC_AGENTS.get(name)
         if entry is None:
-            # Non-deterministic agents (e.g. "llm") are wired in Phase 3; skip
-            # cleanly here so the deterministic path ships independently.
+            # Unknown agent name (the "llm" agent is handled above). Skip it
+            # cleanly and record an ``agent_not_registered`` run so an unknown
+            # selector degrades gracefully instead of failing the review.
             runs.append(
                 AgentRun(
                     agent=name, role="unavailable", failure_reason="agent_not_registered"

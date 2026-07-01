@@ -282,6 +282,11 @@ def main(argv: list[str] | None = None) -> int:
             if "=" in pair:
                 key, value = pair.split("=", 1)
                 modes[key.strip()] = value.strip()
+        # The deterministic ``audit`` agent defaults to advisory so the review
+        # command is useful out-of-the-box (run_review otherwise defaults agents
+        # to shadow, surfacing nothing). An explicit --agent-mode audit=... wins.
+        if "audit" in agents:
+            modes.setdefault("audit", "advisory")
         promotions: set[str] = set()
         if args.blocking_policy:
             import yaml
