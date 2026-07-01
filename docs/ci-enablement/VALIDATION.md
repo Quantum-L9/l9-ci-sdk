@@ -7,8 +7,8 @@ inside a git checkout (matching CI).
 
 ```
 $ pytest -q
-...................................................................  [100%]
-67 passed
+........................................................................  [100%]
+76 passed
 ```
 
 The 2 new tests in `tests/test_agent_payload_contract.py` exercise the emitter
