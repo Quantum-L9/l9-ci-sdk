@@ -2,6 +2,19 @@
 
 Reusable Python CLI for L9 CI compliance checks. The SDK owns scanner and gate logic so GitHub Actions workflows stay thin and reusable.
 
+## Installation
+
+The SDK is consumed by `l9-ci-core` workflows as a runtime CLI. Until it is
+published to a package index, install it from this repo pinned to a commit:
+
+```bash
+python -m pip install "l9-ci @ git+https://github.com/Quantum-L9/l9-ci-sdk.git@<COMMIT_SHA>"
+```
+
+Once published, `python -m pip install l9-ci` is the target. Private-repo
+installs, the publish workflow, and the version/tag policy are documented in
+[docs/PUBLISHING.md](docs/PUBLISHING.md).
+
 ## Commands
 
 ```bash

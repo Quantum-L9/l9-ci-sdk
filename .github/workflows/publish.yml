@@ -1,0 +1,104 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-ci-sdk
+# layer: [ci, release, publish]
+# tags: [L9_CI, release, pypi, trusted-publishing]
+# owner: platform
+# status: active
+# --- /L9_META ---
+#
+# Publish the l9-ci SDK to PyPI.
+#
+# - `workflow_dispatch` builds the sdist/wheel and runs `twine check` ONLY
+#   (no publish) — safe to run at any time to validate the package.
+# - Pushing a `v*` tag builds, checks, verifies the tag matches the
+#   pyproject version, then publishes to PyPI via Trusted Publishing (OIDC).
+#
+# Trusted Publishing prerequisite (one-time, outside this workflow): configure
+# a PyPI "trusted publisher" for project `l9-ci` bound to this repository,
+# workflow file (`publish.yml`), and the `pypi` environment. Until that is
+# configured, the publish job fails closed on a real tag push (it never fakes a
+# successful publish). See docs/PUBLISHING.md.
+name: Publish l9-ci SDK
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l9-ci-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build-and-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Verify tag matches package version
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os, sys, tomllib, pathlib
+          ref = os.environ["REF_NAME"]
+          tag_version = ref[1:] if ref.startswith("v") else ref
+          data = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          proj_version = data["project"]["version"]
+          if tag_version != proj_version:
+              print(f"::error::tag {ref} (version {tag_version}) does not match pyproject version {proj_version}")
+              sys.exit(1)
+          print(f"tag {ref} matches pyproject version {proj_version}")
+          PY
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+      - name: Twine metadata check
+        run: python -m twine check dist/*
+      - name: Upload distribution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: l9-ci-dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: publish-to-pypi
+    needs: build
+    # Publish only on a version-tag push. workflow_dispatch stops after build+check.
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: pypi
+      url: https://pypi.org/project/l9-ci/
+    permissions:
+      # OIDC token for PyPI Trusted Publishing — no API token is stored anywhere.
+      id-token: write
+      # actions/download-artifact@v4 fetches the build artifact from the current
+      # run via the Actions API, which requires actions: read when the job
+      # overrides the default (restricted) permission set.
+      actions: read
+    steps:
+      - name: Download distribution artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: l9-ci-dist
+          path: dist
+      - name: Publish to PyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
