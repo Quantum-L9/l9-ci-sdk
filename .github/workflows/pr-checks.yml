@@ -1,0 +1,144 @@
+# --- L9_META ---
+# origin: l9-ci-enablement (adapted for l9-ci-sdk)
+# layer: [ci, quality, security]
+# tags: [pr-gate, ruff, mypy, pytest, gitguardian, sonar]
+# owner: platform
+# status: active
+# --- /L9_META ---
+#
+# PR quality + security gate for l9-ci-sdk.
+#
+# Blocking:  pytest (with coverage). Advisory: ruff, mypy --strict, Sonar (all
+# with pre-existing findings; see docs/ci-enablement/VALIDATION.md for the
+# measured counts). Flip a gate to blocking only after its findings reach zero
+# (see docs/ci-enablement/RUNBOOK.md).
+#
+# Secrets never reach fork PRs (GitHub security), and these repos are private so
+# org secrets may not be visible at all — the secret-dependent jobs detect the
+# secret and skip (with a warning) when it is absent, so they can never turn a
+# PR red on a missing secret. They become effective the moment the secret is
+# wired. The quality job uses no secrets and always runs.
+
+name: PR Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint / Types / Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Install project + dev tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . ruff mypy pytest pytest-cov
+      - name: Ruff (advisory — pre-existing findings)
+        continue-on-error: true
+        run: ruff check .
+      - name: Mypy --strict (advisory — pre-existing findings)
+        continue-on-error: true
+        run: mypy l9_ci --strict
+      - name: Pytest (blocking gate) with coverage
+        run: pytest -q --cov=l9_ci --cov-report=xml --cov-report=term-missing
+      - name: Upload coverage.xml
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-sdk
+          path: coverage.xml
+          if-no-files-found: warn
+
+  gitguardian:
+    name: GitGuardian secret scan
+    runs-on: ubuntu-latest
+    # Fork PRs cannot see secrets; restrict to same-repo events.
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - name: Detect secret availability
+        id: gg
+        env:
+          GG: ${{ secrets.GITGUARDIAN_API_KEY }}
+        run: |
+          if [ -n "$GG" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::GITGUARDIAN_API_KEY not visible to this repo — secret scan skipped (see docs/ci-enablement/RUNBOOK.md)."
+          fi
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        if: steps.gg.outputs.present == 'true'
+        with:
+          fetch-depth: 0
+      - name: ggshield secret scan (blocking when secret is present)
+        if: steps.gg.outputs.present == 'true'
+        uses: GitGuardian/ggshield-action@v1
+        env:
+          # base.sha only exists on pull_request events; on push it is
+          # undefined, so guard each base ref to its event and fall back to
+          # github.event.before on push. Keeps the scan running on both.
+          GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_PUSH_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          GITHUB_PULL_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+
+  sonar:
+    name: SonarCloud/SonarQube analysis (advisory)
+    runs-on: ubuntu-latest
+    needs: quality
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          fetch-depth: 0
+      - name: Detect Sonar readiness (org-level token)
+        id: sonar
+        env:
+          TOK: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$TOK" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Sonar skipped — org-level SONAR_TOKEN secret not visible to this repo."
+          fi
+      - name: Download coverage.xml
+        if: steps.sonar.outputs.present == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-sdk
+        continue-on-error: true
+      - name: SonarQube scan
+        # projectKey is DERIVED from the repo (<owner>_<name> — SonarCloud's
+        # GitHub import convention) so NO per-repo variable is needed: only the
+        # org-level SONAR_TOKEN secret + SONAR_ORGANIZATION variable.
+        if: steps.sonar.outputs.present == 'true'
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+        with:
+          # projectKey and organization are supplied here at runtime, NOT in
+          # sonar-project.properties (which is org-level only): projectKey is
+          # derived as <owner>_<name> (SonarCloud's GitHub import convention)
+          # and organization defaults to `quantum-l9`, overridable via the
+          # org-level SONAR_ORGANIZATION variable. The remaining prerequisites
+          # are Sonar-side project provisioning and org-token visibility.
+          args: >
+            -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION || 'quantum-l9' }}
