@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import json
+
 from l9_ci.cli import main
 from l9_ci.governance import banned_imports, terminology_guard
 from l9_ci.scanners import secrets_policy
@@ -64,6 +66,56 @@ def test_cli_scanner_commands(tmp_path: Path, capsys) -> None:
     code = main(["check-transport-packet", str(tmp_path)])
     assert code == 1
     assert "PacketEnvelope" in capsys.readouterr().err
+
+
+def test_cli_review_defaults_audit_to_advisory(tmp_path: Path, capsys) -> None:
+    # Out-of-the-box the deterministic audit agent should surface advisory
+    # findings, not silently default to shadow (which prints 0 advisory).
+    (tmp_path / "bad.py").write_text("from x import PacketEnvelope\n", encoding="utf-8")
+    out_json = tmp_path / "report.json"
+    code = main(
+        [
+            "review",
+            "--root",
+            str(tmp_path),
+            "--changed-file",
+            "bad.py",
+            "--file-mode",
+            "filesystem",
+            "--emit-json",
+            str(out_json),
+        ]
+    )
+    assert code == 0
+    report = json.loads(out_json.read_text(encoding="utf-8"))
+    assert report["advisory_count"] >= 1
+    assert report["blocking_count"] == 0
+    assert "advisory" in capsys.readouterr().out
+
+
+def test_cli_review_explicit_shadow_overrides_default(tmp_path: Path) -> None:
+    # An explicit --agent-mode audit=shadow must win over the advisory default.
+    (tmp_path / "bad.py").write_text("from x import PacketEnvelope\n", encoding="utf-8")
+    out_json = tmp_path / "report.json"
+    code = main(
+        [
+            "review",
+            "--root",
+            str(tmp_path),
+            "--changed-file",
+            "bad.py",
+            "--file-mode",
+            "filesystem",
+            "--agent-mode",
+            "audit=shadow",
+            "--emit-json",
+            str(out_json),
+        ]
+    )
+    assert code == 0
+    report = json.loads(out_json.read_text(encoding="utf-8"))
+    assert report["advisory_count"] == 0
+    assert report["shadow_count"] >= 1
 
 
 def test_cli_deprecated_fix_zero_on_change(tmp_path: Path) -> None:
