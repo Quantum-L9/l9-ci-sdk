@@ -15,9 +15,9 @@ surface that emits `agent_review_payload.json`.
 ## Wire contract
 
 TransportPacket is the only supported wire contract. `PacketEnvelope` is
-superseded and must not be reintroduced. There are no `cryptoxdog` code
-references and no public `check-packet-envelope` command; the enforcing command
-is `l9-ci check-transport-packet`.
+superseded and must not be reintroduced. Retired legacy tooling has no
+references here, and there is no public packet-envelope command; the enforcing
+command is `l9-ci check-transport-packet`.
 
 ## Implementer invariants (non-negotiable)
 
