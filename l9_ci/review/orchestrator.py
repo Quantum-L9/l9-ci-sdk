@@ -18,6 +18,7 @@ from pathlib import Path
 from l9_ci.utils.files import FileMode
 
 from . import audit_agent
+from .llm_agent import run_llm_agent
 from .policy import apply_effective_mode
 from .render import AGENT_REVIEW_MARKER
 from .report import AgentRun, FindingMode, ReviewReport
@@ -38,6 +39,8 @@ def run_review(
     promotions: set[str] | None = None,
     file_mode: FileMode = "git_tracked",
     trace_id: str = "",
+    diff_text: str = "",
+    shim_path: str | None = None,
 ) -> ReviewReport:
     """Run the selected review agents and aggregate an advisory-first report.
 
@@ -52,6 +55,21 @@ def run_review(
     runs: list[dict[str, object]] = []
 
     for name in agents:
+        mode: FindingMode = agent_modes.get(name, "shadow")
+        if name == "llm":
+            raw, run = run_llm_agent(
+                root,
+                changed_files,
+                pr_class=pr_class,
+                diff_text=diff_text,
+                file_mode=file_mode,
+                shim_path=shim_path,
+                trace_id=trace_id,
+            )
+            effective = apply_effective_mode(raw, agent_mode=mode, promotions=promotions)
+            all_findings.extend(f.to_dict() for f in effective)
+            runs.append(run.to_dict())
+            continue
         entry = DETERMINISTIC_AGENTS.get(name)
         if entry is None:
             # Non-deterministic agents (e.g. "llm") are wired in Phase 3; skip
@@ -63,7 +81,6 @@ def run_review(
             )
             continue
         fn, agent_id, role = entry
-        mode: FindingMode = agent_modes.get(name, "shadow")
         started = time.perf_counter()
         raw = fn(root, changed_files, file_mode=file_mode)
         effective = apply_effective_mode(raw, agent_mode=mode, promotions=promotions)
