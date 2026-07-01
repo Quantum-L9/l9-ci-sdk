@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from l9_ci.pipeline.context import PipelineContext, derive_matrix_id, parse_matrix_pairs

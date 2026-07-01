@@ -1,20 +1,20 @@
 from __future__ import annotations
 
+import json
 import time
-from pathlib import Path
-from typing import Callable
+from collections.abc import Callable
 
 from l9_ci.gate.ci_gate import evaluate
-from l9_ci.pipeline.context import PipelineContext
-from l9_ci.pipeline.results import StageResult
-from l9_ci.scanners import deprecated_api, packet_envelope
-from l9_ci.governance.thresholds import load_threshold_policy, ThresholdPolicyError
 from l9_ci.governance.rule_modes import (
     RuleModePolicyError,
     apply_rule_modes_to_findings,
     finding_blocks,
     load_rule_mode_policy,
 )
+from l9_ci.governance.thresholds import ThresholdPolicyError, load_threshold_policy
+from l9_ci.pipeline.context import PipelineContext
+from l9_ci.pipeline.results import StageResult
+from l9_ci.scanners import deprecated_api, packet_envelope
 
 
 def _with_rule_modes(ctx: PipelineContext, findings: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -65,7 +65,7 @@ def stage_validate(ctx: PipelineContext) -> StageResult:
 
 def stage_transport_contract(ctx: PipelineContext) -> StageResult:
     start = time.monotonic()
-    violations = packet_envelope.scan([ctx.root], exclude=["tests"], file_mode="filesystem")
+    violations = packet_envelope.scan([ctx.root], root=ctx.root, exclude=["tests"], file_mode="filesystem")
     findings = [
         {"file": str(v.file), "line": str(v.line), "rule_id": "TRANSPORT-PACKET-CONTRACT", "message": getattr(v, "message", getattr(v, "text", ""))}
         for v in violations
@@ -77,7 +77,7 @@ def stage_transport_contract(ctx: PipelineContext) -> StageResult:
 
 def stage_deprecated_api(ctx: PipelineContext) -> StageResult:
     start = time.monotonic()
-    violations = deprecated_api.check([ctx.root], exclude=["tests"], file_mode="filesystem")
+    violations = deprecated_api.check([ctx.root], root=ctx.root, exclude=["tests"], file_mode="filesystem")
     findings = [
         {"file": str(v.file), "line": str(v.line), "rule_id": "DEPRECATED-API", "message": getattr(v, "message", getattr(v, "text", ""))}
         for v in violations
@@ -114,9 +114,30 @@ def stage_security(ctx: PipelineContext) -> StageResult:
     return _result("security", ctx, "success", start=start)
 
 
+def _read_stage_statuses(ctx: PipelineContext) -> dict[str, str]:
+    """Read prior stage statuses from the emitted *_ci_summary.json artifacts."""
+    emit_dir = ctx.emit_dir or (ctx.emit_json.parent if ctx.emit_json else None)
+    statuses: dict[str, str] = {}
+    if emit_dir and emit_dir.exists():
+        for summary in emit_dir.glob("*_ci_summary.json"):
+            try:
+                data = json.loads(summary.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            stage, status = data.get("stage"), data.get("status")
+            if stage and status and stage != "gate":
+                statuses[stage] = status
+    return statuses
+
+
 def stage_gate(ctx: PipelineContext) -> StageResult:
     start = time.monotonic()
-    gate = evaluate({"validate": "success", "lint": "success", "test": "success", "security": "success"}, ["validate", "lint", "test", "security"])
+    # Aggregate the ACTUAL emitted stage summaries. Do not fabricate success:
+    # with no prior summaries to evaluate, report a neutral gate result.
+    statuses = _read_stage_statuses(ctx)
+    if not statuses:
+        return _result("gate", ctx, "neutral", exit_code=0, start=start)
+    gate = evaluate(statuses, sorted(statuses))
     return _result("gate", ctx, "success" if gate.passed else "failure", exit_code=0 if gate.passed else 1, start=start)
 
 

@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from l9_ci.governance.approval import GovernanceApprovalResult, evaluate_governance_approval
 
 PASSING = {"success", "skipped", "neutral"}
-FAILING = {"failure", "cancelled", "timed_out", "action_required"}
 
 
 @dataclass(frozen=True)
