@@ -20,13 +20,13 @@ Re-derived for this repo's actual stack; nothing blind-copied.
 | Secret / var | Used by | Notes |
 |---|---|---|
 | `GITGUARDIAN_API_KEY` | pr-checks / gitguardian | blocking scan; skipped on fork PRs and when the secret is absent |
-| `SONAR_TOKEN` | pr-checks / sonar | advisory until projectKey/org set and token visible |
+| `SONAR_TOKEN` | pr-checks / sonar | advisory; gated on org-level token visibility (projectKey/org are derived at runtime, not set here) |
 | `L9_IMPLEMENTER_BOT_TOKEN` | pr-repair / handoff | optional; enables cross-repo dispatch to PR_Repair |
 
 ## Unknowns (must be filled — not invented)
 
 | Where | Value | How to resolve |
 |---|---|---|
-| `sonar-project.properties` | `sonar.projectKey`, `sonar.organization` | from your SonarCloud/SonarQube project |
-| repo settings | secret visibility on this **private** repo | confirm org secrets reach it, or add repo-level secrets |
+| SonarCloud/SonarQube | Sonar project provisioned for the derived `projectKey` (`<owner>_<name>`) | create/import the project org-side (projectKey/org are derived at runtime, NOT set in properties; optional `SONAR_ORGANIZATION` var only if not `quantum-l9`) |
+| repo settings | secret visibility on this **private** repo | confirm org secrets (incl. `SONAR_TOKEN`) reach it, or add repo-level secrets |
 | PR_Repair | `on: repository_dispatch` handler for `l9-implementer-review` | wired on the PR_Repair side (out of scope here) |

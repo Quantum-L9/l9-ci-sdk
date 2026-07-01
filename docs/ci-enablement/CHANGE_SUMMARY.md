@@ -23,8 +23,8 @@
 
 | Gate | Status today | Decision |
 |---|---|---|
-| pytest | 65 passing, 87% coverage | **blocking** |
-| ruff | 45 findings | advisory (do not weaken to green) |
-| mypy --strict | 17 findings | advisory |
+| pytest | passing with coverage (counts: VALIDATION.md) | **blocking** |
+| ruff | pre-existing findings (count: VALIDATION.md) | advisory (do not weaken to green) |
+| mypy --strict | pre-existing findings (count: VALIDATION.md) | advisory |
 | GitGuardian | depends on secret visibility | blocking when present, else skipped |
-| Sonar | projectKey/org UNKNOWN | advisory |
+| Sonar | projectKey/org derived at runtime; gated on token visibility + project provisioning | advisory |

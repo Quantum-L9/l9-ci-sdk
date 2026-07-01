@@ -8,9 +8,10 @@
 #
 # PR quality + security gate for l9-ci-sdk.
 #
-# Blocking:  pytest (65 tests, coverage). Advisory: ruff (45 pre-existing
-# findings), mypy --strict (17 pre-existing findings), Sonar. Flip a gate to
-# blocking only after its findings reach zero (see docs/ci-enablement/RUNBOOK.md).
+# Blocking:  pytest (with coverage). Advisory: ruff, mypy --strict, Sonar (all
+# with pre-existing findings; see docs/ci-enablement/VALIDATION.md for the
+# measured counts). Flip a gate to blocking only after its findings reach zero
+# (see docs/ci-enablement/RUNBOOK.md).
 #
 # Secrets never reach fork PRs (GitHub security), and these repos are private so
 # org secrets may not be visible at all — the secret-dependent jobs detect the
@@ -86,9 +87,12 @@ jobs:
         if: steps.gg.outputs.present == 'true'
         uses: GitGuardian/ggshield-action@v1
         env:
+          # base.sha only exists on pull_request events; on push it is
+          # undefined, so guard each base ref to its event and fall back to
+          # github.event.before on push. Keeps the scan running on both.
           GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
-          GITHUB_PUSH_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          GITHUB_PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_PUSH_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          GITHUB_PULL_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
 
@@ -129,9 +133,12 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
         with:
+          # projectKey and organization are supplied here at runtime, NOT in
+          # sonar-project.properties (which is org-level only): projectKey is
+          # derived as <owner>_<name> (SonarCloud's GitHub import convention)
+          # and organization defaults to `quantum-l9`, overridable via the
+          # org-level SONAR_ORGANIZATION variable. The remaining prerequisites
+          # are Sonar-side project provisioning and org-token visibility.
           args: >
             -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION || 'quantum-l9' }}
-          # SonarCloud: set sonar.host.url + sonar.organization in
-          # sonar-project.properties. projectKey/organization are UNKNOWN and
-          # MUST be filled before this job produces results.

@@ -39,8 +39,13 @@ Both `pr-checks.yml` and `pr-repair.yml` parse as YAML and each has `on`,
   private-repo secret).
 - No `pull_request_target`. No secrets are committed (diff grepped before push).
 
-## Unknowns confirmed labeled
+## Sonar config + remaining unknowns
 
-`sonar.projectKey` / `sonar.organization` = `UNKNOWN_…`; private-repo secret
-visibility and the PR_Repair `repository_dispatch` handler are enumerated in
-MANIFEST.md.
+`sonar.projectKey` and `sonar.organization` are NOT unknowns: `pr-checks.yml`
+derives `projectKey` as `<owner>_<name>` (SonarCloud's GitHub import convention)
+and defaults `organization` to `quantum-l9` (override via the org-level
+`SONAR_ORGANIZATION` variable), passing both via action `args`.
+`sonar-project.properties` is org-level only. The real remaining prerequisites
+are Sonar-side project provisioning and org-token (`SONAR_TOKEN`) visibility to
+this private repo; that and the PR_Repair `repository_dispatch` handler are
+enumerated in MANIFEST.md.

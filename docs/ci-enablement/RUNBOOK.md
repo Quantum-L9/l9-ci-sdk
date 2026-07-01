@@ -8,9 +8,13 @@
 2. **GitGuardian** — ensure `GITGUARDIAN_API_KEY` is visible to this repo (org
    secret, or repo-level for a private repo). Until then the job skips with a
    warning; once present the scan is blocking on same-repo PRs.
-3. **Sonar** — set `sonar.projectKey` and `sonar.organization` in
-   `sonar-project.properties` from your SonarCloud/SonarQube project, and make
-   `SONAR_TOKEN` visible. For SonarCloud also set `sonar.host.url`.
+3. **Sonar** — org-level config only. `pr-checks.yml` derives
+   `sonar.projectKey` (`<owner>_<name>`) and defaults `sonar.organization` to
+   `quantum-l9`, so you do NOT set these in `sonar-project.properties`. To
+   activate: provision the matching project in SonarCloud/SonarQube and make
+   the org-level `SONAR_TOKEN` visible to this repo. Optional org-level
+   overrides: `SONAR_ORGANIZATION` (if not `quantum-l9`) and `SONAR_HOST_URL`
+   (self-hosted; defaults to `https://sonarcloud.io`).
 
 ## Make an advisory gate blocking
 

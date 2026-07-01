@@ -98,7 +98,11 @@ jobs:
             echo "::warning::L9_IMPLEMENTER_BOT_TOKEN absent — skipping cross-repo dispatch. Payload is available as the 'agent-review-payload' artifact for PR_Repair to consume."
             exit 0
           fi
-          curl -sS -X POST \
+          # --fail-with-body makes curl exit non-zero on a non-2xx response
+          # (e.g. 401/404) while still printing the API error body, so an
+          # operator-triggered dispatch that never happened fails the job
+          # instead of silently reporting success.
+          curl -sS --fail-with-body -X POST \
             -H "Authorization: Bearer ${HANDOFF_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/Quantum-L9/PR_Repair/dispatches \
