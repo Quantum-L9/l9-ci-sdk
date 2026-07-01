@@ -79,7 +79,7 @@ def test_run_review_advisory_report_and_comment(tmp_path: Path) -> None:
 
 def test_unknown_agent_is_skipped_cleanly(tmp_path: Path) -> None:
     _make_repo(tmp_path)
-    report = run_review(tmp_path, ["bad.py"], agents=["llm"], file_mode="filesystem")
+    report = run_review(tmp_path, ["bad.py"], agents=["bogus"], file_mode="filesystem")
     assert report.agents[0]["failure_reason"] == "agent_not_registered"
 
 
