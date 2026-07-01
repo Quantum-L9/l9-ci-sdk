@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install SDK and test tools
-        run: python -m pip install -e . pytest pytest-cov
+        run: python -m pip install -e ".[ci]"
       - name: Byte-compile package
         run: python -m compileall l9_ci
       - name: Unit tests with coverage
