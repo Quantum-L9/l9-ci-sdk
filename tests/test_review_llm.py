@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from l9_ci.review.llm_agent import run_llm_agent

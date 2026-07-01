@@ -25,7 +25,10 @@ from .report import AgentRun, FindingMode, ReviewReport
 
 SCHEMA_VERSION = 1
 
-# Agent registry. Phase 3 adds "llm" (llm_review_agent) here.
+# Registry of deterministic agents. The non-deterministic ``llm`` agent is NOT
+# listed here: ``run_review`` dispatches it via a dedicated branch. Any agent
+# name that is neither ``llm`` nor present in this registry is skipped cleanly
+# and recorded as ``agent_not_registered``.
 DETERMINISTIC_AGENTS = {"audit": (audit_agent.run_audit_agent, audit_agent.AGENT, audit_agent.ROLE)}
 
 
