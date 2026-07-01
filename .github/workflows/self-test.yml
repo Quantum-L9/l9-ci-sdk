@@ -1,0 +1,30 @@
+name: SDK Self-Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install SDK and test tools
+        run: python -m pip install -e ".[ci]"
+      - name: Byte-compile package
+        run: python -m compileall l9_ci
+      - name: Unit tests with coverage
+        run: pytest -q --cov=l9_ci
+      - name: CLI smoke test
+        run: |
+          l9-ci --help
+          l9-ci validate-rule-modes --help
+          l9-ci run-pipeline --help
