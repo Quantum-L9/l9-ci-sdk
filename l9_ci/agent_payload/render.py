@@ -49,10 +49,19 @@ def _summary_files(input_dir: Path) -> list[Path]:
     return files
 
 
-def _stable_hash(paths: list[Path]) -> str:
+def _stable_hash(paths: list[Path], base: Path) -> str:
+    # Hash paths RELATIVE to a stable base (the summary input dir), not their
+    # absolute location. Absolute paths embed the runner's working directory,
+    # which makes the digest vary across runners/checkouts even when the CI
+    # summaries are byte-identical.
     digest = hashlib.sha256()
+    base = base.resolve()
     for path in paths:
-        digest.update(path.as_posix().encode("utf-8"))
+        try:
+            rel = path.resolve().relative_to(base).as_posix()
+        except ValueError:
+            rel = path.name
+        digest.update(rel.encode("utf-8"))
         try:
             digest.update(path.read_bytes())
         except OSError:
@@ -200,7 +209,7 @@ def render_agent_payload(
         pr_class="unknown_diff" if any(item.get("stage") == "classify" and item.get("status") != "success" for item in matrix_runs) else "Unknown",
         gate_status=gate_status,  # type: ignore[arg-type]
         rule_modes_hash="Unknown",
-        policy_hash=_stable_hash(files),
+        policy_hash=_stable_hash(files, input_dir),
         blocking_findings=blocking,
         advisory_findings=advisory,
         failed_checks=failed_checks,

@@ -5,8 +5,14 @@ from pathlib import Path
 
 import pytest
 
-from l9_ci.pipeline.context import derive_matrix_id, normalize_matrix_id, parse_matrix_pairs
+from l9_ci.pipeline.context import (
+    PipelineContext,
+    derive_matrix_id,
+    normalize_matrix_id,
+    parse_matrix_pairs,
+)
 from l9_ci.pipeline.runner import run_pipeline
+from l9_ci.pipeline.stages import stage_deprecated_api, stage_thresholds, stage_transport_contract
 
 
 def test_matrix_id_normalization_is_deterministic() -> None:
@@ -69,9 +75,6 @@ def test_non_matrix_emit_json_preserves_existing_behavior(tmp_path: Path) -> Non
 def test_full_pipeline_requires_emit_dir_not_emit_json(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="--emit-json can only be used"):
         run_pipeline(root=tmp_path, emit_json=str(tmp_path / "ci_summary.json"))
-
-from l9_ci.pipeline.stages import stage_deprecated_api, stage_thresholds, stage_transport_contract
-from l9_ci.pipeline.context import PipelineContext
 
 
 def _write_rule_modes(root: Path) -> None:

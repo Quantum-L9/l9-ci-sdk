@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from l9_ci.utils.files import FileMode, iter_files
+from l9_ci.utils.files import FileMode, iter_files, scan_anchor
 
 DEFAULT_PATTERNS = {
     r"\bprint\(": "Use structured logging instead of print().",
@@ -28,6 +28,22 @@ def _rel(path: Path, root: Path) -> str:
         return str(path).replace("\\", "/")
 
 
+def _normalize_prefix(prefix: str, root: Path) -> str:
+    """Make an ``include`` prefix comparable to root-relative file paths.
+
+    Accepts both root-relative prefixes (``"engine"``) and absolute prefixes
+    (``"/abs/engine"``); absolute prefixes are re-expressed relative to the scan
+    anchor so matching stays correct regardless of the caller's convention.
+    """
+    candidate = Path(prefix)
+    if candidate.is_absolute():
+        try:
+            return candidate.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            return prefix.replace("\\", "/")
+    return prefix.replace("\\", "/")
+
+
 def collect(
     paths: list[Path],
     include_prefixes: list[str] | None = None,
@@ -39,11 +55,12 @@ def collect(
     files = iter_files(paths, suffixes={".py"}, exclude=exclude or [], file_mode=file_mode)
     if not include_prefixes:
         return files
-    root = Path.cwd().resolve()
+    root = scan_anchor(paths)
+    normalized = [_normalize_prefix(prefix, root) for prefix in include_prefixes]
     selected: list[Path] = []
     for path in files:
         rel = _rel(path, root)
-        if any(rel.startswith(prefix.rstrip("/") + "/") or rel == prefix for prefix in include_prefixes):
+        if any(rel.startswith(prefix.rstrip("/") + "/") or rel == prefix for prefix in normalized):
             selected.append(path)
     return selected
 
@@ -58,7 +75,7 @@ def scan(
 ) -> list[Violation]:
     patterns = patterns or DEFAULT_PATTERNS
     violations: list[Violation] = []
-    root = Path.cwd().resolve()
+    root = scan_anchor(paths)
     for path in collect(paths, include_prefixes, exclude=exclude, file_mode=file_mode):
         rel = _rel(path, root)
         for lineno, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):

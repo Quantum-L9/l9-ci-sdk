@@ -88,6 +88,18 @@ def _scan_anchor(roots: list[Path]) -> Path:
     return base if base.is_dir() else base.parent
 
 
+def scan_anchor(roots: list[Path]) -> Path:
+    """Public: the base directory scanner-reported paths should be relative to.
+
+    Scanners must derive relative paths (and prefix/allow matching) from the
+    scan roots, not ``Path.cwd()``. When the CLI is run from a repo root scanning
+    ``.`` the two coincide, but scanning a path outside CWD must anchor to that
+    path so ``--include``/``--path-prefix``/``--allow`` still match and reported
+    paths stay repo-relative rather than absolute.
+    """
+    return _scan_anchor([Path(r) for r in roots] or [Path(".")])
+
+
 def _resolve_mode(file_mode: FileMode, cwd: Path) -> FileMode:
     if file_mode != "auto":
         return file_mode

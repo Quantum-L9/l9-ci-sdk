@@ -114,3 +114,16 @@ def test_gate_fails_from_input_dir_when_summary_failed(tmp_path: Path) -> None:
     rc = main(["gate", "--input-dir", str(input_dir), "--emit-agent-payload", str(output), "--required", "validate,lint,test,security"])
     assert rc == 1
     assert json.loads(output.read_text())["gate_status"] == "fail"
+
+
+def test_policy_hash_is_stable_across_working_directories(tmp_path: Path) -> None:
+    # Identical CI summaries must yield an identical policy_hash regardless of the
+    # absolute location they are read from (the digest is anchored to input_dir).
+    dir_a = tmp_path / "runner_a" / "artifacts" / "ci"
+    dir_b = tmp_path / "runner_b" / "artifacts" / "ci"
+    for d in (dir_a, dir_b):
+        _write_summary(d, "validate")
+        _write_summary(d, "test")
+    hash_a = render_agent_payload(input_dir=dir_a)["policy_hash"]
+    hash_b = render_agent_payload(input_dir=dir_b)["policy_hash"]
+    assert hash_a == hash_b

@@ -47,6 +47,36 @@ def is_allowed_definition_file(path: Path, root: Path) -> bool:
     return _rel(path, root) in ALLOWED_DEFINITION_FILES
 
 
+def _docstring_line_numbers(text: str) -> set[int]:
+    """Return the 1-based line numbers that fall inside triple-quoted strings.
+
+    A line-based scanner that only skips lines *starting* with ``\"\"\"`` still
+    scans ``PacketEnvelope`` mentioned inside a multi-line docstring body, which
+    produces false positives. This walks the source tracking triple-quote state
+    so every line within a triple-quoted region is skipped. It is a heuristic
+    (it does not model triple quotes nested inside single-quoted strings), but it
+    only ever *suppresses* matches inside prose, never real import/usage lines.
+    """
+    inside: set[int] = set()
+    i, line, delim, n = 0, 1, "", len(text)
+    while i < n:
+        if delim:
+            inside.add(line)
+            if text[i : i + 3] == delim:
+                delim = ""
+                i += 3
+                continue
+        elif text[i : i + 3] in ('"""', "'''"):
+            delim = text[i : i + 3]
+            inside.add(line)
+            i += 3
+            continue
+        if text[i] == "\n":
+            line += 1
+        i += 1
+    return inside
+
+
 def collect_python_files(
     paths: list[Path],
     exclude: set[str] | list[str] | None = None,
@@ -70,10 +100,11 @@ def scan_file(file_path: Path, root: Path, exclude: set[str] | None = None) -> l
     text = file_path.read_text(encoding="utf-8", errors="replace")
     rel = _rel(file_path, root)
     is_definition = is_allowed_definition_file(file_path, root)
+    docstring_lines = _docstring_line_numbers(text)
     violations: list[Violation] = []
     for lineno, line in enumerate(text.splitlines(), 1):
         stripped = line.strip()
-        if stripped.startswith("#") or stripped[:3] in ('"""', chr(39) * 3):
+        if stripped.startswith("#") or lineno in docstring_lines:
             continue
         if "PacketEnvelope" in line and ('"PacketEnvelope' in line or "'PacketEnvelope" in line):
             continue
