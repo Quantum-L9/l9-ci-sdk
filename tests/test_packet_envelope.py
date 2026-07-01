@@ -42,3 +42,10 @@ def test_real_usage_after_docstring_is_still_flagged(tmp_path: Path) -> None:
     )
     violations = scan([tmp_path], root=tmp_path)
     assert [v.code for v in violations] == ["PE-001"]
+
+
+def test_packetenvelope_in_single_line_string_is_not_flagged(tmp_path: Path) -> None:
+    # A mention inside a single-line string literal is prose, not usage.
+    f = tmp_path / "prose.py"
+    f.write_text('print("this code once used PacketEnvelope")\n', encoding="utf-8")
+    assert scan([tmp_path], root=tmp_path) == []

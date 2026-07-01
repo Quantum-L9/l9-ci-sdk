@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from l9_ci.utils.files import FileMode, iter_files
+from l9_ci.utils.pysource import docstring_line_numbers, strip_string_and_comment_content
 
 MESSAGE = "PacketEnvelope has been superseded by TransportPacket."
 
@@ -47,36 +48,6 @@ def is_allowed_definition_file(path: Path, root: Path) -> bool:
     return _rel(path, root) in ALLOWED_DEFINITION_FILES
 
 
-def _docstring_line_numbers(text: str) -> set[int]:
-    """Return the 1-based line numbers that fall inside triple-quoted strings.
-
-    A line-based scanner that only skips lines *starting* with ``\"\"\"`` still
-    scans ``PacketEnvelope`` mentioned inside a multi-line docstring body, which
-    produces false positives. This walks the source tracking triple-quote state
-    so every line within a triple-quoted region is skipped. It is a heuristic
-    (it does not model triple quotes nested inside single-quoted strings), but it
-    only ever *suppresses* matches inside prose, never real import/usage lines.
-    """
-    inside: set[int] = set()
-    i, line, delim, n = 0, 1, "", len(text)
-    while i < n:
-        if delim:
-            inside.add(line)
-            if text[i : i + 3] == delim:
-                delim = ""
-                i += 3
-                continue
-        elif text[i : i + 3] in ('"""', "'''"):
-            delim = text[i : i + 3]
-            inside.add(line)
-            i += 3
-            continue
-        if text[i] == "\n":
-            line += 1
-        i += 1
-    return inside
-
-
 def collect_python_files(
     paths: list[Path],
     exclude: set[str] | list[str] | None = None,
@@ -100,23 +71,27 @@ def scan_file(file_path: Path, root: Path, exclude: set[str] | None = None) -> l
     text = file_path.read_text(encoding="utf-8", errors="replace")
     rel = _rel(file_path, root)
     is_definition = is_allowed_definition_file(file_path, root)
-    docstring_lines = _docstring_line_numbers(text)
+    docstring_lines = docstring_line_numbers(text)
     violations: list[Violation] = []
     for lineno, line in enumerate(text.splitlines(), 1):
         stripped = line.strip()
         if stripped.startswith("#") or lineno in docstring_lines:
             continue
-        if "PacketEnvelope" in line and ('"PacketEnvelope' in line or "'PacketEnvelope" in line):
+        # Match on the code with string-literal contents and comments removed, so
+        # a PacketEnvelope mentioned only in prose (e.g. a single-line string) is
+        # not flagged, while real imports/annotations/calls still are.
+        code_line = strip_string_and_comment_content(line)
+        if "PacketEnvelope" not in code_line:
             continue
-        if CLASS_DEFINITION_PATTERN.match(line):
+        if CLASS_DEFINITION_PATTERN.match(code_line):
             if not is_definition:
                 violations.append(Violation(rel, lineno, "PE-DEF", "Class definition of PacketEnvelope is not allowed here"))
             continue
         if is_definition:
             continue
-        for pattern, code, msg in PATTERNS:
-            if pattern.search(line):
-                violations.append(Violation(rel, lineno, code, msg))
+        for pattern, rule_code, msg in PATTERNS:
+            if pattern.search(code_line):
+                violations.append(Violation(rel, lineno, rule_code, msg))
                 break
     return violations
 

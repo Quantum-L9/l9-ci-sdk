@@ -54,10 +54,18 @@ def stage_validate(ctx: PipelineContext) -> StageResult:
     for path in ctx.root.rglob("*.py"):
         if any(part in {".venv", "venv", "__pycache__", "build", "dist"} for part in path.parts):
             continue
+        rel = str(path.relative_to(ctx.root))
         try:
-            compile(path.read_text(encoding="utf-8"), str(path), "exec")
-        except SyntaxError as exc:
-            findings.append({"file": str(path.relative_to(ctx.root)), "rule_id": "PY-SYNTAX", "message": str(exc)})
+            source = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            # Fail closed: an unreadable or non-UTF-8 source becomes a finding
+            # rather than crashing the whole validate stage.
+            findings.append({"file": rel, "rule_id": "PY-READ", "message": f"Unreadable Python source: {exc}"})
+            continue
+        try:
+            compile(source, str(path), "exec")
+        except (SyntaxError, ValueError) as exc:
+            findings.append({"file": rel, "rule_id": "PY-SYNTAX", "message": str(exc)})
     findings = _with_rule_modes(ctx, findings) if findings else []
     blocked = _has_blocking(findings)
     return _result("validate", ctx, "failure" if blocked else "success", findings=findings, exit_code=1 if blocked else 0, start=start)

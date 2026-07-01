@@ -206,7 +206,10 @@ def render_agent_payload(
         commit=str(context["commit"]),
         branch=str(context["branch"]),
         pr_number=context["pr_number"],
-        pr_class="unknown_diff" if any(item.get("stage") == "classify" and item.get("status") != "success" for item in matrix_runs) else "Unknown",
+        # The payload aggregates CI summaries; it does not classify the PR, so it
+        # reports the canonical lower-snake unknown class rather than a bespoke
+        # "Unknown" token that downstream consumers wouldn't recognize.
+        pr_class="unknown_diff",
         gate_status=gate_status,  # type: ignore[arg-type]
         rule_modes_hash="Unknown",
         policy_hash=_stable_hash(files, input_dir),

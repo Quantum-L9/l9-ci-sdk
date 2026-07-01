@@ -134,3 +134,11 @@ def test_thresholds_stage_fails_closed_when_policy_missing(tmp_path: Path) -> No
 def test_unknown_pipeline_stage_fails(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Unknown pipeline stage"):
         run_pipeline(root=tmp_path, stage="bogus")
+
+
+def test_stage_validate_fails_closed_on_unreadable_source(tmp_path: Path) -> None:
+    # A non-UTF-8 .py file must become a PY-READ finding, not crash the stage.
+    _write_rule_modes(tmp_path)
+    (tmp_path / "bad.py").write_bytes(b"\xff\xfe\x00 not valid utf-8 \x9c")
+    result = run_pipeline(root=tmp_path, stage="validate")[0]
+    assert any(f["rule_id"] == "PY-READ" for f in result.findings)

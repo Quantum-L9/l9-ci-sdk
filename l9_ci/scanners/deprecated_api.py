@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from l9_ci.utils.files import FileMode, iter_files
+from l9_ci.utils.pysource import docstring_line_numbers, strip_string_and_comment_content
 
 DEPRECATED_SYMBOL = "DomainSpecLoader"
 REPLACEMENT_SYMBOL = "DomainPackLoader"
@@ -62,9 +63,14 @@ def check_file(path: Path, root: Path | None = None) -> list[Violation]:
     root = root or Path.cwd()
     text = path.read_text(encoding="utf-8", errors="replace")
     rel = _rel(path, root)
+    docstring_lines = docstring_line_numbers(text)
     violations: list[Violation] = []
     for lineno, line in enumerate(text.splitlines(), 1):
-        if DEPRECATED_SYMBOL in line:
+        # Ignore the symbol when it only appears in a comment or a string/docstring
+        # literal (prose), so mentions don't produce false positives.
+        if lineno in docstring_lines:
+            continue
+        if DEPRECATED_SYMBOL in strip_string_and_comment_content(line):
             violations.append(Violation(rel, lineno, line.rstrip()))
     return violations
 

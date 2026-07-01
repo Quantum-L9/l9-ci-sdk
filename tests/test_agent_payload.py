@@ -127,3 +127,11 @@ def test_policy_hash_is_stable_across_working_directories(tmp_path: Path) -> Non
     hash_a = render_agent_payload(input_dir=dir_a)["policy_hash"]
     hash_b = render_agent_payload(input_dir=dir_b)["policy_hash"]
     assert hash_a == hash_b
+
+
+def test_payload_pr_class_uses_canonical_unknown(tmp_path: Path) -> None:
+    input_dir = tmp_path / "artifacts" / "ci"
+    _write_summary(input_dir, "validate")
+    _write_summary(input_dir, "test")
+    payload = render_agent_payload(input_dir=input_dir)
+    assert payload["pr_class"] == "unknown_diff"
