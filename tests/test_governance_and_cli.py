@@ -4,7 +4,9 @@ from pathlib import Path
 
 import json
 
-from l9_ci.cli import main
+import pytest
+
+from l9_ci.cli import PathSafetyError, _safe_path, main
 from l9_ci.governance import banned_imports, terminology_guard
 from l9_ci.scanners import secrets_policy
 
@@ -124,3 +126,18 @@ def test_cli_deprecated_fix_zero_on_change(tmp_path: Path) -> None:
     code = main(["fix-deprecated-api", str(tmp_path), "--zero-on-change"])
     assert code == 0
     assert "DomainPackLoader(config_path=str(SPEC_PATH))" in target.read_text(encoding="utf-8")
+
+
+def test_safe_path_accepts_in_tree_relative(tmp_path: Path) -> None:
+    resolved = _safe_path("sub/report.json", base=tmp_path)
+    assert resolved == (tmp_path / "sub" / "report.json").resolve()
+
+
+def test_safe_path_rejects_traversal(tmp_path: Path) -> None:
+    with pytest.raises(PathSafetyError):
+        _safe_path("../../etc/passwd", base=tmp_path)
+
+
+def test_safe_path_allows_absolute(tmp_path: Path) -> None:
+    target = tmp_path / "out.json"
+    assert _safe_path(str(target)) == target.resolve()

@@ -29,6 +29,37 @@ def _paths(values: list[str]) -> list[Path]:
     return [Path(v) for v in values]
 
 
+class PathSafetyError(ValueError):
+    """Raised when a CLI-supplied path escapes the allowed base directory."""
+
+
+def _safe_path(value: str, *, base: Path | None = None) -> Path:
+    """Validate a CLI-supplied path before any filesystem access.
+
+    CLI arguments are attacker-influenced (an LLM or automation may pass a
+    crafted ``--root``/``--emit-json``/``--diff-path`` etc.). Constructing a
+    ``Path`` straight from that input and touching the filesystem allows path
+    traversal outside the working tree. This helper enforces that a *relative*
+    path stays within ``base`` (defaulting to the current working directory)
+    once resolved, rejecting ``..`` escapes with :class:`PathSafetyError`.
+
+    Absolute paths are treated as an explicit, intentional target (e.g. a CI
+    runner writing to a scratch dir) and are resolved but not confined to the
+    base. The function performs no I/O itself, so callers can safely use the
+    returned path.
+    """
+    candidate = Path(value)
+    if candidate.is_absolute():
+        return candidate.resolve()
+    root = (base or Path.cwd()).resolve()
+    resolved = (root / candidate).resolve()
+    if resolved != root and root not in resolved.parents:
+        raise PathSafetyError(
+            f"refusing path {value!r}: resolves to {resolved} which escapes {root}"
+        )
+    return resolved
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="l9-ci")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -305,13 +336,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.blocking_policy:
             import yaml
 
-            data = yaml.safe_load(Path(args.blocking_policy).read_text(encoding="utf-8")) or {}
+            data = yaml.safe_load(_safe_path(args.blocking_policy).read_text(encoding="utf-8")) or {}
             promotions = set(data.get("review_blocking_promotions", []) or [])
         diff_text = ""
-        if args.diff_path and Path(args.diff_path).exists():
-            diff_text = Path(args.diff_path).read_text(encoding="utf-8", errors="replace")
+        if args.diff_path:
+            diff_file = _safe_path(args.diff_path)
+            if diff_file.exists():
+                diff_text = diff_file.read_text(encoding="utf-8", errors="replace")
         report = run_review(
-            Path(args.root),
+            _safe_path(args.root),
             changed,
             pr_class=args.pr_class,
             agents=agents,
@@ -323,11 +356,11 @@ def main(argv: list[str] | None = None) -> int:
             shim_path=args.shim,
         )
         if args.emit_json:
-            out = Path(args.emit_json)
+            out = _safe_path(args.emit_json)
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(_json.dumps(report.to_dict(), indent=2), encoding="utf-8")
         if args.emit_comment:
-            out = Path(args.emit_comment)
+            out = _safe_path(args.emit_comment)
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(render_comment(report), encoding="utf-8")
         print(
@@ -341,12 +374,12 @@ def main(argv: list[str] | None = None) -> int:
 
         from l9_ci.review.evals import run_evals
 
-        eval_report = run_evals(Path(args.golden_dir))
+        eval_report = run_evals(_safe_path(args.golden_dir))
         for case in eval_report.cases:
             status = "PASS" if case["passed"] else "FAIL"
             print(f"  {status} {case['name']} ({case['finding_count']} findings) {case['reasons']}")
         if args.emit_json:
-            Path(args.emit_json).write_text(_json.dumps(eval_report.to_dict(), indent=2), encoding="utf-8")
+            _safe_path(args.emit_json).write_text(_json.dumps(eval_report.to_dict(), indent=2), encoding="utf-8")
         print(
             f"review-eval: {'PASS' if eval_report.passed else 'FAIL'} "
             f"({len(eval_report.cases)} cases, {len(eval_report.hard_failures)} hard failures)"
