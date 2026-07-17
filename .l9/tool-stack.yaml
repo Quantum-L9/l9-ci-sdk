@@ -1,0 +1,139 @@
+schema: l9.tool-stack-spec/v1
+metadata:
+  repository: Quantum-L9/l9-ci-sdk
+  spec_version: 1.0.0
+  status: authoritative
+  phase: spec-closure
+purpose:
+  statement: Define the supported analysis, normalization, classification, validation,
+    and gate contract stack for l9-ci-sdk.
+  primary_outcome: Every supported provider produces validated machine-readable evidence
+    that can be normalized into canonical SDK findings without embedding workflow
+    or organizational policy into provider adapters.
+canonical_flow:
+- repository_enumeration
+- capability_detection
+- provider_selection
+- provider_execution_or_report_import
+- provider_report_validation
+- evidence_normalization
+- finding_construction
+- explicit_rule_identity_resolution
+- policy_classification
+- gate_evaluation
+- artifact_bundle_emission
+scope:
+  owns:
+  - repository-aware analysis contracts
+  - provider process execution contracts
+  - provider report import contracts
+  - machine-readable report parsing contracts
+  - canonical evidence
+  - canonical findings
+  - source-location normalization
+  - severity normalization
+  - provider failure modeling
+  - coverage modeling
+  - explicit rule identity resolution
+  - policy classification library
+  - gate evaluation library
+  - deterministic artifact serialization
+  - artifact schema validation
+  - public Python API
+  - public CLI contract
+  excludes:
+  - GitHub Actions orchestration
+  - CI workflow permissions
+  - artifact upload and download
+  - organizational rule promotion
+  - historical corpus storage
+  - recurrence analytics
+  - LSP protocol
+  - editor diagnostics
+  - repair planning
+  - repository mutation
+  - pull-request retry loops
+  - hosted services
+  - LLM orchestration
+architectural_rules:
+- id: STACK-001
+  rule: Provider parsing is policy-independent.
+- id: STACK-002
+  rule: Canonical findings never embed a CI verdict.
+- id: STACK-003
+  rule: Policy classification never mutates provider facts.
+- id: STACK-004
+  rule: Gate evaluation consumes classifications, coverage, and provider failures.
+- id: STACK-005
+  rule: Human-readable console output is not a durable provider contract.
+- id: STACK-006
+  rule: Missing required evidence is not equivalent to PASS.
+- id: STACK-007
+  rule: Native provider rule identifiers are always preserved.
+- id: STACK-008
+  rule: Canonical rule identifiers require explicit resolution.
+- id: STACK-009
+  rule: Unsupported behavior is labeled rather than inferred.
+- id: STACK-010
+  rule: Providers are integrated and promoted independently.
+foundation:
+  runtime:
+    language: Python
+    minimum_version: '3.11'
+  interchange:
+    canonical_format: JSON
+    configuration_formats:
+    - YAML
+    - JSON
+  schema:
+    standard: JSON Schema Draft 2020-12
+    versioned_root: l9_ci/schemas
+provider_states:
+- unsupported
+- proposed
+- experimental
+- shadow
+- supported
+- deprecated
+execution_profiles:
+  native:
+    description: Run only SDK-native deterministic checks.
+  import_only:
+    description: Import existing machine-readable reports without executing tools.
+  all_supported:
+    description: Execute only providers whose state is supported.
+phase_1:
+  deliverables:
+  - canonical contracts
+  - JSON schemas
+  - provider SPI
+  - provider registry
+  - deterministic serializer
+  - bundle validator
+  - compatibility rules
+  - architecture tests
+  - ADR seeds
+  - AGENTS.md
+  - roadmap
+  prohibited:
+  - provider implementations
+  - scanner-specific parsing
+  - Core workflow changes
+  - repair integration
+  - LSP integration
+  - corpus integration
+phase_4:
+  status: implemented_with_empirical_blockers
+  deliverables:
+  - gate evaluation
+  - repository snapshots
+  - capability detection
+  - execution profiles
+  - provider selection
+  - centralized CLI contract
+  - Semgrep version policy
+  - execution failure mapping
+  - raw summary validation
+  blocked:
+  - runtime-captured Semgrep fixture
+  - live Core integration

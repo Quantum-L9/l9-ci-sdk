@@ -1,0 +1,16 @@
+schema: l9.finding-policy/v1
+metadata:
+  version: 1.0.0
+  status: example
+defaults:
+  mode: unresolved
+rules: {}
+# Example only:
+#
+# rules:
+#   python.lang.security.audit.exec-used.exec-used:
+#     policy_key: L9-PYTHON-EXEC-USED
+#     mode: blocking
+#
+# Rules are keyed by native Semgrep check_id. Both policy_key and mode must
+# be explicit.

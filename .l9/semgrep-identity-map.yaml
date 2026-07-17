@@ -1,0 +1,14 @@
+schema: l9.identity-map/v1
+metadata:
+  provider_id: semgrep
+  version: 1.0.0
+  status: authoritative
+rules: {}
+# Example only:
+#
+# rules:
+#   python.lang.security.audit.exec-used.exec-used:
+#     canonical_rule_id: L9-PYTHON-EXEC-USED
+#
+# Every entry must be reviewed. Do not derive canonical IDs from severity,
+# confidence, message text, or provider name.

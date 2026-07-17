@@ -1,0 +1,72 @@
+{
+  "version": "representative-fixture",
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.exec-used.exec-used",
+      "path": "src/example.py",
+      "start": {
+        "line": 4,
+        "col": 5,
+        "offset": 42
+      },
+      "end": {
+        "line": 4,
+        "col": 21,
+        "offset": 58
+      },
+      "extra": {
+        "message": "Use of exec detected.",
+        "severity": "ERROR",
+        "fingerprint": "redacted-semgrep-fingerprint-001",
+        "metadata": {
+          "category": "security",
+          "confidence": "HIGH",
+          "cwe": [
+            "CWE-95"
+          ],
+          "technology": [
+            "python"
+          ],
+          "references": [
+            "https://example.invalid/redacted"
+          ]
+        },
+        "lines": "exec(user_input)"
+      }
+    },
+    {
+      "check_id": "python.lang.correctness.useless-comparison.useless-comparison",
+      "path": "src/example.py",
+      "start": {
+        "line": 8,
+        "col": 5,
+        "offset": 83
+      },
+      "end": {
+        "line": 8,
+        "col": 11,
+        "offset": 89
+      },
+      "extra": {
+        "message": "Comparison result is unused.",
+        "severity": "WARNING",
+        "fingerprint": "redacted-semgrep-fingerprint-002",
+        "metadata": {
+          "category": "correctness",
+          "confidence": "MEDIUM",
+          "technology": [
+            "python"
+          ]
+        },
+        "lines": "x == 1"
+      }
+    }
+  ],
+  "errors": [],
+  "paths": {
+    "scanned": [
+      "src/example.py"
+    ],
+    "skipped": []
+  }
+}

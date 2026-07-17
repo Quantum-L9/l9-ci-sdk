@@ -1,0 +1,107 @@
+schema: l9.integration-contract/v1
+metadata:
+  producer: Quantum-L9/l9-ci-sdk
+  consumer: Quantum-L9/l9-ci-core
+  version: 1.0.0
+  status: authoritative
+boundary:
+  SDK_owns:
+    - provider execution contract
+    - provider-native report import
+    - canonical evidence
+    - canonical findings
+    - policy classification library
+    - provider failure records
+    - coverage records
+    - canonical bundle construction
+    - schema validation
+    - semantic validation
+    - deterministic serialization
+    - agent-review payload projection
+  Core_owns:
+    - GitHub Actions orchestration
+    - workflow permissions
+    - provider enablement selection
+    - required versus optional provider selection
+    - policy file selection
+    - artifact upload
+    - artifact retention
+    - gate publication
+    - pull-request summaries
+    - organization rollout policy
+  prohibited:
+    - Core parsing provider-native scanner reports
+    - Core reconstructing canonical findings
+    - SDK uploading workflow artifacts
+    - SDK reading GitHub workflow context directly
+    - SDK deciding organization-wide provider promotion
+CLI:
+  executable: l9-ci
+  commands:
+    semgrep_normalize:
+      syntax: >-
+        l9-ci semgrep normalize
+        --input REPORT
+        --output BUNDLE
+        --root ROOT
+        --snapshot-id SNAPSHOT
+        [--provider-version VERSION]
+        [--identity-map PATH]
+        [--policy PATH]
+        [--strict]
+        [--required]
+        [--generated-at TIMESTAMP]
+        [--revision REVISION]
+        [--dirty | --no-dirty]
+    bundle_validate:
+      syntax: l9-ci bundle validate BUNDLE
+    bundle_project_agent_payload:
+      syntax: >-
+        l9-ci bundle project-agent-payload
+        --input BUNDLE
+        --output PAYLOAD
+        [--strict]
+    compatibility_check:
+      syntax: >-
+        l9-ci compatibility check
+        --bundle BUNDLE
+        [--minimum-SDK-version VERSION]
+exit_codes:
+  success: 0
+  gate_failure: 1
+  invalid_arguments: 2
+  provider_execution_failure: 3
+  provider_report_failure: 4
+  artifact_validation_failure: 5
+  unresolved_strict_contract: 6
+  internal_error: 7
+  incompatible_version: 8
+  operational_limit_exceeded: 9
+artifact_layout:
+  raw:
+    root: artifacts/raw
+    pattern: artifacts/raw/<provider>/<report>
+  canonical:
+    root: artifacts/l9
+    bundle: artifacts/l9/finding-bundle.json
+    agent_payload: artifacts/l9/agent-review-payload.json
+  publication:
+    owner: Core
+    SDK_behavior: local_filesystem_only
+requiredness:
+  source: Core invocation
+  values:
+    required:
+      failure_behavior: provider failure prevents successful strict gate evaluation
+    optional:
+      failure_behavior: failure remains visible but does not independently fail the gate
+version_negotiation:
+  required_fields:
+    - schema
+    - schema_version
+    - SDK_version
+  rules:
+    - unsupported artifact major versions are rejected
+    - minimum SDK requirements are explicit
+    - exact SDK pinning is recommended for CI
+    - consumers must not infer compatibility from artifact shape alone

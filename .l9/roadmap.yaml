@@ -1,0 +1,88 @@
+schema: l9.roadmap-spec/v1
+metadata:
+  repository: Quantum-L9/l9-ci-sdk
+  status: active
+phases:
+- id: P0
+  title: Architecture and contracts
+  status: complete
+  acceptance:
+  - canonical models exist
+  - JSON schemas exist
+  - provider SPI exists
+  - deterministic serializer exists
+  - semantic validator exists
+  - architecture boundaries are tested
+- id: P1
+  title: Semgrep vertical slice
+  status: complete_with_fixture_limitation
+  acceptance:
+  - Semgrep JSON import exists
+  - native check_id is preserved
+  - canonical identity is explicit
+  - unresolved identity is visible
+  - policy classification is explicit
+  - provider failures are structured
+  - deterministic bundle generation exists
+  remaining:
+  - replace representative fixture with runtime capture
+- id: P5
+  title: Second provider selection
+  status: deferred
+  candidates:
+  - Gitleaks
+  - SARIF importer
+  rule: No second provider begins until Semgrep is supported and the bundle protocol
+    has no known breaking defects.
+- id: P2
+  title: Integration and release readiness
+  status: complete
+  acceptance:
+  - stable Core-facing CLI exists
+  - version negotiation exists
+  - canonical bundle validation exists
+  - agent projection exists
+  - operational limits exist
+  - compatibility fixtures exist
+  - release documentation exists
+- id: P3
+  title: Spec closure
+  status: current
+  deliverables:
+  - gate evaluation
+  - repository snapshot derivation
+  - capability detection
+  - execution profiles
+  - provider selection
+  - centralized CLI contract
+  - Semgrep version enforcement
+  - bounded execution failure mapping
+  - raw summary validation
+  - architecture-layer enforcement
+  - runtime fixture provenance
+  acceptance:
+  - missing required evidence cannot pass
+  - snapshot identity can be SDK-derived
+  - provider candidates can be detected
+  - generic providers list and detect commands exist
+  - exit codes have one source of truth
+  - unsupported Semgrep versions fail explicitly
+  - timeout and output limits produce structured failures
+  - malformed raw summary is rejected
+  - architecture tests cover every public SDK layer
+  - repository caches are not committed
+- id: P4
+  title: Semgrep shadow rollout
+  status: blocked
+  blockers:
+  - runtime-captured fixture required
+  - live Core integration required
+GA:
+  criteria:
+  - one supported provider
+  - stable v1 artifact protocol
+  - stable public Python API
+  - stable Core integration contract
+  - compatibility fixtures
+  - deterministic outputs
+  - documented migration and rollback

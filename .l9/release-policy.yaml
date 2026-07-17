@@ -1,0 +1,40 @@
+schema: l9.release-policy/v1
+metadata:
+  repository: Quantum-L9/l9-ci-sdk
+  version: 1.0.0
+release_channels:
+  experimental:
+    requirements:
+    - provider implementation exists
+    - representative fixture exists
+    - unit tests pass
+    - schema tests pass
+  shadow:
+    requirements:
+    - runtime-captured redacted fixture exists
+    - provider version is recorded
+    - deterministic bundle test passes
+    - malformed report behavior is tested
+    - timeout behavior is tested
+    - output limit behavior is tested
+    - no raw secret or source snippet leakage
+    - Core integration example is validated manually
+  supported:
+    requirements:
+    - shadow observation completed
+    - stable identity behavior confirmed
+    - compatibility fixtures published
+    - migration notes published
+    - release checklist completed
+    - known limitations accepted
+    - minimum supported Semgrep versions documented
+Semgrep:
+  current_state: experimental
+  target_state: shadow
+  blockers:
+  - runtime-captured fixture has not replaced representative fixture
+  - supported Semgrep version range is not yet verified
+  - Core has not executed the documented integration path
+  - target coverage semantics require verification against real reports
+  - runtime-captured fixture has not been supplied
+  - live Core invocation has not been verified

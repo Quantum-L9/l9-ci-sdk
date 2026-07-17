@@ -1,0 +1,45 @@
+schema: l9.compatibility-spec/v1
+metadata:
+  version: 1.0.0
+version_axes:
+  SDK_version:
+    source: installed_package_version
+    compatibility: semantic_versioning
+  artifact_protocol:
+    current: l9.finding-bundle/v1
+    compatibility: explicit_major_version
+  schema_version:
+    current: "1.0.0"
+    compatibility: additive_changes_only_within_major
+rules:
+  - id: COMPAT-001
+    statement: Unknown required fields are incompatible.
+  - id: COMPAT-002
+    statement: Unknown optional fields may be ignored by tolerant readers.
+  - id: COMPAT-003
+    statement: Removing or renaming fields requires a schema major version.
+  - id: COMPAT-004
+    statement: Adding enum members requires a schema minor version.
+  - id: COMPAT-005
+    statement: Changing identity inputs requires a schema major version.
+  - id: COMPAT-006
+    statement: Artifact writers must emit exactly one declared schema version.
+  - id: COMPAT-007
+    statement: Readers must reject unsupported schema major versions.
+  - id: COMPAT-008
+    statement: Schema validation does not replace semantic validation.
+  - id: COMPAT-009
+    statement: Canonical ordering changes require a compatibility review.
+reader_modes:
+  strict:
+    behavior:
+      - reject unsupported schema major versions
+      - reject unknown enum values
+      - reject unresolved classifications when required
+      - reject broken references
+  tolerant:
+    behavior:
+      - permit unknown optional properties
+      - preserve unknown attributes
+      - reject unsupported schema major versions
+      - reject broken references

@@ -1,0 +1,72 @@
+schema: l9.ownership-spec/v1
+repository: Quantum-L9/l9-ci-sdk
+ownership:
+  l9_ci/contracts:
+    owns:
+      - canonical models
+      - canonical enums
+      - local invariants
+  l9_ci/repository:
+    owns:
+      - file enumeration
+      - Git repository inspection
+      - snapshot identity
+  l9_ci/capabilities:
+    owns:
+      - language detection
+      - repository capability detection
+      - provider candidacy signals
+  l9_ci/providers:
+    owns:
+      - provider SPI
+      - provider-native parsing
+      - provider execution
+      - provider normalization
+      - provider coverage
+      - provider failures
+  l9_ci/identity:
+    owns:
+      - canonical identity resolution
+      - versioned identity maps
+  l9_ci/policy:
+    owns:
+      - policy parsing
+      - finding classification
+  l9_ci/execution:
+    owns:
+      - execution profiles
+      - provider selection
+  l9_ci/artifacts:
+    owns:
+      - canonical serialization
+      - schema validation
+      - semantic validation
+      - atomic writes
+  l9_ci/gates:
+    owns:
+      - pass, fail, incomplete, and invalid gate outcomes
+  l9_ci/integration:
+    owns:
+      - compatibility negotiation
+      - operational limits
+      - redaction validation
+      - non-canonical projections
+  l9_ci/cli:
+    owns:
+      - stable exit codes
+      - CLI output format
+      - structured diagnostics
+external_boundaries:
+  l9-ci-core:
+    relationship: consumer
+    allowed:
+      - invoke public CLI
+      - supply policy
+      - select required providers
+      - publish gate results
+      - upload artifacts
+    prohibited:
+      - parse provider-native reports
+      - reconstruct canonical findings
+      - mutate canonical bundles
+      - synthesize rule identity

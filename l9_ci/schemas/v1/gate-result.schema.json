@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/gate-result.schema.json",
+  "title": "GateResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "status",
+    "blocking_finding_ids",
+    "unresolved_finding_ids",
+    "fatal_provider_ids",
+    "incomplete_provider_ids",
+    "reasons",
+    "summary"
+  ],
+  "properties": {
+    "schema": {
+      "const": "l9.gate-result/v1"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail",
+        "incomplete",
+        "invalid"
+      ]
+    },
+    "blocking_finding_ids": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "unresolved_finding_ids": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "fatal_provider_ids": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "incomplete_provider_ids": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "reasons": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blocking_count",
+        "unresolved_count",
+        "fatal_provider_count",
+        "incomplete_provider_count"
+      ],
+      "properties": {
+        "blocking_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fatal_provider_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "incomplete_provider_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

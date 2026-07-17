@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/source-location.schema.json",
+  "title": "SourceLocation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["normalized_path"],
+  "properties": {
+    "normalized_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "start_line": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "start_column": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "end_line": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "end_column": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "byte_start": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "byte_end": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

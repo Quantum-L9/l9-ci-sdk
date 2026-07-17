@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/agent-review-payload.schema.json",
+  "title": "AgentReviewProjection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "SDK_version",
+    "source_bundle_schema",
+    "source_bundle_schema_version",
+    "snapshot_id",
+    "blocking_findings",
+    "advisory_findings",
+    "shadow_findings",
+    "unresolved_findings",
+    "disabled_findings",
+    "autofix_candidates",
+    "provider_failures",
+    "coverage",
+    "limitations",
+    "summary"
+  ],
+  "properties": {
+    "schema": {
+      "const": "l9.agent-review-projection/v1"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "SDK_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_bundle_schema": {
+      "const": "l9.finding-bundle/v1"
+    },
+    "source_bundle_schema_version": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "snapshot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "blocking_findings": {
+      "$ref": "#/$defs/findingArray"
+    },
+    "advisory_findings": {
+      "$ref": "#/$defs/findingArray"
+    },
+    "shadow_findings": {
+      "$ref": "#/$defs/findingArray"
+    },
+    "unresolved_findings": {
+      "$ref": "#/$defs/findingArray"
+    },
+    "disabled_findings": {
+      "$ref": "#/$defs/findingArray"
+    },
+    "autofix_candidates": {
+      "$ref": "#/$defs/findingArray"
+    },
+    "provider_failures": {
+      "type": "array",
+      "items": {
+        "$ref": "provider-failure.schema.json"
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "$ref": "coverage.schema.json"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blocking_count",
+        "advisory_count",
+        "shadow_count",
+        "unresolved_count",
+        "disabled_count",
+        "autofix_candidate_count",
+        "provider_failure_count"
+      ],
+      "properties": {
+        "blocking_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "shadow_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "disabled_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "autofix_candidate_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "provider_failure_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "agentFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finding_id",
+        "provider_id",
+        "provider_rule_id",
+        "category",
+        "message",
+        "fingerprint",
+        "locations",
+        "limitations"
+      ],
+      "properties": {
+        "finding_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_rule_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "canonical_rule_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "informational",
+            "unknown"
+          ]
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fingerprint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "$ref": "source-location.schema.json"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "findingArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/agentFinding"
+      }
+    }
+  }
+}

@@ -1,0 +1,174 @@
+schema: l9.architecture-spec/v1
+metadata:
+  repository: Quantum-L9/l9-ci-sdk
+  version: 1.1.0
+  status: authoritative
+layers:
+  contracts:
+    package: l9_ci.contracts
+    responsibility:
+      - immutable canonical models
+      - canonical enums
+      - model invariants
+    may_depend_on:
+      - Python standard library
+  repository:
+    package: l9_ci.repository
+    responsibility:
+      - repository enumeration
+      - Git inspection
+      - deterministic snapshot identity
+    may_depend_on:
+      - Python standard library
+    must_not_depend_on:
+      - providers
+      - policy
+      - gates
+      - integration
+  capabilities:
+    package: l9_ci.capabilities
+    responsibility:
+      - repository capability detection
+    may_depend_on:
+      - repository
+      - contracts
+  providers:
+    package: l9_ci.providers
+    responsibility:
+      - provider metadata
+      - provider execution
+      - report import
+      - provider normalization
+      - provider coverage
+    may_depend_on:
+      - contracts
+      - identity
+      - repository
+    must_not_depend_on:
+      - artifacts
+      - gates
+      - integration
+      - workflow code
+  identity:
+    package: l9_ci.identity
+    responsibility:
+      - explicit canonical rule identity resolution
+    may_depend_on:
+      - contracts
+  policy:
+    package: l9_ci.policy
+    responsibility:
+      - policy loading
+      - finding classification
+    may_depend_on:
+      - contracts
+    must_not_depend_on:
+      - providers
+      - artifacts
+      - gates
+  execution:
+    package: l9_ci.execution
+    responsibility:
+      - execution profiles
+      - provider selection
+    may_depend_on:
+      - capabilities
+      - providers
+  artifacts:
+    package: l9_ci.artifacts
+    responsibility:
+      - deterministic serialization
+      - schema validation
+      - semantic validation
+      - atomic writes
+    may_depend_on:
+      - contracts
+    must_not_depend_on:
+      - providers
+      - policy
+      - gates
+  gates:
+    package: l9_ci.gates
+    responsibility:
+      - gate evaluation
+    may_depend_on:
+      - contracts
+    must_not_depend_on:
+      - providers
+      - policy
+      - integration
+  pipeline:
+    package: l9_ci.pipeline
+    responsibility:
+      - public SDK composition flows
+    may_depend_on:
+      - repository
+      - providers
+      - identity
+      - policy
+      - artifacts
+      - integration
+  integration:
+    package: l9_ci.integration
+    responsibility:
+      - operational limits
+      - compatibility negotiation
+      - redaction validation
+      - non-canonical projections
+    may_depend_on:
+      - contracts
+    must_not_depend_on:
+      - providers
+      - pipeline
+  cli:
+    package: l9_ci.cli
+    responsibility:
+      - stable exit codes
+      - structured diagnostics
+      - output formatting
+    may_depend_on:
+      - Python standard library
+  commands:
+    package: l9_ci.commands
+    responsibility:
+      - command registration
+      - public CLI composition
+    may_depend_on:
+      - public SDK packages
+public_surface:
+  packages:
+    - l9_ci.contracts
+    - l9_ci.repository
+    - l9_ci.capabilities
+    - l9_ci.providers
+    - l9_ci.identity
+    - l9_ci.policy
+    - l9_ci.execution
+    - l9_ci.artifacts
+    - l9_ci.gates
+    - l9_ci.integration
+    - l9_ci.cli
+forbidden_dependency_edges:
+  - contracts_to_providers
+  - contracts_to_artifacts
+  - providers_to_artifacts
+  - providers_to_policy
+  - providers_to_gates
+  - artifacts_to_providers
+  - policy_to_providers
+  - gates_to_providers
+  - integration_to_pipeline
+  - SDK_to_Core
+  - SDK_to_LSP
+  - SDK_to_Repair
+  - SDK_to_Corpus
+canonical_flow:
+  - repository
+  - capabilities
+  - execution
+  - providers
+  - identity
+  - policy
+  - gates
+  - artifacts
+  - projections
