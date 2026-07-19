@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 157
+Files: 158
 
 ## Contents
 
@@ -119,6 +119,7 @@ Files: 157
 - `l9_ci/schemas/v1/provider-failure.schema.json`
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
+- `requirements.txt`
 - `tests/__init__.py`
 - `tests/architecture/test_dependency_boundaries.py`
 - `tests/architecture/test_public_api.py`
