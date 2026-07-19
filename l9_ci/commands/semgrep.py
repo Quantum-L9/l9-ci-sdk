@@ -18,7 +18,12 @@ def SDK_version() -> str:
     try:
         return importlib.metadata.version("l9-ci-sdk")
     except importlib.metadata.PackageNotFoundError:
-        return "0+uninstalled"
+        # Running from source (no build metadata): fall back to the canonical
+        # in-source version. Must be a valid major.minor.patch so downstream
+        # `compatibility check` version negotiation succeeds.
+        from l9_ci import __version__
+
+        return __version__
 
 
 def register_semgrep_commands(
