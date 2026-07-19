@@ -29,11 +29,17 @@ rulesets (see [`../l9-analysis.yml`](../l9-analysis.yml)), never in this pack.
 
 | Profile | Event | sdk_profile | Default mode | semgrep required |
 |---|---|---|---|---|
-| `pr_fast` | `pull_request` | ci_fast | blocking | yes |
+| `pr_fast` | `pull_request` | ci_fast | advisory | yes |
 | `merge` | `push` | ci_fast | blocking | yes |
 | `nightly` | `schedule` | ci_deep | advisory | no |
 | `release` | `push` | ci_deep | blocking | yes |
 | `supply_chain` | `schedule` | ci_deep | blocking | yes |
+
+`pr_fast` defaults to advisory (not blocking) in this pack: community `p/python`
+Semgrep rules carry no L9 canonical rule ID, so strict identity resolution
+would reject every finding at normalize. Advisory-first surfaces findings
+without blocking; tighten later per `promotion-policy.yaml` once an
+identity map or stricter policy is in place.
 
 Validated with Core's own `validate-governance` (`status: valid`).
 
@@ -130,5 +136,8 @@ For a strict-TypeScript service (e.g. eslint + `tsc --noEmit` + `vitest run`):
    [`../l9-lint-test.yml`](../l9-lint-test.yml) (Python) or
    [`../l9-lint-test-node.yml`](../l9-lint-test-node.yml) (Node/TypeScript).
 
-Pin Core by the immutable commit `54a2f2fc8d060674d544fab14388bb5eff6b8e78`
-(or the `v2` tag once published).
+Pin Core to the same immutable commit referenced throughout
+[`../l9-analysis.yml`](../l9-analysis.yml) (currently
+`f7a4ee8c1f4e4413cb3645d088cafa3e9c798235`, or the `v2` tag once published) —
+do not let this doc's pin drift from the workflow's; the workflow is the
+source of truth.

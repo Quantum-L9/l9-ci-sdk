@@ -1,4 +1,10 @@
-# L9 analysis caller (TEMPLATE — copy into your repo at .github/workflows/l9-analysis.yml)
+# L9 analysis caller
+#
+# Dual-purpose file: this is BOTH the copy-in template for other repos AND the
+# live, triggering workflow for l9-ci-sdk's own PRs (see #12 — main had no
+# .github/ before, so Core was not active on this repo's own checks until this
+# file started running here). If you are adopting l9-ci-core in a different
+# repo, copy this file verbatim to .github/workflows/l9-analysis.yml there too.
 #
 # Works for Python AND Node.js repos: semgrep is the single, language-agnostic
 # provider the pinned SDK normalizes. The ONLY per-language difference is the
@@ -13,8 +19,10 @@
 #                   uploaded artifact (no report-in-tree needed) and publishes the
 #                   GitHub check per the resolved governance mode.
 #
-# Prerequisite: copy docs/templates/governance/*.yaml into THIS repo at
-# .github/governance/  (that is the CI instantiation pack the resolver reads).
+# Prerequisite (only when copying this file into ANOTHER repo): also copy
+# .github/governance/*.yaml from this repo (that is the CI instantiation pack
+# the resolver reads). This repo's own copy already lives at
+# .github/governance/ alongside this workflow.
 
 name: L9 Analysis
 
@@ -30,12 +38,15 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Pin Core to the immutable release commit (or replace with the v2 tag).
-  L9_CORE_REF: "f7a4ee8c1f4e4413cb3645d088cafa3e9c798235"
   # Match the event: pr_fast for pull_request, merge for push, nightly/release/
   # supply_chain as appropriate. Must be allowed_events in execution-profiles.yaml.
   L9_PROFILE: "pr_fast"
   L9_MATRIX_ID: "pr-semgrep"
+  # Core is pinned to the immutable commit f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
+  # (or replace with the v2 tag once published). `uses:` does not support
+  # expression interpolation, so this SHA is duplicated literally on every
+  # `uses: Quantum-L9/l9-ci-core/...@<sha>` line below — update all of them
+  # together when bumping the pin.
 
 jobs:
   analyze:
@@ -47,8 +58,8 @@ jobs:
     outputs:
       mode: ${{ steps.gov.outputs.mode }}
       enabled: ${{ steps.gov.outputs.enabled }}
-      artifact-name: ${{ steps.names.outputs.artifact-name }}
-      governance-digest: ${{ steps.gov.outputs.governance-digest }}
+      artifact-name: ${{ steps.names.outputs['artifact-name'] }}
+      governance-digest: ${{ steps.gov.outputs['governance-digest'] }}
     steps:
       - name: Checkout immutable event revision
         env:
@@ -94,11 +105,15 @@ jobs:
           # Node.js repo:  --config p/javascript --config p/typescript
           # Polyglot / either: keep all three (semgrep skips rules that do not
           # match any files) or use --config auto.
+          # No --error flag: semgrep scan exits 0 on completed scans regardless
+          # of findings (gating is the SDK/governance layer's job, not
+          # semgrep's exit code) but still exits non-zero on real execution
+          # failures (bad config, unparseable rules, etc.) — do not swallow
+          # those with `|| true`, or a broken scan silently produces an empty
+          # report.
           semgrep scan \
             --config p/python \
-            --json \
-            --output "artifacts/raw/semgrep/${L9_MATRIX_ID}/report.json" \
-            --quiet || true
+            --json-output "artifacts/raw/semgrep/${L9_MATRIX_ID}/report.json"
         env:
           L9_MATRIX_ID: ${{ env.L9_MATRIX_ID }}
 
@@ -119,8 +134,8 @@ jobs:
           snapshot-id: ${{ github.sha }}
           revision: ${{ github.sha }}
           strict: ${{ steps.gov.outputs.strict }}
-          required: ${{ steps.gov.outputs.required-provider }}
-          policy: ${{ steps.gov.outputs.sdk-policy }}
+          required: ${{ steps.gov.outputs['required-provider'] }}
+          policy: ${{ steps.gov.outputs['sdk-policy'] }}
 
       - name: Validate canonical bundle
         if: steps.gov.outputs.enabled == 'true'
@@ -157,17 +172,17 @@ jobs:
         with:
           provider: semgrep
           matrix-id: ${{ env.L9_MATRIX_ID }}
-          sdk-revision: ${{ steps.sdk.outputs.sdk-revision }}
+          sdk-revision: ${{ steps.sdk.outputs['sdk-revision'] }}
           bundle: ${{ steps.route.outputs.bundle }}
-          agent-payload: ${{ steps.route.outputs.agent-payload }}
-          raw-directory: ${{ steps.route.outputs.raw-directory }}
+          agent-payload: ${{ steps.route.outputs['agent-payload'] }}
+          raw-directory: ${{ steps.route.outputs['raw-directory'] }}
           output: artifacts/metadata/${{ env.L9_MATRIX_ID }}/artifact-manifest.json
 
       - name: Upload analysis artifact set
         if: steps.gov.outputs.enabled == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
-          name: ${{ steps.names.outputs.artifact-name }}
+          name: ${{ steps.names.outputs['artifact-name'] }}
           path: |
             artifacts/raw/semgrep/${{ env.L9_MATRIX_ID }}/
             artifacts/l9/${{ env.L9_MATRIX_ID }}/
@@ -185,11 +200,11 @@ jobs:
       checks: write
       contents: read
     with:
-      artifact-name: ${{ needs.analyze.outputs.artifact-name }}
+      artifact-name: ${{ needs.analyze.outputs['artifact-name'] }}
       profile: pr_fast
       mode: ${{ needs.analyze.outputs.mode }}
       provider: semgrep
       matrix-id: pr-semgrep
-      governance-digest: ${{ needs.analyze.outputs.governance-digest }}
+      governance-digest: ${{ needs.analyze.outputs['governance-digest'] }}
       repository-revision: ${{ github.sha }}
       workflow-result: ${{ needs.analyze.result }}
