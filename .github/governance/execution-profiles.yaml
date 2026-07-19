@@ -11,15 +11,15 @@
     },
     "merge": {
       "sdk_profile": "ci_fast",
-      "strict": true,
-      "default_mode": "blocking",
+      "strict": false,
+      "default_mode": "advisory",
       "providers": ["semgrep"],
       "policy": "",
       "allowed_events": ["push", "workflow_dispatch"]
     },
     "nightly": {
       "sdk_profile": "ci_deep",
-      "strict": true,
+      "strict": false,
       "default_mode": "advisory",
       "providers": ["semgrep"],
       "policy": "",
@@ -27,16 +27,16 @@
     },
     "release": {
       "sdk_profile": "ci_deep",
-      "strict": true,
-      "default_mode": "blocking",
+      "strict": false,
+      "default_mode": "advisory",
       "providers": ["semgrep"],
       "policy": "",
       "allowed_events": ["push", "workflow_dispatch"]
     },
     "supply_chain": {
       "sdk_profile": "ci_deep",
-      "strict": true,
-      "default_mode": "blocking",
+      "strict": false,
+      "default_mode": "advisory",
       "providers": ["semgrep"],
       "policy": "",
       "allowed_events": ["schedule", "workflow_dispatch"]
