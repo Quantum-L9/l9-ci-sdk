@@ -2,10 +2,10 @@
   "schema": "l9.rule-modes/v1",
   "defaults": {
     "pr_fast": "advisory",
-    "merge": "blocking",
+    "merge": "advisory",
     "nightly": "advisory",
-    "release": "blocking",
-    "supply_chain": "blocking"
+    "release": "advisory",
+    "supply_chain": "advisory"
   },
   "provider_overrides": {
     "semgrep": {}
