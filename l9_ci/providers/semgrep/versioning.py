@@ -3,7 +3,7 @@
 from __future__ import annotations
 import re
 from dataclasses import dataclass
-from l9_ci.integration import SemanticVersion
+from l9_ci.contracts import SemanticVersion
 
 _VERSION_PATTERN = re.compile(r"(?P<version>[0-9]+\.[0-9]+\.[0-9]+)")
 
