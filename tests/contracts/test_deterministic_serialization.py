@@ -11,7 +11,9 @@ from l9_ci.contracts import (
 )
 
 
-def build_bundle(reverse: bool) -> FindingBundle:
+def build_bundle(
+    reverse: bool, generated_at: str = "2026-07-17T00:00:00Z"
+) -> FindingBundle:
     evidence = [
         EvidenceRecord(
             evidence_id="evidence-b",
@@ -61,7 +63,7 @@ def build_bundle(reverse: bool) -> FindingBundle:
         findings.reverse()
     return FindingBundle(
         SDK_version="1.0.0",
-        generated_at="2026-07-17T00:00:00Z",
+        generated_at=generated_at,
         snapshot=SnapshotDescriptor(
             snapshot_id="snapshot-1",
             repository_root=".",
@@ -101,3 +103,16 @@ def test_bundle_serialization_ends_with_one_newline() -> None:
     content = bundle_bytes(build_bundle(reverse=False))
     assert content.endswith(b"\n")
     assert not content.endswith(b"\n\n")
+
+
+def test_generated_at_excluded_from_content_identity() -> None:
+    # QA-003: generated_at is invocation provenance, not content. Two bundles
+    # that are identical except for their generation time (a simulated clock
+    # boundary) must share a canonical content digest, even though their raw
+    # serialized bytes legitimately differ by the timestamp. Previously the
+    # determinism tests only ever pinned generated_at, so this entropy was
+    # never exercised.
+    early = build_bundle(reverse=False, generated_at="2026-07-17T00:00:00Z")
+    late = build_bundle(reverse=True, generated_at="2027-01-01T12:34:56Z")
+    assert early.canonical_digest() == late.canonical_digest()
+    assert bundle_bytes(early) != bundle_bytes(late)

@@ -1,0 +1,25 @@
+schema: l9.fixture-provenance/v1
+# STATUS: capture pending. A runtime-captured, provenance-bound Semgrep report
+# requires executing the pinned supported Semgrep version (>= 1.100.0). This was
+# not possible in the report-only audit environment (Semgrep binary
+# unavailable / not installable). Until this fixture is captured, the full-path
+# integration test (tests/providers/semgrep/test_runtime_fixture.py) SKIPS
+# rather than passing silently or substituting a synthetic fixture.
+verification_status: capture_pending
+capture_required_before_supported_state: true
+expected_capture_command: >-
+  semgrep scan --config <ruleset> --json-output results.json <repository-root>
+# When captured, place the redacted report at
+# tests/fixtures/semgrep/runtime/results.json and populate every field below,
+# then set verification_status: runtime_captured.
+required_provenance_fields_after_capture:
+  - semgrep_version
+  - capture_timestamp
+  - command
+  - input_checksum
+  - output_checksum
+  - redaction_reviewed_by
+promotion_gate: >-
+  Capturing this fixture and running the full normalize -> validate -> project
+  -> gate path against it gates promoting Semgrep out of EXPERIMENTAL
+  (roadmap P4). Do not mark Semgrep supported until this is runtime_captured.
