@@ -18,8 +18,17 @@ from l9_ci.integration import (
 )
 from l9_ci.policy import FindingPolicy, classify_findings
 from l9_ci.providers import ProviderNormalizationContext
-from l9_ci.providers.semgrep import SemgrepProvider
+from l9_ci.providers.semgrep import require_supported_semgrep_version
 from l9_ci.repository import build_repository_snapshot
+from .lifecycle import resolve_import_provider
+
+
+class UnsupportedProviderVersionError(ValueError):
+    """Raised when a supplied provider version fails the version policy.
+
+    Distinct from generic ValueError so the CLI can map it to the
+    INCOMPATIBLE_VERSION (exit 8) contract without fragile message matching.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,7 +64,23 @@ def run_semgrep_pipeline(
         if request.identity_map_path
         else None
     )
-    provider = SemgrepProvider(identity_map=identity_map)
+    # Enforce the report-producing provider version before normalization. An
+    # unsupported (or unparseable) version must not reach a canonical bundle.
+    # This validates the version that generated the imported report, which is
+    # independent of any locally installed Semgrep executable.
+    if request.provider_version is not None:
+        try:
+            require_supported_semgrep_version(request.provider_version)
+        except ValueError as exc:
+            raise UnsupportedProviderVersionError(str(exc)) from exc
+    # Resolve the provider through the registry-backed lifecycle seam so the
+    # canonical import path exercises capability detection and execution-profile
+    # selection rather than constructing the provider ad hoc.
+    provider = resolve_import_provider(
+        "semgrep",
+        repository_root=request.repository_root,
+        identity_map=identity_map,
+    )
     repository_snapshot = None
     if request.derive_snapshot:
         repository_snapshot = build_repository_snapshot(request.repository_root)

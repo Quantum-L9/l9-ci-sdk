@@ -101,8 +101,11 @@ layers:
     package: l9_ci.pipeline
     responsibility:
       - public SDK composition flows
+      - provider lifecycle composition
     may_depend_on:
       - repository
+      - capabilities
+      - execution
       - providers
       - identity
       - policy

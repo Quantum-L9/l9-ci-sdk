@@ -23,11 +23,22 @@ def select_providers(
         if profile.supported_only:
             if metadata.state is not ProviderState.SUPPORTED:
                 continue
-        if profile.execute_providers and not metadata.execution_support:
-            continue
-        if not profile.execute_providers and not metadata.import_support:
-            continue
-        if not provider.detect(repository_root) and profile.execute_providers:
+        # Honor both acquisition controls. A provider is selected for execution
+        # only when the profile requests execution and the provider supports it
+        # (and is detected on disk); for import only when the profile requests
+        # import (import_reports) and the provider supports import. A profile
+        # that requests neither for this provider selects nothing — previously
+        # import_reports was ignored, so a native profile could silently select
+        # an import-capable provider.
+        if profile.execute_providers:
+            if not metadata.execution_support:
+                continue
+            if not provider.detect(repository_root):
+                continue
+        elif profile.import_reports:
+            if not metadata.import_support:
+                continue
+        else:
             continue
         selected.append(provider)
     return tuple(
