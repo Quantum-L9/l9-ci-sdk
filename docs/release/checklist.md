@@ -6,6 +6,10 @@
 - [ ] Compatibility fixtures pass.
 - [ ] Unsupported schema major versions fail.
 ## Fixture provenance
+<!-- Harness + scaffolding landed: tests/providers/semgrep/test_runtime_fixture.py
+     runs the full normalize->validate->project->gate path and SKIPS until the
+     fixture at tests/fixtures/semgrep/runtime/results.json is captured. See
+     tests/fixtures/semgrep/runtime/provenance.yaml for required fields. -->
 - [ ] Runtime Semgrep fixture captured.
 - [ ] Semgrep version recorded.
 - [ ] Invocation recorded.
