@@ -16,9 +16,11 @@ invoke l9-ci bundle validate
     ↓
 invoke l9-ci bundle project-agent-payload
     ↓
+invoke l9-ci gate evaluate
+    ↓
 upload raw and canonical artifacts
     ↓
-publish gate result
+publish gate result (Core publishes the SDK-emitted gate-result.json)
 
 Required inputs
 
@@ -41,6 +43,8 @@ The SDK produces:
 
 * finding-bundle.json;
 * agent-review-payload.json;
+* gate-result.json (the canonical gate decision; Core publishes this rather
+  than reconstructing a verdict);
 * stable exit codes.
 
 Prohibited behavior

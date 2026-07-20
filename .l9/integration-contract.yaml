@@ -66,6 +66,16 @@ CLI:
         l9-ci compatibility check
         --bundle BUNDLE
         [--minimum-SDK-version VERSION]
+    gate_evaluate:
+      syntax: >-
+        l9-ci gate evaluate
+        --bundle BUNDLE
+        [--output GATE_RESULT]
+        [--strict-unresolved | --no-strict-unresolved]
+      description: >-
+        Evaluate a validated canonical bundle and emit the canonical
+        gate-result artifact. This is the SDK's single gate-decision authority;
+        Core publishes the emitted result rather than reconstructing a verdict.
 exit_codes:
   success: 0
   gate_failure: 1
@@ -85,6 +95,7 @@ artifact_layout:
     root: artifacts/l9
     bundle: artifacts/l9/finding-bundle.json
     agent_payload: artifacts/l9/agent-review-payload.json
+    gate_result: artifacts/l9/gate-result.json
   publication:
     owner: Core
     SDK_behavior: local_filesystem_only

@@ -397,14 +397,24 @@ class SemgrepProvider:
                     )
                 )
                 limitations.append(message)
-        considered_paths, analyzed_paths, coverage_limitations = _coverage_paths(
+        (
+            considered_paths,
+            analyzed_paths,
+            coverage_limitations,
+            coverage_verified,
+        ) = _coverage_paths(
             report,
             findings,
         )
         limitations.extend(coverage_limitations)
-        coverage_status = (
-            CoverageStatus.PARTIAL if failures else CoverageStatus.COMPLETE
-        )
+        # Coverage is COMPLETE only when the report exposed a verified scanned
+        # inventory and no errors occurred. A zero-finding report with no
+        # verified paths.scanned must not silently present as COMPLETE, or a
+        # required provider could pass the gate on unproven coverage.
+        if failures or not coverage_verified:
+            coverage_status = CoverageStatus.PARTIAL
+        else:
+            coverage_status = CoverageStatus.COMPLETE
         coverage = Coverage(
             provider_id="semgrep",
             status=coverage_status,
@@ -434,7 +444,14 @@ class SemgrepProvider:
 def _coverage_paths(
     report: Mapping[str, Any],
     findings: Sequence[Finding],
-) -> tuple[set[str], set[str], tuple[str, ...]]:
+) -> tuple[set[str], set[str], tuple[str, ...], bool]:
+    """Return (considered, analyzed, limitations, verified).
+
+    ``verified`` is True only when the report exposed a non-empty
+    ``paths.scanned`` inventory. Coverage derived from finding locations, a
+    ``paths`` object with no ``scanned`` key, or an empty scanned list is
+    unverified and must not be represented as COMPLETE.
+    """
     limitations: list[str] = []
     report_paths = report.get("paths")
     if isinstance(report_paths, Mapping):
@@ -458,7 +475,13 @@ def _coverage_paths(
                     path = item.get("path")
                     if isinstance(path, str):
                         skipped.add(SourceLocation(path).normalized_path)
-        return scanned | skipped, scanned, tuple(limitations)
+        if not scanned:
+            limitations.append(
+                "Semgrep report paths did not include a verified, non-empty "
+                "scanned inventory; coverage cannot be confirmed complete."
+            )
+            return scanned | skipped, scanned, tuple(limitations), False
+        return scanned | skipped, scanned, tuple(limitations), True
     finding_paths = {
         location.normalized_path
         for finding in findings
@@ -468,7 +491,7 @@ def _coverage_paths(
         "Semgrep report did not expose verified paths.scanned coverage; "
         "coverage was derived from finding paths only."
     )
-    return finding_paths, finding_paths, tuple(limitations)
+    return finding_paths, finding_paths, tuple(limitations), False
 
 
 def _source_location(result: Mapping[str, Any]) -> SourceLocation:
