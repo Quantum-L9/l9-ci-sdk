@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from l9_ci.pipeline import (
     SemgrepPipelineRequest,
+    UnsupportedProviderVersionError,
     run_semgrep_pipeline,
 )
 from l9_ci.providers.semgrep import SemgrepProvider
@@ -108,6 +109,9 @@ def handle_normalize(args: argparse.Namespace) -> int:
     except FileNotFoundError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return int(ExitCode.PROVIDER_REPORT_FAILURE)
+    except UnsupportedProviderVersionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return int(ExitCode.INCOMPATIBLE_VERSION)
     except ValueError as exc:
         message = str(exc)
         print(f"error: {message}", file=sys.stderr)

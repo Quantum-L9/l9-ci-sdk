@@ -56,7 +56,7 @@ rules:
         "repository_root": Path(".").resolve(),
         "snapshot_id": "snapshot-release-test",
         "SDK_version": "1.0.0",
-        "provider_version": "fixture-version",
+        "provider_version": "1.100.0",
         "identity_map_path": identity_map,
         "policy_path": policy,
         "strict": True,
