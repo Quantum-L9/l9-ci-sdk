@@ -18,10 +18,12 @@ from l9_ci.integration import (
     validate_report_size,
 )
 from l9_ci.policy import FindingPolicy, classify_findings
-from l9_ci.providers import ProviderNormalizationContext
+from l9_ci.policy.remediation import RemediationMap, apply_remediation_classes
+from l9_ci.providers import ProviderExecutionRequest, ProviderNormalizationContext
 from l9_ci.providers.semgrep import require_supported_semgrep_version
 from l9_ci.repository import build_repository_snapshot
 from .lifecycle import resolve_import_provider
+from .runner import execute_and_normalize
 
 
 class UnsupportedProviderVersionError(ValueError):
@@ -49,6 +51,17 @@ class SemgrepPipelineRequest:
     dirty: bool | None = None
     derive_snapshot: bool = False
     limits: OperationalLimits = OperationalLimits()
+    # SDK-owned bounded execution (DWA-002). When execute is True, the provider
+    # is run through the generic runner (which writes report_path) instead of
+    # importing a pre-produced report. Default False keeps the import-only path.
+    execute: bool = False
+    timeout_seconds: int = 300
+    output_size_limit_bytes: int = 50_000_000
+    execution_arguments: tuple[str, ...] = ()
+    # Trusted canonical-rule -> remediation-class mapping (DWA-007). When set,
+    # findings whose canonical rule id is mapped get a remediation_class, so the
+    # projection can emit autofix candidates. Omitted -> no autofix classes.
+    remediation_map_path: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,17 +103,30 @@ def run_semgrep_pipeline(
         snapshot_id = repository_snapshot.snapshot_id
     if not snapshot_id:
         raise ValueError("snapshot_id is required unless derive_snapshot is enabled")
-    validate_report_size(request.report_path, request.limits)
-    report = provider.import_report(request.report_path)
-    normalization = provider.normalize(
-        report,
-        ProviderNormalizationContext(
-            snapshot_id=snapshot_id,
-            repository_root=request.repository_root,
-            provider_version=request.provider_version,
-            required=request.required,
-        ),
+    context = ProviderNormalizationContext(
+        snapshot_id=snapshot_id,
+        repository_root=request.repository_root,
+        provider_version=request.provider_version,
+        required=request.required,
     )
+    if request.execute:
+        # SDK-owned bounded execution: run the provider through the generic
+        # runner (validate -> execute -> classify -> import -> normalize)
+        # instead of importing a pre-produced report (DWA-002).
+        execution_request = ProviderExecutionRequest(
+            repository_root=request.repository_root,
+            output_path=request.report_path,
+            timeout_seconds=request.timeout_seconds,
+            output_size_limit_bytes=request.output_size_limit_bytes,
+            arguments=request.execution_arguments,
+        )
+        normalization = execute_and_normalize(
+            provider, request=execution_request, context=context
+        )
+    else:
+        validate_report_size(request.report_path, request.limits)
+        report = provider.import_report(request.report_path)
+        normalization = provider.normalize(report, context)
     validate_record_counts(
         finding_count=len(normalization.findings),
         evidence_count=len(normalization.evidence),
@@ -128,6 +154,12 @@ def run_semgrep_pipeline(
         classifications = classification_result.classifications
     elif request.strict and normalization.findings:
         raise ValueError("strict mode requires a policy for non-empty findings")
+    # Assign trusted remediation classes after canonical identity resolution so
+    # the projection can emit autofix candidates (DWA-007). No-op without a map.
+    bundle_findings = normalization.findings
+    if request.remediation_map_path is not None:
+        remediation_map = RemediationMap.load(request.remediation_map_path)
+        bundle_findings = apply_remediation_classes(bundle_findings, remediation_map)
     bundle = FindingBundle(
         SDK_version=request.SDK_version,
         snapshot=SnapshotDescriptor(
@@ -146,7 +178,7 @@ def run_semgrep_pipeline(
             ),
         ),
         evidence=normalization.evidence,
-        findings=normalization.findings,
+        findings=bundle_findings,
         classifications=classifications,
         provider_failures=normalization.failures,
         coverage=(normalization.coverage,),

@@ -1,0 +1,16 @@
+schema: l9.remediation-map/v1
+# Trusted canonical-rule-id -> remediation-class mapping (DWA-007).
+#
+# The SDK ships NO built-in classifications: deciding that a rule's findings are
+# safe to auto-fix is a human/owner judgement, not something the SDK may infer
+# from scanner metadata. Copy this file, populate `rules` with canonical rule
+# ids you have reviewed, and pass it to the pipeline (remediation_map_path).
+#
+# Keys are CANONICAL rule ids (post-identity-resolution), never native scanner
+# ids. remediation_class must be one of: safe-autofix, mechanical.
+metadata:
+  version: "0"
+rules: {}
+# Example (do not enable without review):
+#   L9-PYTHON-USELESS-COMPARISON:
+#     remediation_class: mechanical
