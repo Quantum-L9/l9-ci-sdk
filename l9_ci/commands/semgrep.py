@@ -3,16 +3,15 @@
 from __future__ import annotations
 import argparse
 import importlib.metadata
-import sys
 from pathlib import Path
 from l9_ci.pipeline import (
     SemgrepPipelineRequest,
-    UnsupportedProviderVersionError,
     run_semgrep_pipeline,
 )
 from l9_ci.providers.semgrep import SemgrepProvider
 
 from l9_ci.cli import ExitCode, OutputFormat, render_success
+from l9_ci.commands.errors import emit_error
 
 
 def SDK_version() -> str:
@@ -106,23 +105,12 @@ def handle_normalize(args: argparse.Namespace) -> int:
                 derive_snapshot=args.derive_snapshot,
             )
         )
-    except FileNotFoundError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return int(ExitCode.PROVIDER_REPORT_FAILURE)
-    except UnsupportedProviderVersionError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return int(ExitCode.INCOMPATIBLE_VERSION)
-    except ValueError as exc:
-        message = str(exc)
-        print(f"error: {message}", file=sys.stderr)
-        if "strict" in message or "unresolved" in message:
-            return int(ExitCode.UNRESOLVED_STRICT_CONTRACT)
-        if "schema" in message or "validation" in message:
-            return int(ExitCode.ARTIFACT_VALIDATION_FAILURE)
-        return int(ExitCode.PROVIDER_REPORT_FAILURE)
     except Exception as exc:
-        print(f"internal error: {exc}", file=sys.stderr)
-        return int(ExitCode.INTERNAL_ERROR)
+        return emit_error(
+            exc,
+            output_format=OutputFormat(args.format),
+            default=ExitCode.PROVIDER_REPORT_FAILURE,
+        )
     print(
         render_success(
             {"output_path": str(result.output_path)},

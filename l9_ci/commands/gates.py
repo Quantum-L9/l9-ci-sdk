@@ -8,7 +8,8 @@ from l9_ci.artifacts import (
     canonical_json_bytes,
     load_and_validate_bundle,
 )
-from l9_ci.cli import ExitCode
+from l9_ci.cli import ExitCode, OutputFormat
+from l9_ci.commands.errors import emit_error
 from l9_ci.gates import GateStatus, evaluate_gate
 
 
@@ -28,6 +29,7 @@ def register_gate_commands(
         action=argparse.BooleanOptionalAction,
         default=True,
     )
+    evaluate.add_argument("--format", choices=("text", "json"), default="text")
     evaluate.set_defaults(handler=handle_evaluate)
 
 
@@ -38,12 +40,8 @@ def handle_evaluate(args: argparse.Namespace) -> int:
             bundle,
             strict_unresolved=args.strict_unresolved,
         )
-    except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return int(ExitCode.ARTIFACT_VALIDATION_FAILURE)
     except Exception as exc:
-        print(f"internal error: {exc}", file=sys.stderr)
-        return int(ExitCode.INTERNAL_ERROR)
+        return emit_error(exc, output_format=OutputFormat(args.format))
     content = canonical_json_bytes(result.to_dict())
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

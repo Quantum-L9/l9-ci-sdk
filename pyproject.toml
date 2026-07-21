@@ -24,7 +24,7 @@ dev = [
     "pytest==9.1.1",
     "pytest-cov>=5,<8",
     "types-jsonschema",
-    "types-PyYAML",>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
+    "types-PyYAML",
 ]
 
 [project.scripts]
@@ -73,4 +73,4 @@ show_missing = true
 # Ratcheting repository baseline. Raise this as coverage improves; CI fails on
 # regression below it. Critical decision modules are asserted at 100% branch
 # coverage by dedicated tests (gates/evaluator.py, artifacts/validator.py).
-fail_under = 73>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
+fail_under = 80

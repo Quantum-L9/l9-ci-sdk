@@ -14,7 +14,6 @@ from .limits import (
 from .projection import project_agent_review_payload
 from .redaction import RedactionResult, validate_redaction
 from .versioning import (
-    SemanticVersion,
     VersionNegotiationResult,
     negotiate_versions,
 )
@@ -26,7 +25,6 @@ __all__ = [
     "AgentReviewPayload",
     "OperationalLimits",
     "RedactionResult",
-    "SemanticVersion",
     "VersionNegotiationResult",
     "negotiate_versions",
     "project_agent_review_payload",
