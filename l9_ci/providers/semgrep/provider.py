@@ -152,8 +152,10 @@ class SemgrepProvider:
                 report_path=(
                     request.output_path if request.output_path.exists() else None
                 ),
-                stdout=exc.stdout or "",
-                stderr=exc.stderr or "",
+                # text=True guarantees str, but TimeoutExpired types these as
+                # bytes | str | None; narrow to str for the result contract.
+                stdout=exc.stdout if isinstance(exc.stdout, str) else "",
+                stderr=exc.stderr if isinstance(exc.stderr, str) else "",
                 timed_out=True,
             )
         stdout = completed.stdout

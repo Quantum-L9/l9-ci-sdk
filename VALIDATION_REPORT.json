@@ -1,31 +1,30 @@
 {
-  "schema": "l9.validation-report/v1",
-  "repository": "Quantum-L9/l9-ci-sdk",
-  "consolidated_phases": [
-    1,
-    2,
-    3,
-    4
-  ],
-  "file_count": 158,
-  "checks": {
-    "python_compileall": "passed",
-    "ruff_check": "passed",
-    "ruff_format_check": "passed",
-    "pytest": {
-      "status": "passed",
-      "tests": 75
-    },
-    "cli_providers_list": "passed",
-    "cli_providers_detect": "passed",
-    "cache_hygiene": "passed"
+  "commit": "669f3ed2c27f5ef770eccc2d7bbe5ad7848a0c40",
+  "commit_committed_at": "2026-07-21T00:23:58+00:00",
+  "dependency_versions": {
+    "PyYAML": "6.0.1",
+    "jsonschema": "4.26.0",
+    "referencing": "0.37.0"
   },
-  "empirical_blockers": [
-    "A runtime-captured and redacted Semgrep fixture was not supplied, so no fabricated results.captured.json or provenance values were created.",
-    "Live l9-ci-core invocation remains unverified."
+  "file_count": 184,
+  "file_tree_digest": "81698702f3dde6efa4e8774c82f1ff29cb0d210f6ea02291950acad20dc09dab",
+  "gate_commands": [
+    "python -m compileall l9_ci",
+    "python -m ruff check l9_ci tests scripts",
+    "python -m ruff format --check l9_ci tests scripts",
+    "python -m mypy",
+    "python -m pytest --cov=l9_ci --cov-branch"
   ],
-  "source_files": [
-    "docs/source/sdk-spec.md",
-    "docs/source/phase-4.md"
-  ]
+  "generated_by": "scripts/generate_validation_report.py",
+  "python_version": "3.11",
+  "repository": "Quantum-L9/l9-ci-sdk",
+  "schema": "l9.validation-report/v2",
+  "toolchain_versions": {
+    "coverage": "7.15.2",
+    "mypy": "2.3.0",
+    "pytest": "9.1.1",
+    "pytest-cov": "7.1.0",
+    "ruff": "0.15.22"
+  },
+  "validated_by": ".github/workflows/ci.yml"
 }

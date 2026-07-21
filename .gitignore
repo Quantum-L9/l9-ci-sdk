@@ -4,3 +4,10 @@
 __pycache__/
 *.py[cod]
 artifacts/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/

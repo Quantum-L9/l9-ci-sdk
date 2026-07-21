@@ -1,14 +1,16 @@
 import json
 from importlib.resources import files
+from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 from l9_ci.gates import GateResult, GateStatus
 
 
-def _schema() -> dict:
-    return json.loads(
+def _schema() -> dict[str, Any]:
+    schema: dict[str, Any] = json.loads(
         files("l9_ci").joinpath("schemas/v1/gate-result.schema.json").read_text()
     )
+    return schema
 
 
 RESULTS = {

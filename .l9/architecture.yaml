@@ -103,6 +103,7 @@ layers:
       - public SDK composition flows
       - provider lifecycle composition
     may_depend_on:
+      - contracts
       - repository
       - capabilities
       - execution
@@ -137,7 +138,13 @@ layers:
       - command registration
       - public CLI composition
     may_depend_on:
-      - public SDK packages
+      - artifacts
+      - capabilities
+      - cli
+      - gates
+      - integration
+      - pipeline
+      - providers
 public_surface:
   packages:
     - l9_ci.contracts
