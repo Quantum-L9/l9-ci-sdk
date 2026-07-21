@@ -6,11 +6,12 @@ from typing import Any, Mapping
 
 # SemanticVersion is defined in the contracts layer (the lowest shared layer) so
 # that both integration and providers can use it without providers depending
-# upward on integration. Re-exported here for backward compatibility.
+# upward on integration. It is used internally here by negotiate_versions but is
+# NOT part of the integration public surface — its canonical public home is
+# l9_ci.contracts (AUD-005).
 from l9_ci.contracts import SemanticVersion
 
 __all__ = [
-    "SemanticVersion",
     "VersionNegotiationResult",
     "negotiate_versions",
 ]

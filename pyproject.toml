@@ -73,4 +73,4 @@ show_missing = true
 # Ratcheting repository baseline. Raise this as coverage improves; CI fails on
 # regression below it. Critical decision modules are asserted at 100% branch
 # coverage by dedicated tests (gates/evaluator.py, artifacts/validator.py).
-fail_under = 73
+fail_under = 80

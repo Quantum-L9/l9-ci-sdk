@@ -7,6 +7,32 @@
 # constant MUST match `.l9/integration-contract.yaml` metadata.version.
 __version__ = "1.0.0"
 
-from . import capabilities, cli, execution, gates, repository
+# The 11 public packages, matching .l9/architecture.yaml public_surface and
+# .l9/public-api.yaml (AUD-005: one canonical, test-enforced public surface).
+from . import (
+    artifacts,
+    capabilities,
+    cli,
+    contracts,
+    execution,
+    gates,
+    identity,
+    integration,
+    policy,
+    providers,
+    repository,
+)
 
-__all__ = ["capabilities", "cli", "execution", "gates", "repository"]
+__all__ = [
+    "artifacts",
+    "capabilities",
+    "cli",
+    "contracts",
+    "execution",
+    "gates",
+    "identity",
+    "integration",
+    "policy",
+    "providers",
+    "repository",
+]

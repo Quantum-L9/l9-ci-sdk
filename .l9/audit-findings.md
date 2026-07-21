@@ -17,7 +17,7 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 - [x] **AUD-002** H 🚫 — Architecture tests must enforce the complete authoritative dependency graph. *(reconciled may_depend_on + positive-allowlist enforcement — `1c74931`)*
 - [x] **AUD-003** H 🚫 — Required provider failures must prevent a successful strict gate. *(evaluator fail-closed — `672a23f`)*
 - [x] **AUD-004** H 🚫 — Unverified/missing scan coverage must not read as COMPLETE/PASS. *(coverage → PARTIAL without verified scan — `672a23f`)*
-- [ ] **AUD-005** H 🚫 — One canonical, test-enforced public API boundary.
+- [x] **AUD-005** H 🚫 — One canonical, test-enforced public API boundary. *(`.l9/public-api.yaml` drives root exports/docs/exact-equality tests — `PR6`)*
 - [ ] **AUD-006** H — SDK must not own GitHub Actions workflow orchestration.
 - [x] **AUD-007** H 🚫 — Validation evidence/inventory bound to the immutable commit. *(commit-bound generator + drift-checked manifest — `1c74931`)*
 - [x] **AUD-008** H 🚫 — Required unit/lint/format/architecture gates run continuously on the commit (self-validation CI). *(ci.yml added — `1c74931`; requiring it in branch protection is a pending repo-admin action)*
@@ -30,7 +30,7 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 - [ ] **DWA-002** H 🚫 — Bounded provider execution & structured execution-failure mapping have a production caller. *(deferred: changes the Core/CI execution contract; next batch)*
 - [x] **DWA-003** H 🚫 — Canonical gate evaluation carried into the Core-facing artifact flow. *(contract + docs — `672a23f`)*
 - [x] **DWA-004** H 🚫 — Semgrep version enforcement connected to the import/normalization path. *(pipeline version gate — `420d2b7`)*
-- [ ] **DWA-005** M 🚫 — Structured `Diagnostic` rendering used by command handlers.
+- [x] **DWA-005** M 🚫 — Structured `Diagnostic` rendering used by command handlers. *(centralized CLI error boundary honoring --format on every command — `PR6`)*
 - [x] **DWA-006** M — `ExecutionProfile.import_reports` read by provider selection. *(selection now honors import_reports — `420d2b7`)*
 - [ ] **DWA-007** M — Autofix projection has a trusted producer for `remediation_class`.
 - [ ] **DWA-008** M — `ProviderExecutionRequest.network_allowed` is an enforced (not inert) control.
@@ -42,17 +42,16 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 - [x] **QA-003** H 🚫 — Determinism proven for the production path, not a frozen `generated_at`. *(content digest excludes generated_at + cross-clock tests — `ad3a4ca`)*
 - [x] **QA-004** H 🚫 — Version-policy tests validate the canonical normalization path. *(pipeline-level version tests — `420d2b7`)*
 - [x] **QA-005** H 🚫 — Architecture boundary test is recursive and spec-derived. *(matrix from architecture.yaml + mutation proof — `65715d0`)*
-- [ ] **QA-006** H 🚫 — Core-facing CLI has command-handler / argparse integration tests.
+- [x] **QA-006** H 🚫 — Core-facing CLI has command-handler / argparse integration tests. *(main()-level tests per command: success/failure envelopes, exit codes — `PR6`)*
 - [x] **QA-007** H 🚫 — Static type gate proves public contracts & critical paths type-check. *(strict mypy over l9_ci/tests/scripts — `1c74931`)*
 - [x] **QA-008** M — Line/branch coverage target, measurement, and critical-path coverage evidence. *(pytest-cov branch ratchet + evaluator 100% — `1c74931`)*
-- [ ] **QA-009** M 🚫 — Public API tests assert exact equality (not subset).
+- [x] **QA-009** M 🚫 — Public API tests assert exact equality (not subset). *(exact-equality per package + compatibility allowlist — `PR6`)*
 - [x] **QA-010** H 🚫 — Provider tested against a runtime-captured, provenance-bound report. *(full-path harness + scaffolding; capture is a tracked skip — `ad3a4ca`)*
 
 ## Status
 
-- Completed: 19 / 28 (AUD-001/002/003/004/007/008/009, DWA-001/003/004/006, QA-001/002/003/004/005/007/008/010)
-- Open: 9 / 28 — remaining: public surface & CLI (AUD-005, QA-009, DWA-005, QA-006),
-  provider runtime (DWA-002, DWA-007, DWA-008, AUD-010), and workflow ownership (AUD-006).
+- Completed: 23 / 28 (AUD-001/002/003/004/005/007/008/009, DWA-001/003/004/005/006, QA-001/002/003/004/005/006/007/008/009/010)
+- Open: 5 / 28 — remaining: provider runtime (DWA-002, DWA-007, DWA-008, AUD-010) and workflow ownership (AUD-006).
 
 Known caveats on completed items:
 - **QA-010** capture step skips until a real Semgrep fixture is captured (Semgrep binary unavailable in the audit
