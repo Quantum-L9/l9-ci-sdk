@@ -1,11 +1,10 @@
 """Quantum-L9 CI SDK."""
 
-# Canonical SDK version. In production this package runs from source via
-# PYTHONPATH (l9-ci-core's provision-sdk), where no distribution is installed
-# and importlib.metadata cannot resolve a version at runtime — this constant
-# is the source-run fallback and MUST match `.l9/integration-contract.yaml`
-# metadata.version (and pyproject.toml's `[project] version`, for local
-# `pip install -e .` installs).
+# Canonical SDK version — the single source of truth. `pyproject.toml` derives
+# its build-manifest version from this constant (tool.setuptools.dynamic), so an
+# installed package (`importlib.metadata.version("l9-ci-sdk")`) and a source run
+# (via PYTHONPATH, l9-ci-core's provision-sdk) report the same value. This
+# constant MUST match `.l9/integration-contract.yaml` metadata.version.>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
 __version__ = "1.0.0"
 
 from . import capabilities, cli, execution, gates, repository

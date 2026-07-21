@@ -1,7 +1,7 @@
 """End-to-end Semgrep report to canonical bundle pipeline."""
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from l9_ci.artifacts import validate_bundle, write_bundle_atomic
 from l9_ci.contracts import (
@@ -128,38 +128,34 @@ def run_semgrep_pipeline(
         classifications = classification_result.classifications
     elif request.strict and normalization.findings:
         raise ValueError("strict mode requires a policy for non-empty findings")
-    snapshot = SnapshotDescriptor(
-        snapshot_id=snapshot_id,
-        repository_root=".",
-        revision=request.revision,
-        dirty=request.dirty,
-    )
-    providers = (
-        ProviderRun(
-            provider_id="semgrep",
-            adapter_version=provider.metadata.adapter_version,
-            provider_version=request.provider_version,
-            mode="import",
-            required=request.required,
-        ),
-    )
-    # generated_at has a default_factory on FindingBundle; only override it when
-    # the caller supplied an explicit value.
-    optional_fields: dict[str, str] = {}
-    if request.generated_at is not None:
-        optional_fields["generated_at"] = request.generated_at
     bundle = FindingBundle(
         SDK_version=request.SDK_version,
-        snapshot=snapshot,
-        providers=providers,
+        snapshot=SnapshotDescriptor(
+            snapshot_id=snapshot_id,
+            repository_root=".",
+            revision=request.revision,
+            dirty=request.dirty,
+        ),
+        providers=(
+            ProviderRun(
+                provider_id="semgrep",
+                adapter_version=provider.metadata.adapter_version,
+                provider_version=request.provider_version,
+                mode="import",
+                required=request.required,
+            ),
+        ),
         evidence=normalization.evidence,
         findings=normalization.findings,
         classifications=classifications,
         provider_failures=normalization.failures,
         coverage=(normalization.coverage,),
         limitations=normalization.limitations,
-        **optional_fields,
     )
+    # generated_at is explicit invocation provenance; override the wall-clock
+    # default only when the caller supplied it (QA-003).
+    if request.generated_at is not None:
+        bundle = replace(bundle, generated_at=request.generated_at)>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
     validation = validate_bundle(bundle)
     validation.require_valid()
     validate_redaction(bundle.to_dict()).require_valid()

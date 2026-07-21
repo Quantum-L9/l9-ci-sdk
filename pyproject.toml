@@ -1,54 +1,76 @@
 [build-system]
-requires = ["hatchling>=1.25.0"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "l9-ci"
-version = "1.0.0"
-description = "Canonical analysis contracts, provider adapters, normalized findings, validation, and deterministic artifact generation for Quantum-L9 CI."
+name = "l9-ci-sdk"
+description = "L9 CI SDK: canonical analysis contracts, provider adapters, normalized findings, validation, and deterministic artifact generation."
 readme = "README.md"
-license = { file = "LICENSE" }
 requires-python = ">=3.11"
-# Exact pins, mirroring requirements.txt. This is the version l9-ci-core's
-# provision-sdk action installs into its provisioning venv (via
-# requirements.txt) and the version `pip install -e .` resolves here — an
-# unpinned range would let those two diverge. Updating a version requires
-# updating both files together.
+license = { text = "Proprietary" }
+dynamic = ["version"]
+# Runtime dependencies. Abstract ranges here; exact pins for reproducible CI
+# installs live in constraints.txt (install with `pip install -c constraints.txt`).
 dependencies = [
-    "jsonschema==4.26.0",
-    "referencing==0.37.0",
-    "PyYAML==6.0.3",
+    "jsonschema>=4.18,<5",
+    "referencing>=0.30,<1",
+    "PyYAML>=6,<7",
 ]
 
-# Mirrors requirements-ci.txt (exact pins; the current, active local-gate
-# toolchain documented in AGENTS.md), not the pre-v2 ci extras group.
-# bandit/pip-audit/safety/pip-licenses/pytest-asyncio/pytest-xdist/
-# pytest-timeout are not invoked anywhere in this codebase's tests or
-# workflows, so they are not carried forward as unused placeholders.
 [project.optional-dependencies]
-ci = [
-    "ruff==0.16.0",
+dev = [
+    "ruff==0.15.22",
     "mypy==2.3.0",
-    "types-PyYAML==6.0.12.20260724",
-    "types-jsonschema==4.26.0.20260518",
     "pytest==9.1.1",
+    "pytest-cov>=5,<8",
+    "types-jsonschema",
+    "types-PyYAML",>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
 ]
 
 [project.scripts]
 l9-ci = "l9_ci.__main__:main"
 
-[project.urls]
-Repository = "https://github.com/Quantum-L9/l9-ci-sdk"
+# Single version source of truth: the l9_ci.__version__ constant. The build
+# manifest derives its version from it, so an installed package and a source run
+# report the same value (AUD-009).
+[tool.setuptools.dynamic]
+version = { attr = "l9_ci.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["l9_ci*"]
+
+[tool.setuptools.package-data]
+l9_ci = ["schemas/v1/*.json"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["l9_ci", "tests", "scripts"]
+
+# Tests are type-checked for real type errors, but are not required to annotate
+# every fixture/helper (strict-on-tests would be churn without defect-detection
+# value). Product code (l9_ci) stays fully strict.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-norecursedirs = ["memory-bank", ".git", ".venv", "venv", "node_modules"]
+addopts = "-q"
 
-[tool.hatch.build.targets.wheel]
-packages = ["l9_ci"]
+[tool.coverage.run]
+branch = true
+source = ["l9_ci"]
 
-# Ruff and mypy are intentionally NOT configured here: ruff.toml is the single
-# lint authority (see its header comment) and takes precedence over any
-# [tool.ruff] table regardless; mypy currently runs with no dedicated config
-# section (`mypy l9_ci`, default settings) rather than reintroducing the
-# pre-v2 [tool.mypy] strictness settings as a side effect of this restore.
+[tool.coverage.report]
+show_missing = true
+# Ratcheting repository baseline. Raise this as coverage improves; CI fails on
+# regression below it. Critical decision modules are asserted at 100% branch
+# coverage by dedicated tests (gates/evaluator.py, artifacts/validator.py).
+fail_under = 73>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))

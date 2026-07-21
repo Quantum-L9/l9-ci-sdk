@@ -167,8 +167,10 @@ class SemgrepProvider:
                 report_path=(
                     request.output_path if request.output_path.exists() else None
                 ),
-                stdout=_as_text(exc.stdout),
-                stderr=_as_text(exc.stderr),
+                # text=True guarantees str, but TimeoutExpired types these as
+                # bytes | str | None; narrow to str for the result contract.
+                stdout=exc.stdout if isinstance(exc.stdout, str) else "",
+                stderr=exc.stderr if isinstance(exc.stderr, str) else "",>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
                 timed_out=True,
             )
         stdout = completed.stdout

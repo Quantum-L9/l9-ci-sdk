@@ -1,8 +1,8 @@
-# Consolidated Manifest
+# Manifest
 
-Files: 252
+Files: 252>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
 
-## Contents
+Files: 184
 
 - `.github/CODEOWNERS`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
@@ -255,4 +255,4 @@ Files: 252
 - `tests/repository/test_manifest.py`
 - `tests/repository/test_snapshot.py`
 - `tests/yaml/__init__.py`
-- `tests/yaml/test_yaml_governance.py`
+- `tests/yaml/test_yaml_governance.py`>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))

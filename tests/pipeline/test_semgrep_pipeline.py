@@ -1,3 +1,4 @@
+from typing import Any
 from pathlib import Path
 import pytest
 from l9_ci.artifacts import load_and_validate_bundle
@@ -118,7 +119,7 @@ def test_pipeline_output_is_reproducible(tmp_path: Path) -> None:
     write_policy(policy)
     first_path = tmp_path / "first.json"
     second_path = tmp_path / "second.json"
-    common = {
+    common: dict[str, Any] = {
         "report_path": FIXTURE,
         "repository_root": Path(".").resolve(),
         "snapshot_id": "snapshot-1",
@@ -153,7 +154,7 @@ def test_pipeline_content_identity_is_clock_independent(tmp_path: Path) -> None:
     policy = tmp_path / "policy.yaml"
     write_identity_map(identity_map)
     write_policy(policy)
-    common = {
+    common: dict[str, Any] = {
         "report_path": FIXTURE,
         "repository_root": Path(".").resolve(),
         "snapshot_id": "snapshot-1",

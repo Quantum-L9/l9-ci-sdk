@@ -6,6 +6,7 @@ import json
 import sys
 from importlib.resources import files
 from pathlib import Path
+from typing import Any
 from l9_ci.cli import ExitCode
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
@@ -76,7 +77,7 @@ def handle_project_agent_payload(args: argparse.Namespace) -> int:
     return int(ExitCode.SUCCESS)
 
 
-def _validate_agent_payload_schema(payload: dict) -> None:
+def _validate_agent_payload_schema(payload: dict[str, Any]) -> None:
     schema_path = (
         files("l9_ci")
         .joinpath("schemas")
