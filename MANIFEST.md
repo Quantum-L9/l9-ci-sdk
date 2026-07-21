@@ -21,7 +21,7 @@ Files: 184
 | `28d5b6fd052ac251b160dd75404f24b00ef0e7013a62500aee2d560bf5f72692` | `.github/workflows/l9-analysis.yml` |
 | `6c0c8765a08b39f2834946ca7bc31de9b5f093805afd2410cf11483f12ef9e26` | `.gitignore` |
 | `1dfd996858006447d572b0e85ecfa243e4ebcb82a30dbb098a20e8952dd85e90` | `.l9/architecture.yaml` |
-| `207914428cfd85dfd488d83f2657939c9a61cbb404abb410d1bd29668f6622ca` | `.l9/audit-findings.md` |
+| `273c154aa2bf6692e17f79d31d4b7cbfc4511855b2d37d62d6702e356745c73e` | `.l9/audit-findings.md` |
 | `90dd93edae5948ed8a718df94ea3a7f508b06c3143185fa5bd7bf9225fd62d09` | `.l9/compatibility.yaml` |
 | `6b2914f8b3c3c8cfb92d1b255d9f18a13fbb352b798c4984ce9f52ccf137d1c8` | `.l9/integration-contract.yaml` |
 | `87388e2978d214acce5da6fd31b7c30ea2d0cb976774b8258c03efe8c15378a4` | `.l9/ownership.yaml` |

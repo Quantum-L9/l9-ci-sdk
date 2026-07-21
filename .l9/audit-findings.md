@@ -14,14 +14,14 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 ## Architecture conformance
 
 - [x] **AUD-001** H 🚫 — Providers must not depend on integration. *(moved `SemanticVersion` to contracts — `65715d0`)*
-- [ ] **AUD-002** H 🚫 — Architecture tests must enforce the complete authoritative dependency graph. *(superseded in practice by QA-005's spec-derived recursive test; verify no gap remains, then close)*
+- [x] **AUD-002** H 🚫 — Architecture tests must enforce the complete authoritative dependency graph. *(reconciled may_depend_on + positive-allowlist enforcement — `1c74931`)*
 - [x] **AUD-003** H 🚫 — Required provider failures must prevent a successful strict gate. *(evaluator fail-closed — `672a23f`)*
 - [x] **AUD-004** H 🚫 — Unverified/missing scan coverage must not read as COMPLETE/PASS. *(coverage → PARTIAL without verified scan — `672a23f`)*
 - [ ] **AUD-005** H 🚫 — One canonical, test-enforced public API boundary.
 - [ ] **AUD-006** H — SDK must not own GitHub Actions workflow orchestration.
-- [ ] **AUD-007** H 🚫 — Validation evidence/inventory bound to the immutable commit.
-- [ ] **AUD-008** H 🚫 — Required unit/lint/format/architecture gates run continuously on the commit (self-validation CI).
-- [ ] **AUD-009** M — SDK version & installation identity: one reproducible source of truth.
+- [x] **AUD-007** H 🚫 — Validation evidence/inventory bound to the immutable commit. *(commit-bound generator + drift-checked manifest — `1c74931`)*
+- [x] **AUD-008** H 🚫 — Required unit/lint/format/architecture gates run continuously on the commit (self-validation CI). *(ci.yml added — `1c74931`; requiring it in branch protection is a pending repo-admin action)*
+- [x] **AUD-009** M — SDK version & installation identity: one reproducible source of truth. *(pyproject single version source + console script — `1c74931`)*
 - [ ] **AUD-010** M — Provider version policy enforced on the canonical normalization path before promotion. *(pipeline enforcement landed via DWA-004/QA-004; confirm promotion-gating wording, then close)*
 
 ## Dead-wiring & latent capability
@@ -43,16 +43,16 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 - [x] **QA-004** H 🚫 — Version-policy tests validate the canonical normalization path. *(pipeline-level version tests — `420d2b7`)*
 - [x] **QA-005** H 🚫 — Architecture boundary test is recursive and spec-derived. *(matrix from architecture.yaml + mutation proof — `65715d0`)*
 - [ ] **QA-006** H 🚫 — Core-facing CLI has command-handler / argparse integration tests.
-- [ ] **QA-007** H 🚫 — Static type gate proves public contracts & critical paths type-check.
-- [ ] **QA-008** M — Line/branch coverage target, measurement, and critical-path coverage evidence.
+- [x] **QA-007** H 🚫 — Static type gate proves public contracts & critical paths type-check. *(strict mypy over l9_ci/tests/scripts — `1c74931`)*
+- [x] **QA-008** M — Line/branch coverage target, measurement, and critical-path coverage evidence. *(pytest-cov branch ratchet + evaluator 100% — `1c74931`)*
 - [ ] **QA-009** M 🚫 — Public API tests assert exact equality (not subset).
 - [x] **QA-010** H 🚫 — Provider tested against a runtime-captured, provenance-bound report. *(full-path harness + scaffolding; capture is a tracked skip — `ad3a4ca`)*
 
 ## Status
 
-- Completed: 13 / 28 (AUD-001/003/004, DWA-001/003/004/006, QA-001/002/003/004/005/010)
-- Open: 15 / 28 — natural next batch: RC-004 release evidence (AUD-007), self-validation CI (AUD-008),
-  CLI/type/coverage tests (QA-006/007/008), exact public API (AUD-005/QA-009), and DWA-002/005/007/008.
+- Completed: 19 / 28 (AUD-001/002/003/004/007/008/009, DWA-001/003/004/006, QA-001/002/003/004/005/007/008/010)
+- Open: 9 / 28 — remaining: public surface & CLI (AUD-005, QA-009, DWA-005, QA-006),
+  provider runtime (DWA-002, DWA-007, DWA-008, AUD-010), and workflow ownership (AUD-006).
 
 Known caveats on completed items:
 - **QA-010** capture step skips until a real Semgrep fixture is captured (Semgrep binary unavailable in the audit
