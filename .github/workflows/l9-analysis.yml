@@ -1,28 +1,22 @@
-# L9 analysis caller
+# L9 analysis caller — this repository's OWN live analysis workflow.
 #
-# Dual-purpose file: this is BOTH the copy-in template for other repos AND the
-# live, triggering workflow for l9-ci-sdk's own PRs (see #12 — main had no
-# .github/ before, so Core was not active on this repo's own checks until this
-# file started running here). If you are adopting l9-ci-core in a different
-# repo, copy this file verbatim to .github/workflows/l9-analysis.yml there too.
+# Ownership (AUD-006): GitHub Actions orchestration, the reusable analysis
+# workflows, and the copy-in caller TEMPLATE are owned by l9-ci-core, NOT by this
+# SDK. This file is l9-ci-sdk's own minimal caller for its own PRs; it is not a
+# template to be copied verbatim into other repos (adopt Core's template from
+# l9-ci-core instead). Every real step below delegates to Core-owned composite
+# actions (provision-sdk, invoke-sdk, validate-bundle, route-artifacts) and
+# Core's reusable publish-analysis.yml. See .l9/ownership.yaml workflow_ownership.
 #
-# Works for Python AND Node.js repos: semgrep is the single, language-agnostic
-# provider the pinned SDK normalizes. The ONLY per-language difference is the
-# semgrep --config rulesets in the "Run semgrep" step below.
+# Why scan+normalize share one job (not a pure `uses:` thin caller): Core's
+# reusable normalize workflow re-checks-out github.sha and reads the report from
+# the tree, so it cannot receive a freshly-generated (uncommitted) report.
+# Shrinking this to a pure thin caller requires a Core-side reusable workflow
+# that accepts the raw report as an uploaded artifact (tracked in TODO.md).
 #
-# Topology (this is the wiring that actually works):
-#   job analyze  -> generates the semgrep report and runs the SDK pipeline in ONE
-#                   job so the freshly-generated report is on the same filesystem
-#                   (the reusable normalize workflow re-checks-out github.sha and
-#                   would NOT see an uncommitted report).
-#   job publish  -> calls Core's publish-analysis.yml, which DOWNLOADS the
-#                   uploaded artifact (no report-in-tree needed) and publishes the
-#                   GitHub check per the resolved governance mode.
-#
-# Prerequisite (only when copying this file into ANOTHER repo): also copy
-# .github/governance/*.yaml from this repo (that is the CI instantiation pack
-# the resolver reads). This repo's own copy already lives at
-# .github/governance/ alongside this workflow.
+# Topology:
+#   job analyze  -> runs semgrep, then the Core composite actions, in one job.
+#   job publish  -> calls Core's publish-analysis.yml (downloads the artifact).
 
 name: L9 Analysis
 

@@ -70,3 +70,22 @@ external_boundaries:
       - reconstruct canonical findings
       - mutate canonical bundles
       - synthesize rule identity
+# GitHub Actions workflow ownership (AUD-006).
+workflow_ownership:
+  owner: l9-ci-core
+  statement: >-
+    l9-ci-core owns GitHub Actions orchestration, the reusable analysis
+    workflows, artifact upload, and the copy-in caller TEMPLATE. The SDK is NOT a
+    workflow-template authority: the files under .github/workflows/ here are this
+    repository's OWN minimal live callers, not a template to be copied verbatim
+    into other repos. All real work delegates to Core-owned composite actions
+    (provision-sdk, invoke-sdk, validate-bundle, route-artifacts) and Core's
+    reusable publish-analysis.yml.
+  remaining_core_side_requirement: >-
+    The SDK caller still runs `semgrep scan` and hands the report to Core's
+    composite actions within one job because Core's reusable normalize workflow
+    (normalize-semgrep-report.yml) re-checks-out github.sha and reads the report
+    from the tree, so it cannot receive a freshly-generated (uncommitted) report.
+    To let the SDK caller shrink to a pure `uses:` thin caller, l9-ci-core must
+    provide a reusable analysis workflow that accepts the raw report as an
+    uploaded ARTIFACT rather than an in-tree path. Tracked in this repo's TODO.md.

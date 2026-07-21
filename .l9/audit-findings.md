@@ -18,7 +18,7 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 - [x] **AUD-003** H 🚫 — Required provider failures must prevent a successful strict gate. *(evaluator fail-closed — `672a23f`)*
 - [x] **AUD-004** H 🚫 — Unverified/missing scan coverage must not read as COMPLETE/PASS. *(coverage → PARTIAL without verified scan — `672a23f`)*
 - [x] **AUD-005** H 🚫 — One canonical, test-enforced public API boundary. *(`.l9/public-api.yaml` drives root exports/docs/exact-equality tests — `PR6`)*
-- [ ] **AUD-006** H — SDK must not own GitHub Actions workflow orchestration.
+- [~] **AUD-006** H — SDK must not own GitHub Actions workflow orchestration. *(PARTIAL — `PR8`: removed the template-authority framing, recorded Core ownership in `.l9/ownership.yaml`. Full thin-caller conversion is blocked on a Core-side reusable workflow that accepts the raw report as an artifact — Core's current one reads report-in-tree. Tracked in `TODO.md`.)*
 - [x] **AUD-007** H 🚫 — Validation evidence/inventory bound to the immutable commit. *(commit-bound generator + drift-checked manifest — `1c74931`)*
 - [x] **AUD-008** H 🚫 — Required unit/lint/format/architecture gates run continuously on the commit (self-validation CI). *(ci.yml added — `1c74931`; requiring it in branch protection is a pending repo-admin action)*
 - [x] **AUD-009** M — SDK version & installation identity: one reproducible source of truth. *(pyproject single version source + console script — `1c74931`)*
@@ -51,7 +51,9 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 ## Status
 
 - Completed: 27 / 28 (all AUD except 006; all DWA; all QA)
-- Open: 1 / 28 — workflow ownership (AUD-006), cross-repo with l9-ci-core.
+- Partial: 1 / 28 — AUD-006 (workflow ownership): SDK-side framing + ownership
+  docs done; full orchestration hand-off blocked on a Core-side reusable
+  workflow (report-as-artifact). See TODO.md.
 
 Known caveats on completed items:
 - **QA-010** capture step skips until a real Semgrep fixture is captured (Semgrep binary unavailable in the audit

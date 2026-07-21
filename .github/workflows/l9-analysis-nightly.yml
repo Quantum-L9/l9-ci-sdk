@@ -1,28 +1,11 @@
-# L9 analysis caller
+# L9 analysis caller — this repository's OWN live analysis workflow (variant).
 #
-# Dual-purpose file: this is BOTH the copy-in template for other repos AND the
-# live, triggering workflow for l9-ci-sdk's own PRs (see #12 — main had no
-# .github/ before, so Core was not active on this repo's own checks until this
-# file started running here). If you are adopting l9-ci-core in a different
-# repo, copy this file verbatim to .github/workflows/l9-analysis.yml there too.
-#
-# Works for Python AND Node.js repos: semgrep is the single, language-agnostic
-# provider the pinned SDK normalizes. The ONLY per-language difference is the
-# semgrep --config rulesets in the "Run semgrep" step below.
-#
-# Topology (this is the wiring that actually works):
-#   job analyze  -> generates the semgrep report and runs the SDK pipeline in ONE
-#                   job so the freshly-generated report is on the same filesystem
-#                   (the reusable normalize workflow re-checks-out github.sha and
-#                   would NOT see an uncommitted report).
-#   job publish  -> calls Core's publish-analysis.yml, which DOWNLOADS the
-#                   uploaded artifact (no report-in-tree needed) and publishes the
-#                   GitHub check per the resolved governance mode.
-#
-# Prerequisite (only when copying this file into ANOTHER repo): also copy
-# .github/governance/*.yaml from this repo (that is the CI instantiation pack
-# the resolver reads). This repo's own copy already lives at
-# .github/governance/ alongside this workflow.
+# Ownership (AUD-006): GitHub Actions orchestration, the reusable analysis
+# workflows, and the copy-in caller template are owned by l9-ci-core, NOT this
+# SDK. This is l9-ci-sdk's own minimal caller for its own runs; it is not a
+# template to be copied into other repos. All real steps delegate to Core-owned
+# composite actions and Core's reusable publish-analysis.yml. See
+# .l9/ownership.yaml workflow_ownership and .github/workflows/l9-analysis.yml.
 
 name: L9 Analysis (Nightly)
 
