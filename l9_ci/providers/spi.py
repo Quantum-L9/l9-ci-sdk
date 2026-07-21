@@ -22,7 +22,10 @@ class ProviderExecutionRequest:
     output_size_limit_bytes: int
     environment: Mapping[str, str] = field(default_factory=dict)
     arguments: tuple[str, ...] = ()
-    network_allowed: bool = False
+    # NOTE: a `network_allowed` flag was removed (DWA-008). The SDK executes
+    # providers via subprocess and cannot enforce network isolation, so the flag
+    # was inert and created false assurance. Network isolation is an explicit
+    # l9-ci-core execution-environment guarantee, not an SDK-owned control.
 
     def __post_init__(self) -> None:
         if self.timeout_seconds <= 0:
@@ -102,6 +105,15 @@ class Provider(Protocol):
         request: ProviderExecutionRequest,
     ) -> ProviderExecutionResult:
         """Execute the provider using bounded process controls."""
+
+    def execution_failure(
+        self,
+        result: ProviderExecutionResult,
+        *,
+        required: bool,
+        provider_version: str | None,
+    ) -> ProviderFailure | None:
+        """Classify a raw execution result into a structured failure, or None."""
 
     def validate_report_shape(
         self,

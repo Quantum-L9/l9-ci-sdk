@@ -22,18 +22,18 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 - [x] **AUD-007** H 🚫 — Validation evidence/inventory bound to the immutable commit. *(commit-bound generator + drift-checked manifest — `1c74931`)*
 - [x] **AUD-008** H 🚫 — Required unit/lint/format/architecture gates run continuously on the commit (self-validation CI). *(ci.yml added — `1c74931`; requiring it in branch protection is a pending repo-admin action)*
 - [x] **AUD-009** M — SDK version & installation identity: one reproducible source of truth. *(pyproject single version source + console script — `1c74931`)*
-- [ ] **AUD-010** M — Provider version policy enforced on the canonical normalization path before promotion. *(pipeline enforcement landed via DWA-004/QA-004; confirm promotion-gating wording, then close)*
+- [x] **AUD-010** M — Provider version policy enforced on the canonical normalization path before promotion. *(promotion-gate guard test ties ProviderState to release-policy blockers — `PR7`)*
 
 ## Dead-wiring & latent capability
 
 - [x] **DWA-001** H 🚫 — Registry-backed selection reachable from a runtime entrypoint. *(lifecycle seam — `420d2b7`)*
-- [ ] **DWA-002** H 🚫 — Bounded provider execution & structured execution-failure mapping have a production caller. *(deferred: changes the Core/CI execution contract; next batch)*
+- [x] **DWA-002** H 🚫 — Bounded provider execution & structured execution-failure mapping have a production caller. *(generic runner behind execute mode; execution_failure promoted to the SPI — `PR7`)*
 - [x] **DWA-003** H 🚫 — Canonical gate evaluation carried into the Core-facing artifact flow. *(contract + docs — `672a23f`)*
 - [x] **DWA-004** H 🚫 — Semgrep version enforcement connected to the import/normalization path. *(pipeline version gate — `420d2b7`)*
 - [x] **DWA-005** M 🚫 — Structured `Diagnostic` rendering used by command handlers. *(centralized CLI error boundary honoring --format on every command — `PR6`)*
 - [x] **DWA-006** M — `ExecutionProfile.import_reports` read by provider selection. *(selection now honors import_reports — `420d2b7`)*
-- [ ] **DWA-007** M — Autofix projection has a trusted producer for `remediation_class`.
-- [ ] **DWA-008** M — `ProviderExecutionRequest.network_allowed` is an enforced (not inert) control.
+- [x] **DWA-007** M — Autofix projection has a trusted producer for `remediation_class`. *(versioned canonical-rule→class map, post-identity; ships empty, owner-populated — `PR7`)*
+- [x] **DWA-008** M — `ProviderExecutionRequest.network_allowed` is an enforced (not inert) control. *(removed — SDK subprocess can't enforce network isolation; it's a Core guarantee — `PR7`)*
 
 ## Quality & test effectiveness
 
@@ -50,8 +50,8 @@ Legend: `[x]` done · `[ ]` open · **H/M** = high/medium · **🚫** = blocks r
 
 ## Status
 
-- Completed: 23 / 28 (AUD-001/002/003/004/005/007/008/009, DWA-001/003/004/005/006, QA-001/002/003/004/005/006/007/008/009/010)
-- Open: 5 / 28 — remaining: provider runtime (DWA-002, DWA-007, DWA-008, AUD-010) and workflow ownership (AUD-006).
+- Completed: 27 / 28 (all AUD except 006; all DWA; all QA)
+- Open: 1 / 28 — workflow ownership (AUD-006), cross-repo with l9-ci-core.
 
 Known caveats on completed items:
 - **QA-010** capture step skips until a real Semgrep fixture is captured (Semgrep binary unavailable in the audit

@@ -21,7 +21,7 @@ Files: 189
 | `28d5b6fd052ac251b160dd75404f24b00ef0e7013a62500aee2d560bf5f72692` | `.github/workflows/l9-analysis.yml` |
 | `6c0c8765a08b39f2834946ca7bc31de9b5f093805afd2410cf11483f12ef9e26` | `.gitignore` |
 | `1dfd996858006447d572b0e85ecfa243e4ebcb82a30dbb098a20e8952dd85e90` | `.l9/architecture.yaml` |
-| `cd90c2970ee4c1255bff869d36f5c0304d599b341a4342913098d306fba25820` | `.l9/audit-findings.md` |
+| `158f0e7e1d923713307e425ed381dc793c1f075f4efcf256bb98fe06d4347165` | `.l9/audit-findings.md` |
 | `90dd93edae5948ed8a718df94ea3a7f508b06c3143185fa5bd7bf9225fd62d09` | `.l9/compatibility.yaml` |
 | `6b2914f8b3c3c8cfb92d1b255d9f18a13fbb352b798c4984ce9f52ccf137d1c8` | `.l9/integration-contract.yaml` |
 | `87388e2978d214acce5da6fd31b7c30ea2d0cb976774b8258c03efe8c15378a4` | `.l9/ownership.yaml` |
@@ -110,9 +110,9 @@ Files: 189
 | `515907f585c12cd293160f1704ab51d3836b4536cffe2510e148b8f8149a4dbf` | `l9_ci/integration/projection.py` |
 | `9b0c1f57bf9b3752a0a5ab745ef5778a043c46b8278e622ef40a6264695fb7b1` | `l9_ci/integration/redaction.py` |
 | `9dea63bc87ee9348730881318fff370fd86669a4c5a93036c986dbf81cb7aaba` | `l9_ci/integration/versioning.py` |
-| `20c970e630fdc05cc6835d973a581dc4e7cdf33a9623c0dc0ea5debde24a6e7a` | `l9_ci/pipeline/__init__.py` |
+| `ff6ecce14075f05364a4146c2e3337390a5cf9b7fcf52f1b8d9f3dcb8b91d9ec` | `l9_ci/pipeline/__init__.py` |
 | `0e0586f43a513014a084fc7022dfb410e7ef9289edce67fbd38a5e6c4c2462ee` | `l9_ci/pipeline/lifecycle.py` |
-| `77f01cea52a88f4922aed2ae52c8d56544c559e1a05e288a6cd5d25715850e0c` | `l9_ci/pipeline/semgrep.py` |
+| `8a34d25c5ce7f8204aaadd971ef7536aea7e541dfeb6c8c53f125e2348b9dc17` | `l9_ci/pipeline/semgrep.py` |
 | `d8170cf547309e41af1c96624f31f72d68b166f949eb49a2a216446a68a8bb9e` | `l9_ci/policy/__init__.py` |
 | `1568d8d63ce2731b590daca71f82d1d45f34218e0b937ab5da0085e745a28034` | `l9_ci/policy/classifier.py` |
 | `73041480c6647207b11c5f5bc420b326ac51bcbeb868e5ad873d7b00b065dc51` | `l9_ci/policy/model.py` |
@@ -124,7 +124,7 @@ Files: 189
 | `a826912d61c6965f24ccff2dcdca9125e2d029c71dbccb5ea21194401cd059d4` | `l9_ci/providers/semgrep/provider.py` |
 | `806b9e89851eba65554f670fd2cf8b58fd575070fbe775429949c77efad7a953` | `l9_ci/providers/semgrep/report.py` |
 | `eadc585f1aab62f21c1a748b9aaa8749488e69e77ac6d3eaade4d753c1a802a1` | `l9_ci/providers/semgrep/versioning.py` |
-| `8a88a0be5da1cb9fe498cb3ffe6ca8448920d3cc227ec3a07430e34edb3a870d` | `l9_ci/providers/spi.py` |
+| `951fbd398bc354227f571fa36f51c60583c1db438b24dba4d49c9537b2461cbb` | `l9_ci/providers/spi.py` |
 | `190cd03e63da3c86ac44393e7571ba1894bcde5b94d8af528ec2eefac0fdcdae` | `l9_ci/repository/__init__.py` |
 | `d5276d5628f49bfd506c8615414108ec77de7680796be39cecb62ade3a6da2c6` | `l9_ci/repository/enumerator.py` |
 | `cfbb040d57bb139cd948621bf8e667fd1c43d0ca7505cc82b9897cc3a72dba0a` | `l9_ci/repository/git.py` |
