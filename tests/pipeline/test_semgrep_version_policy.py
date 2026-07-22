@@ -1,14 +1,11 @@
-"""Pipeline-level Semgrep version enforcement (DWA-004, QA-004).
-
-The version policy previously existed only in a helper that the pipeline never
-called, so an unsupported (or unparseable) provider version could be recorded in
-a canonical bundle. These tests assert the pipeline rejects such versions before
-any bundle is written, and accepts supported versions.
-"""
+"""Canonical pipeline Semgrep provenance enforcement."""
 
 from __future__ import annotations
+
 from pathlib import Path
+
 import pytest
+
 from l9_ci.pipeline import (
     SemgrepPipelineRequest,
     UnsupportedProviderVersionError,
@@ -32,30 +29,20 @@ def _request(tmp_path: Path, version: str | None) -> SemgrepPipelineRequest:
 
 @pytest.mark.parametrize(
     "version",
-    [
-        "fixture-version",  # not a semantic version at all
-        "1.99.0",  # below the 1.100.0 minimum
-        "0.1.2",  # far below minimum
-        "2.0.0",  # at the exclusive 2.0.0 upper bound (unvalidated major)
-        "2.1.3",  # above the upper bound
-    ],
+    ["fixture-version", "1.99.0", "0.1.2", "2.0.0", "2.1.3"],
 )
 def test_pipeline_rejects_unsupported_version(tmp_path: Path, version: str) -> None:
     with pytest.raises(UnsupportedProviderVersionError):
         run_semgrep_pipeline(_request(tmp_path, version))
-    # No canonical bundle may be produced from an unsupported report version.
     assert not (tmp_path / "bundle.json").exists()
 
 
-@pytest.mark.parametrize("version", ["1.100.0", "1.101.2", "1.999.999"])
+@pytest.mark.parametrize("version", ["1.100.0", "1.170.0", "1.999.999"])
 def test_pipeline_accepts_supported_version(tmp_path: Path, version: str) -> None:
-    # Default policy is the closed range >=1.100.0,<2.0.0: both edges are
-    # exercised here (lowest supported version and the highest version below
-    # the exclusive 2.0.0 bound). Unvalidated majors are rejected above.
-    result = run_semgrep_pipeline(_request(tmp_path, version))
-    assert result.output_path.exists()
+    assert run_semgrep_pipeline(_request(tmp_path, version)).output_path.exists()
 
 
-def test_missing_version_skips_enforcement(tmp_path: Path) -> None:
-    result = run_semgrep_pipeline(_request(tmp_path, None))
-    assert result.output_path.exists()
+def test_import_rejects_missing_report_provenance(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="provider_version"):
+        run_semgrep_pipeline(_request(tmp_path, None))
+    assert not (tmp_path / "bundle.json").exists()
