@@ -32,15 +32,19 @@ The exact exported symbol set per package is listed in `.l9/public-api.yaml`.
 Example imports:
 
 ```python
-from l9_ci.contracts import FindingBundle, GateStatus, SemanticVersion
+from l9_ci.contracts import FindingBundle, SemanticVersion
 from l9_ci.providers import Provider, ProviderRegistry, SemgrepProvider
 from l9_ci.artifacts import load_and_validate_bundle, validate_bundle
-from l9_ci.gates import evaluate_gate
+from l9_ci.gates import GateStatus, evaluate_gate
 from l9_ci.cli import Diagnostic, ExitCode, OutputFormat
 ```
 
-Note: `SemanticVersion` has a single public home — `l9_ci.contracts`. It is used
-internally by `l9_ci.integration` but is not re-exported there.
+Note: `SemanticVersion` has a single canonical public home — `l9_ci.contracts`.
+`l9_ci.integration.SemanticVersion` remains importable, but only as a
+deprecated compatibility alias recorded in the manifest's
+`compatibility_allowlist` (AUD-001: the symbol originally shipped from
+`integration` and its removal was an unannounced breaking change). New code
+must import it from `l9_ci.contracts`.
 
 ## Stability
 

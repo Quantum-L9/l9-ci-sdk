@@ -87,8 +87,9 @@ packages:
     - GateResult
     - GateStatus
     - evaluate_gate
-  # SemanticVersion is canonical in l9_ci.contracts and is intentionally NOT
-  # re-exported from l9_ci.integration (AUD-005: one canonical home per symbol).
+  # SemanticVersion is canonical in l9_ci.contracts (AUD-005: one canonical
+  # home per symbol); l9_ci.integration carries only a deprecated
+  # compatibility alias, recorded in compatibility_allowlist below (AUD-001).
   l9_ci.integration:
     - AGENT_REVIEW_PAYLOAD_PROTOCOL
     - AGENT_REVIEW_PAYLOAD_SCHEMA_VERSION
@@ -109,4 +110,12 @@ packages:
     - render_success
 # Intentional deviations from the exact set, if any, recorded for compatibility
 # review. Empty = every package's __all__ must equal its list above exactly.
-compatibility_allowlist: {}
+compatibility_allowlist:
+  # AUD-001 remediation: SemanticVersion originally shipped from
+  # l9_ci.integration and was moved to l9_ci.contracts (65715d0) without an
+  # alias — a breaking change for existing importers. This deprecated
+  # re-export preserves compatibility; removal is a versioned decision under
+  # .l9/compatibility.yaml (deprecate now, drop no earlier than the next
+  # major release).
+  l9_ci.integration:
+    - SemanticVersion

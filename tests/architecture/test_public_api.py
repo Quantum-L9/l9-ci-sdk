@@ -68,10 +68,19 @@ def test_every_exported_symbol_is_importable() -> None:
 
 
 def test_semantic_version_has_one_public_home() -> None:
-    # Regression for the AUD-005 duplicate: SemanticVersion is public in
-    # contracts only, not integration.
+    # Regression for the AUD-005 duplicate: SemanticVersion's canonical home is
+    # contracts. Integration may only carry it as a deprecated compatibility
+    # alias declared in compatibility_allowlist (AUD-001), never as a second
+    # canonical listing under packages.
     assert "SemanticVersion" in PACKAGES["l9_ci.contracts"]
     assert "SemanticVersion" not in PACKAGES["l9_ci.integration"]
+    assert "SemanticVersion" in ALLOWLIST.get("l9_ci.integration", [])
+
+
+def test_deprecated_semantic_version_alias_is_the_same_object() -> None:
+    # AUD-001: the compatibility alias must be a re-export of the canonical
+    # class, not a divergent copy.
+    import l9_ci.contracts as contracts
     import l9_ci.integration as integration
 
-    assert "SemanticVersion" not in getattr(integration, "__all__", [])
+    assert integration.SemanticVersion is contracts.SemanticVersion
