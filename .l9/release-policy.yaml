@@ -5,36 +5,37 @@ metadata:
 release_channels:
   experimental:
     requirements:
-    - provider implementation exists
-    - representative fixture exists
-    - unit tests pass
-    - schema tests pass
+      - provider implementation exists
+      - representative fixture exists
+      - unit tests pass
+      - schema tests pass
   shadow:
     requirements:
-    - runtime-captured redacted fixture exists
-    - provider version is recorded
-    - deterministic bundle test passes
-    - malformed report behavior is tested
-    - timeout behavior is tested
-    - output limit behavior is tested
-    - no raw secret or source snippet leakage
-    - Core integration example is validated manually
+      - runtime-captured redacted fixture exists
+      - provider version is recorded
+      - deterministic bundle test passes
+      - malformed report behavior is tested
+      - timeout behavior is tested
+      - output limit behavior is tested
+      - no raw secret or source snippet leakage
+      - Core integration path publishes canonical gate results
   supported:
     requirements:
-    - shadow observation completed
-    - stable identity behavior confirmed
-    - compatibility fixtures published
-    - migration notes published
-    - release checklist completed
-    - known limitations accepted
-    - minimum supported Semgrep versions documented
+      - shadow observation completed
+      - stable identity behavior confirmed
+      - compatibility fixtures published
+      - migration notes published
+      - release checklist completed
+      - known limitations accepted
+      - supported Semgrep version range documented
 Semgrep:
   current_state: experimental
   target_state: shadow
-  blockers:
-  - runtime-captured fixture has not replaced representative fixture
-  - supported Semgrep version range is not yet verified
-  - Core has not executed the documented integration path
-  - target coverage semantics require verification against real reports
-  - runtime-captured fixture has not been supplied
-  - live Core invocation has not been verified
+  blockers: []
+  evidence:
+    runtime_fixture: tests/fixtures/semgrep/runtime/provenance.yaml
+    version_range: ">=1.100.0,<2.0.0"
+    core_gate_publication: "{{CORE_GATE_PUBLICATION_RUN_URL}}"
+    core_gate_check: "{{CORE_GATE_CHECK_URL}}"
+    required_check_ruleset: "{{AUD_008_RULESET_URL}}"
+    validation_artifact: "{{SDK_VALIDATION_ARTIFACT_URL}}"

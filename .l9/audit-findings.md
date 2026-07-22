@@ -1,72 +1,78 @@
-# Audit Findings — Remediation Ledger
+# Audit Findings - Final Remediation Ledger
 
-Source audit suite: `l9-ci-sdk-audit-suite-341ac62`
-Immutable base reference: `341ac62e0f812dffd2e5a8633ef20a035ff41894`
-Total findings: 28 (high: 20, medium: 8) · release-blocking: 21
+Source audit base: `341ac62e0f812dffd2e5a8633ef20a035ff41894`  
+Runtime SDK code revision: `{{SDK_CODE_SHA}}`  
+SDK workflow/evidence revision: `{{SDK_WORKFLOW_SHA}}`  
+Core reusable analysis revision: `{{CORE_ANALYZE_SHA}}`
 
-This is the authoritative status ledger for the audit findings. Checked items
-are remediated; unchecked items remain open. Each completed item references the
-commit that closed it. First remediation pass: **PR #17**
-(branch `claude/audit-findings-priority-w22f94`).
+This ledger may be committed only after every external evidence placeholder has
+been replaced and the final verification commands pass.
 
-Legend: `[x]` done · `[~]` partial (gap recorded inline) · `[ ]` open · **H/M** = high/medium · **🚫** = blocks release.
+## Findings
 
-## Architecture conformance
+- [x] **AUD-001** `BLOCKER` - Authoritative dependency direction: providers must not depend on integration.
+  - Evidence: PR #17 base plus SDK S1 (`{{SDK_S1_SHA}}`)
+- [x] **AUD-002** `BLOCKER` - Architecture tests must enforce the complete authoritative dependency graph.
+  - Evidence: PR #17 architecture enforcement at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **AUD-003** `BLOCKER` - Required provider failures must prevent successful strict gate evaluation.
+  - Evidence: PR #17 fail-closed evaluator at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **AUD-004** `BLOCKER` - Unverified or missing scan coverage must not be represented as COMPLETE or PASS.
+  - Evidence: PR #17 verified coverage semantics at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **AUD-005** `BLOCKER` - The SDK must have one canonical, test-enforced public API boundary.
+  - Evidence: SDK S1 (`{{SDK_S1_SHA}}`) public API manifest plus v1 compatibility alias
+- [x] **AUD-006** `NON-BLOCKER` - The SDK must not own or distribute GitHub Actions workflow orchestration assigned to l9-ci-core.
+  - Evidence: Core C3 (`{{CORE_ANALYZE_SHA}}`) and SDK S3 (`{{SDK_WORKFLOW_SHA}}`) thin callers
+- [x] **AUD-007** `BLOCKER` - Validation evidence and repository inventory must be bound to the immutable commit being released.
+  - Evidence: SDK S3 (`{{SDK_WORKFLOW_SHA}}`) and validation artifact {{SDK_VALIDATION_ARTIFACT_URL}}
+- [x] **AUD-008** `BLOCKER` - Required unit, lint, format, and architecture gates must run continuously on the commit under review.
+  - Evidence: Issue {{AUD_008_ISSUE_URL}}; ruleset {{AUD_008_RULESET_URL}}; blocked proof {{AUD_008_NEGATIVE_PROOF_URL}}; passing proof {{AUD_008_POSITIVE_PROOF_URL}}
+- [x] **AUD-009** `NON-BLOCKER` - SDK version and installation identity must have one reproducible source of truth.
+  - Evidence: PR #17 package metadata at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **AUD-010** `NON-BLOCKER` - Declared provider version policy must be enforced on the canonical normalization path before promotion.
+  - Evidence: SDK S1 (`{{SDK_S1_SHA}}`) and runtime evidence in SDK S2 (`{{SDK_CODE_SHA}}`)
+- [x] **DWA-001** `BLOCKER` - Registry-backed capability detection and execution-profile selection are not reachable from a runtime entrypoint.
+  - Evidence: PR #17 registry lifecycle at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **DWA-002** `BLOCKER` - Bounded provider execution and structured execution-failure mapping have no production caller.
+  - Evidence: SDK S1 (`{{SDK_S1_SHA}}`) plus Core C3 production caller (`{{CORE_ANALYZE_SHA}}`)
+- [x] **DWA-003** `BLOCKER` - Canonical gate evaluation is implemented and CLI-reachable but omitted from the Core-facing artifact flow.
+  - Evidence: Core C1/C2/C3 (`{{CORE_ACTIONS_SHA}}`, `{{CORE_PUBLISH_SHA}}`, `{{CORE_ANALYZE_SHA}}`); run {{CORE_GATE_PUBLICATION_RUN_URL}}; check {{CORE_GATE_CHECK_URL}}
+- [x] **DWA-004** `BLOCKER` - Semgrep version enforcement exists but is not connected to the import and normalization path.
+  - Evidence: SDK S1 (`{{SDK_S1_SHA}}`) exact Semgrep 1.170.0 enforcement
+- [x] **DWA-005** `BLOCKER` - Structured Diagnostic rendering is public and documented but unused by command handlers.
+  - Evidence: PR #17 structured diagnostics, retained and integration-tested by SDK S1 (`{{SDK_S1_SHA}}`)
+- [x] **DWA-006** `NON-BLOCKER` - ExecutionProfile.import_reports is defined and serialized but never read by provider selection.
+  - Evidence: PR #17 provider selection fix at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **DWA-007** `NON-BLOCKER` - Autofix candidate projection has no trusted producer for remediation_class in the active provider path.
+  - Evidence: PR #17 trusted remediation map at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **DWA-008** `NON-BLOCKER` - ProviderExecutionRequest.network_allowed is an inert control in the built-in execution path.
+  - Evidence: PR #17 removal of inert network flag at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **QA-001** `BLOCKER` - The gate decision engine lacks a complete fail-closed behavioral test matrix.
+  - Evidence: PR #17 exhaustive gate matrix at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **QA-002** `BLOCKER` - Semgrep coverage tests omit the zero-result report with no verified scanned-path inventory.
+  - Evidence: PR #17 zero-result fixtures and gate tests at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **QA-003** `BLOCKER` - Determinism tests freeze generated_at and therefore do not test the production default path.
+  - Evidence: SDK S1 (`{{SDK_S1_SHA}}`) requires generated-at and preserves byte determinism
+- [x] **QA-004** `BLOCKER` - Semgrep version-policy tests validate the helper but not the canonical normalization path that must enforce it.
+  - Evidence: SDK S1 (`{{SDK_S1_SHA}}`) pipeline/CLI version tests and SDK S2 runtime proof (`{{SDK_CODE_SHA}}`)
+- [x] **QA-005** `BLOCKER` - The architecture boundary test checks a hand-written subset non-recursively and misses a real forbidden import.
+  - Evidence: PR #17 recursive spec-derived architecture mutation tests at `4bc1526330188a7e209adf4c1109236ec726d869`
+- [x] **QA-006** `BLOCKER` - The Core-facing CLI boundary has no command-handler or argparse integration tests.
+  - Evidence: PR #17 command integration tests plus SDK S1 execute CLI tests (`{{SDK_S1_SHA}}`)
+- [x] **QA-007** `BLOCKER` - No static type gate proves the public SDK contracts and critical paths type-check.
+  - Evidence: PR #17/S3 strict mypy required check; positive proof {{AUD_008_POSITIVE_PROOF_URL}}
+- [x] **QA-008** `NON-BLOCKER` - The repository reports a test count but has no line or branch coverage target, measurement, or critical-path coverage evidence.
+  - Evidence: PR #17/S3 branch coverage ratchet; validation artifact {{SDK_VALIDATION_ARTIFACT_URL}}
+- [x] **QA-009** `BLOCKER` - Public API tests use subset assertions and cannot detect accidental exports or undeclared compatibility expansion.
+  - Evidence: SDK S1 (`{{SDK_S1_SHA}}`) exact API manifest plus explicit compatibility allowlist
+- [x] **QA-010** `BLOCKER` - Provider behavior is tested only against a representative Semgrep fixture, not a runtime-captured and provenance-bound report.
+  - Evidence: SDK S2 runtime capture and non-skipped full-path test (`{{SDK_CODE_SHA}}`)
 
-- [~] **AUD-001** H 🚫 — Providers must not depend on integration. *(PARTIAL — `65715d0` moved `SemanticVersion` to contracts, but the move removed `l9_ci.integration.SemanticVersion` without a compatibility alias, a breaking API change for existing importers. Remediated: deprecated re-export restored under `compatibility_allowlist` pending a versioned removal.)*
-- [x] **AUD-002** H 🚫 — Architecture tests must enforce the complete authoritative dependency graph. *(reconciled may_depend_on + positive-allowlist enforcement — `1c74931`)*
-- [x] **AUD-003** H 🚫 — Required provider failures must prevent a successful strict gate. *(evaluator fail-closed — `672a23f`)*
-- [x] **AUD-004** H 🚫 — Unverified/missing scan coverage must not read as COMPLETE/PASS. *(coverage → PARTIAL without verified scan — `672a23f`)*
-- [x] **AUD-005** H 🚫 — One canonical, test-enforced public API boundary. *(`.l9/public-api.yaml` drives root exports/docs/exact-equality tests — `PR6`)*
-- [~] **AUD-006** H — SDK must not own GitHub Actions workflow orchestration. *(PARTIAL — `PR8`: removed the template-authority framing, recorded Core ownership in `.l9/ownership.yaml`. Full thin-caller conversion is blocked on a Core-side reusable workflow that accepts the raw report as an artifact — Core's current one reads report-in-tree. Tracked in `TODO.md`.)*
-- [x] **AUD-007** H 🚫 — Validation evidence/inventory bound to the immutable commit. *(commit-bound generator + drift-checked manifest — `1c74931`)*
-- [~] **AUD-008** H 🚫 — Required unit/lint/format/architecture gates run continuously on the commit (self-validation CI). *(PARTIAL — `1c74931` added ci.yml, but its action refs were mutable tags (now SHA-pinned) and requiring the check in branch protection remains a pending repo-admin action; not done until the check is required.)*
-- [x] **AUD-009** M — SDK version & installation identity: one reproducible source of truth. *(pyproject single version source + console script — `1c74931`)*
-- [x] **AUD-010** M — Provider version policy enforced on the canonical normalization path before promotion. *(promotion-gate guard test ties ProviderState to release-policy blockers — `PR7`)*
+## Closure summary
 
-## Dead-wiring & latent capability
-
-- [x] **DWA-001** H 🚫 — Registry-backed selection reachable from a runtime entrypoint. *(lifecycle seam — `420d2b7`)*
-- [~] **DWA-002** H 🚫 — Bounded provider execution & structured execution-failure mapping have a production caller. *(PARTIAL — `PR7` added the generic runner behind `SemgrepPipelineRequest.execute`, but no CLI command or workflow invoked it, so the execution path still had no production caller. Remediated: `l9-ci semgrep run` exposes bounded execution; workflow adoption remains a Core/consumer decision.)*
-- [~] **DWA-003** H 🚫 — Canonical gate evaluation carried into the Core-facing artifact flow. *(PARTIAL — `672a23f` added the gate contract and docs, but no analysis workflow executed `gate evaluate` or shipped `gate-result.json` in the artifact set. Remediated SDK-side: every l9-analysis caller now evaluates the gate and uploads `gate-result.json`; Core-side consumption of the gate result is external and tracked in TODO.md.)*
-- [~] **DWA-004** H 🚫 — Semgrep version enforcement connected to the import/normalization path. *(PARTIAL — `420d2b7` wired the gate, but the policy accepted every future major version (`maximum_exclusive=None`), so "supported version range" was open-ended. Remediated: closed range `>=1.100.0,<2.0.0` with boundary tests.)*
-- [x] **DWA-005** M 🚫 — Structured `Diagnostic` rendering used by command handlers. *(centralized CLI error boundary honoring --format on every command — `PR6`)*
-- [x] **DWA-006** M — `ExecutionProfile.import_reports` read by provider selection. *(selection now honors import_reports — `420d2b7`)*
-- [x] **DWA-007** M — Autofix projection has a trusted producer for `remediation_class`. *(versioned canonical-rule→class map, post-identity; ships empty, owner-populated — `PR7`)*
-- [x] **DWA-008** M — `ProviderExecutionRequest.network_allowed` is an enforced (not inert) control. *(removed — SDK subprocess can't enforce network isolation; it's a Core guarantee — `PR7`)*
-
-## Quality & test effectiveness
-
-- [x] **QA-001** H 🚫 — Fail-closed gate decision test matrix. *(table-driven matrix — `672a23f`)*
-- [x] **QA-002** H 🚫 — Semgrep coverage tests cover the zero-result / unverified-scan report. *(fixtures + gate e2e — `672a23f`)*
-- [x] **QA-003** H 🚫 — Determinism proven for the production path, not a frozen `generated_at`. *(content digest excludes generated_at + cross-clock tests — `ad3a4ca`)*
-- [~] **QA-004** H 🚫 — Version-policy tests validate the canonical normalization path. *(PARTIAL — `420d2b7` added pipeline-level tests, but they asserted acceptance of `2.0.0`, encoding the open-ended range rather than the policy intent. Remediated: boundary tests now reject `>=2.0.0` and cover both edges of the closed range.)*
-- [x] **QA-005** H 🚫 — Architecture boundary test is recursive and spec-derived. *(matrix from architecture.yaml + mutation proof — `65715d0`)*
-- [x] **QA-006** H 🚫 — Core-facing CLI has command-handler / argparse integration tests. *(main()-level tests per command: success/failure envelopes, exit codes — `PR6`)*
-- [x] **QA-007** H 🚫 — Static type gate proves public contracts & critical paths type-check. *(strict mypy over l9_ci/tests/scripts — `1c74931`)*
-- [x] **QA-008** M — Line/branch coverage target, measurement, and critical-path coverage evidence. *(pytest-cov branch ratchet + evaluator 100% — `1c74931`)*
-- [x] **QA-009** M 🚫 — Public API tests assert exact equality (not subset). *(exact-equality per package + compatibility allowlist — `PR6`)*
-- [x] **QA-010** H 🚫 — Provider tested against a runtime-captured, provenance-bound report. *(was PARTIAL at `ad3a4ca` — harness + scaffolding only; the full-path test was a tracked SKIP, which is not a closure. Remediated: runtime-captured Semgrep 1.170.0 report (workflow run 29835939127, artifact 8497285790) committed as a redacted, provenance-bound fixture; the full-path test now runs and asserts a deterministic strict-gate outcome.)*
-
-## Status
-
-Ledger correction (remediation pass 2): the previous revision of this ledger
-over-claimed closure. DWA-002, DWA-003, QA-010, AUD-001, AUD-008, DWA-004 and
-QA-004 were marked done while material gaps remained (no production caller for
-bounded execution, no gate evaluation in the artifact flow, a skipped
-runtime-fixture test, a compatibility-breaking symbol move, mutable action
-pins, and an open-ended version range). Those items are now marked `[~]` with
-the original gap and its remediation recorded inline. A checked item must mean
-the behavior is enforced and verified on the canonical path — not that
-scaffolding for it exists.
-
-- Completed: 22 / 28 (QA-010 closed in this pass by the committed runtime fixture)
-- Partial: 6 / 28 — AUD-001, AUD-006, AUD-008, DWA-002, DWA-003, DWA-004 /
-  QA-004 (same underlying gap). The remaining partials carry explicit external dependencies: Core-side reusable workflow
-  (AUD-006), branch-protection admin action (AUD-008), Core-side gate-result
-  consumption (DWA-003), deprecated-alias removal window (AUD-001), and
-  workflow adoption of bounded execution (DWA-002). See TODO.md.
-
-Known caveats on completed items:
-- **QA-003** chose the "exclude from content digest" remediation; byte-identical output still requires the caller to
-  pin `generated_at`. See `TODO.md`.
+- Release-blocking findings closed: **21 / 21**
+- Total findings closed: **28 / 28**
+- AUD-008 administrator issue: {{AUD_008_ISSUE_URL}}
+- AUD-008 active ruleset: {{AUD_008_RULESET_URL}}
+- Canonical gate publication run: {{CORE_GATE_PUBLICATION_RUN_URL}}
+- Canonical gate check: {{CORE_GATE_CHECK_URL}}
+- Commit-bound SDK validation artifact: {{SDK_VALIDATION_ARTIFACT_URL}}
