@@ -129,6 +129,33 @@ jobs:
           executable: ${{ steps.sdk.outputs.executable }}
           bundle: .l9/runtime/${{ env.L9_MATRIX_ID }}/finding-bundle.json
 
+      - name: Evaluate canonical gate (DWA-003)
+        if: steps.gov.outputs.enabled == 'true'
+        env:
+          SDK: ${{ steps.sdk.outputs.executable }}
+          MODE: ${{ steps.gov.outputs.mode }}
+          MATRIX_ID: ${{ env.L9_MATRIX_ID }}
+        run: |
+          set -euo pipefail
+          # The canonical gate is the SDK's single verdict authority
+          # (gate-spec.yaml). Evaluate it in the pipeline so the verdict is a
+          # published artifact, not dead code. Exit mapping: pass=0, fail=7,
+          # incomplete/unresolved=6, invalid bundle=5.
+          status=0
+          "${SDK}" gate evaluate \
+            --bundle ".l9/runtime/${MATRIX_ID}/finding-bundle.json" \
+            --output ".l9/runtime/${MATRIX_ID}/gate-result.json" \
+            --format json || status=$?
+          echo "gate-exit-code=${status}" >> "$GITHUB_OUTPUT"
+          cat ".l9/runtime/${MATRIX_ID}/gate-result.json" || true
+          if [ "${MODE}" = "enforcing" ] && [ "${status}" -ne 0 ]; then
+            echo "Gate verdict is blocking in enforcing mode (exit ${status})" >&2
+            exit "${status}"
+          fi
+          if [ "${status}" -ne 0 ]; then
+            echo "::warning::L9 gate verdict non-pass (exit ${status}); advisory in ${MODE} mode"
+          fi
+
       - name: Project agent-review payload
         if: steps.gov.outputs.enabled == 'true'
         uses: Quantum-L9/l9-ci-core/.github/actions/invoke-sdk@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
@@ -150,6 +177,18 @@ jobs:
           bundle: .l9/runtime/${{ env.L9_MATRIX_ID }}/finding-bundle.json
           agent-payload: .l9/runtime/${{ env.L9_MATRIX_ID }}/agent-review-payload.json
           destination-root: artifacts
+
+      - name: Stage gate result for upload
+        if: steps.gov.outputs.enabled == 'true'
+        env:
+          MATRIX_ID: ${{ env.L9_MATRIX_ID }}
+        run: |
+          set -euo pipefail
+          # route-artifacts predates the gate step; stage the verdict alongside
+          # the routed canonical outputs so it ships in the same artifact set.
+          mkdir -p "artifacts/l9/${MATRIX_ID}"
+          cp ".l9/runtime/${MATRIX_ID}/gate-result.json" \
+            "artifacts/l9/${MATRIX_ID}/gate-result.json"
 
       - name: Build artifact manifest
         if: steps.gov.outputs.enabled == 'true'
