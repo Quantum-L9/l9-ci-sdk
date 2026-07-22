@@ -1,0 +1,129 @@
+{
+  "version": "1.170.0",
+  "results": [
+    {
+      "check_id": "python.django.security.injection.command.subprocess-injection.subprocess-injection",
+      "path": "l9_ci/providers/semgrep/provider.py",
+      "start": {
+        "line": 140,
+        "col": 25,
+        "offset": 4027
+      },
+      "end": {
+        "line": 148,
+        "col": 14,
+        "offset": 4301
+      },
+      "extra": {
+        "message": "Detected user input entering a `subprocess` call unsafely. This could result in a command injection vulnerability. An attacker could use this vulnerability to execute arbitrary commands on the host, which allows them to download malware, scan sensitive data, or run any command they wish on the server. Do not let users choose the command to run. In general, prefer to use Python API versions of system commands. If you must use subprocess, use a dictionary to allowlist a set of commands.",
+        "metadata": {
+          "category": "security",
+          "technology": [
+            "flask"
+          ],
+          "owasp": [
+            "A01:2017 - Injection",
+            "A03:2021 - Injection",
+            "A05:2025 - Injection"
+          ],
+          "cwe": [
+            "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+          ],
+          "references": [
+            "https://semgrep.dev/docs/cheat-sheets/python-command-injection/"
+          ],
+          "confidence": "HIGH",
+          "cwe2022-top25": true,
+          "cwe2021-top25": true,
+          "subcategory": [
+            "vuln"
+          ],
+          "likelihood": "MEDIUM",
+          "impact": "HIGH",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "vulnerability_class": [
+            "Command Injection"
+          ],
+          "source": "https://semgrep.dev/r/python.django.security.injection.command.subprocess-injection.subprocess-injection",
+          "shortlink": "https://sg.run/49BE"
+        },
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    }
+  ],
+  "errors": [],
+  "paths": {
+    "scanned": [
+      "l9_ci/__init__.py",
+      "l9_ci/__main__.py",
+      "l9_ci/artifacts/__init__.py",
+      "l9_ci/artifacts/compatibility.py",
+      "l9_ci/artifacts/serializer.py",
+      "l9_ci/artifacts/validator.py",
+      "l9_ci/capabilities/__init__.py",
+      "l9_ci/capabilities/detector.py",
+      "l9_ci/capabilities/model.py",
+      "l9_ci/cli/__init__.py",
+      "l9_ci/cli/diagnostics.py",
+      "l9_ci/cli/exit_codes.py",
+      "l9_ci/cli/output.py",
+      "l9_ci/commands/__init__.py",
+      "l9_ci/commands/artifacts.py",
+      "l9_ci/commands/errors.py",
+      "l9_ci/commands/gates.py",
+      "l9_ci/commands/integration.py",
+      "l9_ci/commands/providers.py",
+      "l9_ci/commands/semgrep.py",
+      "l9_ci/contracts/__init__.py",
+      "l9_ci/contracts/bundle.py",
+      "l9_ci/contracts/classification.py",
+      "l9_ci/contracts/coverage.py",
+      "l9_ci/contracts/evidence.py",
+      "l9_ci/contracts/failure.py",
+      "l9_ci/contracts/finding.py",
+      "l9_ci/contracts/source.py",
+      "l9_ci/contracts/version.py",
+      "l9_ci/execution/__init__.py",
+      "l9_ci/execution/profiles.py",
+      "l9_ci/execution/selection.py",
+      "l9_ci/gates/__init__.py",
+      "l9_ci/gates/evaluator.py",
+      "l9_ci/gates/model.py",
+      "l9_ci/identity/__init__.py",
+      "l9_ci/identity/resolver.py",
+      "l9_ci/integration/__init__.py",
+      "l9_ci/integration/agent_payload.py",
+      "l9_ci/integration/limits.py",
+      "l9_ci/integration/projection.py",
+      "l9_ci/integration/redaction.py",
+      "l9_ci/integration/versioning.py",
+      "l9_ci/pipeline/__init__.py",
+      "l9_ci/pipeline/lifecycle.py",
+      "l9_ci/pipeline/runner.py",
+      "l9_ci/pipeline/semgrep.py",
+      "l9_ci/policy/__init__.py",
+      "l9_ci/policy/classifier.py",
+      "l9_ci/policy/model.py",
+      "l9_ci/policy/remediation.py",
+      "l9_ci/providers/__init__.py",
+      "l9_ci/providers/metadata.py",
+      "l9_ci/providers/registry.py",
+      "l9_ci/providers/semgrep/__init__.py",
+      "l9_ci/providers/semgrep/identities.py",
+      "l9_ci/providers/semgrep/provider.py",
+      "l9_ci/providers/semgrep/report.py",
+      "l9_ci/providers/semgrep/versioning.py",
+      "l9_ci/providers/spi.py",
+      "l9_ci/repository/__init__.py",
+      "l9_ci/repository/enumerator.py",
+      "l9_ci/repository/git.py",
+      "l9_ci/repository/snapshot.py",
+      "scripts/generate_validation_report.py"
+    ]
+  },
+  "engine_requested": "OSS",
+  "skipped_rules": []
+}
