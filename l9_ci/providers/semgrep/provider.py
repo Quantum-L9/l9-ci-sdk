@@ -158,6 +158,16 @@ class SemgrepProvider:
                 stderr=exc.stderr if isinstance(exc.stderr, str) else "",
                 timed_out=True,
             )
+        except OSError as exc:
+            # Missing/unlaunchable executable must surface as a structured
+            # execution failure (fail-closed), not an unhandled exception
+            # escaping the bounded runner (DWA-002).
+            return ProviderExecutionResult(
+                exit_code=-1,
+                report_path=None,
+                stdout="",
+                stderr=f"failed to launch semgrep: {exc}",
+            )
         stdout = completed.stdout
         stderr = completed.stderr
         output_size = len(stdout.encode()) + len(stderr.encode())

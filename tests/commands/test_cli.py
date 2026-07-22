@@ -187,6 +187,48 @@ def test_semgrep_normalize_unsupported_version_exit_8(
     assert payload["error"]["code"] == "incompatible_version"
 
 
+def test_semgrep_run_writes_failed_bundle_when_execution_fails(
+    monkeypatch, capsys, tmp_path
+) -> None:
+    # DWA-002: `semgrep run` is the production caller for bounded execution.
+    # With the semgrep binary absent (or execution failing), the runner must
+    # produce a canonical bundle with FAILED coverage and a structured
+    # provider failure — not crash and not silently succeed.
+    out = tmp_path / "bundle.json"
+    code = run_cli(
+        [
+            "semgrep",
+            "run",
+            "--report",
+            str(tmp_path / "raw-report.json"),
+            "--output",
+            str(out),
+            "--root",
+            str(tmp_path),
+            "--snapshot-id",
+            "s1",
+            "--timeout-seconds",
+            "5",
+            "--format",
+            "json",
+        ],
+        monkeypatch,
+    )
+    assert code == int(ExitCode.SUCCESS)
+    payload = json.loads(out.read_text())
+    assert payload["coverage"][0]["status"] == "failed"
+    assert payload["provider_failures"], "expected a structured provider failure"
+    assert payload["providers"][0]["mode"] == "import"
+    assert _json_stdout(capsys)["ok"] is True
+
+
+def test_semgrep_run_requires_report_and_output(monkeypatch, capsys) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        run_cli(["semgrep", "run"], monkeypatch)
+    assert excinfo.value.code == 2
+    capsys.readouterr()
+
+
 def test_compatibility_check_success_and_json(monkeypatch, capsys, tmp_path) -> None:
     bundle_path = _write_bundle(tmp_path / "bundle.json", _bundle())
     code = run_cli(
