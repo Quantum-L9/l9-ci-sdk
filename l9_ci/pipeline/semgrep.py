@@ -1,8 +1,10 @@
-"""End-to-end Semgrep report to canonical bundle pipeline."""
+"""End-to-end Semgrep report or bounded execution pipeline."""
 
 from __future__ import annotations
+
 from dataclasses import dataclass, replace
 from pathlib import Path
+
 from l9_ci.artifacts import validate_bundle, write_bundle_atomic
 from l9_ci.contracts import (
     FindingBundle,
@@ -22,16 +24,13 @@ from l9_ci.policy.remediation import RemediationMap, apply_remediation_classes
 from l9_ci.providers import ProviderExecutionRequest, ProviderNormalizationContext
 from l9_ci.providers.semgrep import require_supported_semgrep_version
 from l9_ci.repository import build_repository_snapshot
-from .lifecycle import resolve_import_provider
+
+from .lifecycle import ProviderAcquisitionMode, resolve_provider
 from .runner import execute_and_normalize
 
 
 class UnsupportedProviderVersionError(ValueError):
-    """Raised when a supplied provider version fails the version policy.
-
-    Distinct from generic ValueError so the CLI can map it to the
-    INCOMPATIBLE_VERSION (exit 8) contract without fragile message matching.
-    """
+    """Raised when supplied or detected Semgrep provenance is unsupported."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,16 +50,10 @@ class SemgrepPipelineRequest:
     dirty: bool | None = None
     derive_snapshot: bool = False
     limits: OperationalLimits = OperationalLimits()
-    # SDK-owned bounded execution (DWA-002). When execute is True, the provider
-    # is run through the generic runner (which writes report_path) instead of
-    # importing a pre-produced report. Default False keeps the import-only path.
     execute: bool = False
     timeout_seconds: int = 300
     output_size_limit_bytes: int = 50_000_000
     execution_arguments: tuple[str, ...] = ()
-    # Trusted canonical-rule -> remediation-class mapping (DWA-007). When set,
-    # findings whose canonical rule id is mapped get a remediation_class, so the
-    # projection can emit autofix candidates. Omitted -> no autofix classes.
     remediation_map_path: Path | None = None
 
 
@@ -70,31 +63,32 @@ class SemgrepPipelineResult:
     output_path: Path
 
 
-def run_semgrep_pipeline(
-    request: SemgrepPipelineRequest,
-) -> SemgrepPipelineResult:
+def _supported_version(raw: str) -> str:
+    try:
+        require_supported_semgrep_version(raw)
+    except ValueError as exc:
+        raise UnsupportedProviderVersionError(str(exc)) from exc
+    return raw.strip()
+
+
+def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResult:
     identity_map = (
         RuleIdentityMap.load(request.identity_map_path)
         if request.identity_map_path
         else None
     )
-    # Enforce the report-producing provider version before normalization. An
-    # unsupported (or unparseable) version must not reach a canonical bundle.
-    # This validates the version that generated the imported report, which is
-    # independent of any locally installed Semgrep executable.
-    if request.provider_version is not None:
-        try:
-            require_supported_semgrep_version(request.provider_version)
-        except ValueError as exc:
-            raise UnsupportedProviderVersionError(str(exc)) from exc
-    # Resolve the provider through the registry-backed lifecycle seam so the
-    # canonical import path exercises capability detection and execution-profile
-    # selection rather than constructing the provider ad hoc.
-    provider = resolve_import_provider(
+    mode = (
+        ProviderAcquisitionMode.EXECUTE
+        if request.execute
+        else ProviderAcquisitionMode.IMPORT
+    )
+    provider = resolve_provider(
         "semgrep",
+        mode=mode,
         repository_root=request.repository_root,
         identity_map=identity_map,
     )
+
     repository_snapshot = None
     if request.derive_snapshot:
         repository_snapshot = build_repository_snapshot(request.repository_root)
@@ -103,30 +97,50 @@ def run_semgrep_pipeline(
         snapshot_id = repository_snapshot.snapshot_id
     if not snapshot_id:
         raise ValueError("snapshot_id is required unless derive_snapshot is enabled")
+
+    if request.execute:
+        detected_version = provider.detect_version()
+        provider_version = (
+            _supported_version(detected_version)
+            if detected_version is not None
+            else None
+        )
+    else:
+        if request.provider_version is None or not request.provider_version.strip():
+            raise ValueError(
+                "provider_version is required when importing a Semgrep report"
+            )
+        provider_version = _supported_version(request.provider_version)
+
     context = ProviderNormalizationContext(
         snapshot_id=snapshot_id,
         repository_root=request.repository_root,
-        provider_version=request.provider_version,
+        provider_version=provider_version,
         required=request.required,
     )
     if request.execute:
-        # SDK-owned bounded execution: run the provider through the generic
-        # runner (validate -> execute -> classify -> import -> normalize)
-        # instead of importing a pre-produced report (DWA-002).
-        execution_request = ProviderExecutionRequest(
-            repository_root=request.repository_root,
-            output_path=request.report_path,
-            timeout_seconds=request.timeout_seconds,
-            output_size_limit_bytes=request.output_size_limit_bytes,
-            arguments=request.execution_arguments,
-        )
         normalization = execute_and_normalize(
-            provider, request=execution_request, context=context
+            provider,
+            request=ProviderExecutionRequest(
+                repository_root=request.repository_root,
+                output_path=request.report_path,
+                timeout_seconds=request.timeout_seconds,
+                output_size_limit_bytes=request.output_size_limit_bytes,
+                arguments=tuple(request.execution_arguments),
+            ),
+            context=context,
         )
     else:
         validate_report_size(request.report_path, request.limits)
         report = provider.import_report(request.report_path)
+        shape_errors = tuple(provider.validate_report_shape(report))
+        if shape_errors:
+            raise ValueError(
+                "Semgrep report failed structural validation: "
+                + "; ".join(shape_errors)
+            )
         normalization = provider.normalize(report, context)
+
     validate_record_counts(
         finding_count=len(normalization.findings),
         evidence_count=len(normalization.evidence),
@@ -143,23 +157,23 @@ def run_semgrep_pipeline(
             raise ValueError(
                 f"strict identity resolution failed for findings: {joined}"
             )
+
     classifications: tuple[FindingClassification, ...] = ()
     if request.policy_path:
         policy = FindingPolicy.load(request.policy_path)
-        classification_result = classify_findings(
+        classifications = classify_findings(
             normalization.findings,
             policy,
             strict=request.strict,
-        )
-        classifications = classification_result.classifications
+        ).classifications
     elif request.strict and normalization.findings:
         raise ValueError("strict mode requires a policy for non-empty findings")
-    # Assign trusted remediation classes after canonical identity resolution so
-    # the projection can emit autofix candidates (DWA-007). No-op without a map.
+
     bundle_findings = normalization.findings
     if request.remediation_map_path is not None:
         remediation_map = RemediationMap.load(request.remediation_map_path)
         bundle_findings = apply_remediation_classes(bundle_findings, remediation_map)
+
     bundle = FindingBundle(
         SDK_version=request.SDK_version,
         snapshot=SnapshotDescriptor(
@@ -172,8 +186,8 @@ def run_semgrep_pipeline(
             ProviderRun(
                 provider_id="semgrep",
                 adapter_version=provider.metadata.adapter_version,
-                provider_version=request.provider_version,
-                mode="import",
+                provider_version=provider_version,
+                mode=mode.value,
                 required=request.required,
             ),
         ),
@@ -184,15 +198,10 @@ def run_semgrep_pipeline(
         coverage=(normalization.coverage,),
         limitations=normalization.limitations,
     )
-    # generated_at is explicit invocation provenance; override the wall-clock
-    # default only when the caller supplied it (QA-003).
     if request.generated_at is not None:
         bundle = replace(bundle, generated_at=request.generated_at)
     validation = validate_bundle(bundle)
     validation.require_valid()
     validate_redaction(bundle.to_dict()).require_valid()
     write_bundle_atomic(bundle, request.output_path)
-    return SemgrepPipelineResult(
-        bundle=bundle,
-        output_path=request.output_path,
-    )
+    return SemgrepPipelineResult(bundle=bundle, output_path=request.output_path)

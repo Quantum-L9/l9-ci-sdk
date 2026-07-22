@@ -1,19 +1,7 @@
-"""Generic bounded-execution runner (DWA-002).
-
-Chains a provider's bounded execution → failure classification → import →
-report-shape validation → normalization, giving ``Provider.execute`` /
-``Provider.execution_failure`` and ``ProviderExecutionRequest`` (timeout, output
-limit, environment allowlist) a real production caller. Previously that
-machinery existed and was unit-tested but was never invoked — scanners were run
-in the workflow shell and the SDK only imported the raw report, so the bounded
-controls protected nothing.
-
-Any failure (timeout, output-limit, missing report, malformed report, bad exit)
-becomes a structured ``ProviderFailure`` plus FAILED coverage, so a required
-provider that fails execution drives the gate to INCOMPLETE (fail-closed).
-"""
+"""Generic bounded provider execution and normalization runner."""
 
 from __future__ import annotations
+
 from l9_ci.contracts import (
     Coverage,
     CoverageStatus,
@@ -32,6 +20,7 @@ def _failed(
     provider: Provider,
     failures: tuple[ProviderFailure, ...],
 ) -> ProviderNormalizationResult:
+    limitations = tuple(failure.message for failure in failures)
     return ProviderNormalizationResult(
         evidence=(),
         findings=(),
@@ -40,10 +29,10 @@ def _failed(
             status=CoverageStatus.FAILED,
             files_considered=0,
             files_analyzed=0,
-            limitations=(),
+            limitations=limitations,
         ),
         failures=failures,
-        limitations=tuple(failure.message for failure in failures),
+        limitations=limitations,
     )
 
 
@@ -52,6 +41,8 @@ def _failure(
     context: ProviderNormalizationContext,
     failure_type: ProviderFailureType,
     message: str,
+    *,
+    diagnostics: dict[str, object] | None = None,
 ) -> ProviderFailure:
     return ProviderFailure(
         provider_id=provider.metadata.provider_id,
@@ -60,6 +51,7 @@ def _failure(
         message=message,
         required=context.required,
         fatal=context.required,
+        diagnostics=diagnostics or {},
     )
 
 
@@ -69,8 +61,63 @@ def execute_and_normalize(
     request: ProviderExecutionRequest,
     context: ProviderNormalizationContext,
 ) -> ProviderNormalizationResult:
-    """Run bounded execution and normalize, or return a failed result."""
-    result = provider.execute(request)
+    """Run detect/configure/execute/import/validate/normalize, failing closed."""
+    if not provider.detect(request.repository_root):
+        return _failed(
+            provider,
+            (
+                _failure(
+                    provider,
+                    context,
+                    ProviderFailureType.NOT_INSTALLED,
+                    f"{provider.metadata.display_name} is not installed",
+                ),
+            ),
+        )
+
+    if context.provider_version is None:
+        return _failed(
+            provider,
+            (
+                _failure(
+                    provider,
+                    context,
+                    ProviderFailureType.CONFIGURATION_ERROR,
+                    f"{provider.metadata.display_name} version could not be detected",
+                ),
+            ),
+        )
+
+    configuration_errors = tuple(provider.validate_configuration(request.repository_root))
+    if configuration_errors:
+        return _failed(
+            provider,
+            (
+                _failure(
+                    provider,
+                    context,
+                    ProviderFailureType.CONFIGURATION_ERROR,
+                    f"{provider.metadata.display_name} configuration is invalid",
+                    diagnostics={"errors": list(configuration_errors)},
+                ),
+            ),
+        )
+
+    try:
+        result = provider.execute(request)
+    except Exception as exc:  # provider process boundary; convert to contract failure
+        return _failed(
+            provider,
+            (
+                _failure(
+                    provider,
+                    context,
+                    ProviderFailureType.EXECUTION_ERROR,
+                    f"provider execution raised {type(exc).__name__}: {exc}",
+                ),
+            ),
+        )
+
     failure = provider.execution_failure(
         result,
         required=context.required,
@@ -90,8 +137,22 @@ def execute_and_normalize(
                 ),
             ),
         )
-    report = provider.import_report(result.report_path)
-    shape_errors = provider.validate_report_shape(report)
+
+    try:
+        report = provider.import_report(result.report_path)
+    except ValueError as exc:
+        return _failed(
+            provider,
+            (
+                _failure(
+                    provider,
+                    context,
+                    ProviderFailureType.REPORT_MALFORMED,
+                    str(exc),
+                ),
+            ),
+        )
+    shape_errors = tuple(provider.validate_report_shape(report))
     if shape_errors:
         return _failed(
             provider,
@@ -100,8 +161,22 @@ def execute_and_normalize(
                     provider,
                     context,
                     ProviderFailureType.REPORT_MALFORMED,
-                    "; ".join(shape_errors),
+                    "provider report failed structural validation",
+                    diagnostics={"errors": list(shape_errors)},
                 ),
             ),
         )
-    return provider.normalize(report, context)
+    try:
+        return provider.normalize(report, context)
+    except Exception as exc:
+        return _failed(
+            provider,
+            (
+                _failure(
+                    provider,
+                    context,
+                    ProviderFailureType.NORMALIZATION_ERROR,
+                    f"normalization raised {type(exc).__name__}: {exc}",
+                ),
+            ),
+        )
