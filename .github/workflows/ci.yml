@@ -1,15 +1,10 @@
 name: SDK self-validation
 
-# Runs the SDK's OWN quality gates (lint, format, types, tests, coverage) on the
-# commit under review (AUD-008). This is distinct from the Semgrep analysis
-# workflows (l9-analysis*.yml) and from Core-owned orchestration — it validates
-# this repository against itself. Recommended: require this check in branch
-# protection (repo-admin action).
-
 on:
   push:
     branches: ["**"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,53 +13,40 @@ jobs:
   validate:
     name: Lint, type-check, test, coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: "3.11"
-
-      - name: Install (pinned)
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]" -c constraints.txt
-
+      - name: Install pinned validation toolchain
+        run: pip install -e ".[dev]" -c constraints.txt
       - name: compileall
         run: python -m compileall l9_ci
-
       - name: ruff check
         run: python -m ruff check l9_ci tests scripts
-
       - name: ruff format check
         run: python -m ruff format --check l9_ci tests scripts
-
       - name: mypy
         run: python -m mypy
-
       - name: pytest + branch coverage
         run: python -m pytest --cov=l9_ci --cov-branch
-
-      - name: critical-module 100% branch coverage
-        # The gate decision engine must stay fully covered (fail-closed logic).
+      - name: critical gate evaluator 100% branch coverage
         run: |
           python -m pytest \
             --cov=l9_ci.gates.evaluator --cov-branch \
             --cov-fail-under=100 tests/gates
-
       - name: Generate commit-bound validation evidence
         run: python scripts/generate_validation_report.py
-
-      - name: Manifest must not be stale
-        # MANIFEST.md is a deterministic inventory of tracked files; if the
-        # generator produced a different manifest, it was committed stale.
+      - name: Tracked manifest must be current
         run: git diff --exit-code MANIFEST.md
-
       - name: Upload validation evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: validation-evidence
           path: |
-            VALIDATION_REPORT.json
+            artifacts/metadata/validation-report.json
             MANIFEST.md
+          if-no-files-found: error
+          retention-days: 90
