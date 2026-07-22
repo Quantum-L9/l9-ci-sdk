@@ -36,6 +36,8 @@ def _request(tmp_path: Path, version: str | None) -> SemgrepPipelineRequest:
         "fixture-version",  # not a semantic version at all
         "1.99.0",  # below the 1.100.0 minimum
         "0.1.2",  # far below minimum
+        "2.0.0",  # at the exclusive 2.0.0 upper bound (unvalidated major)
+        "2.1.3",  # above the upper bound
     ],
 )
 def test_pipeline_rejects_unsupported_version(tmp_path: Path, version: str) -> None:
@@ -45,11 +47,11 @@ def test_pipeline_rejects_unsupported_version(tmp_path: Path, version: str) -> N
     assert not (tmp_path / "bundle.json").exists()
 
 
-@pytest.mark.parametrize("version", ["1.100.0", "1.101.2", "2.0.0"])
+@pytest.mark.parametrize("version", ["1.100.0", "1.101.2", "1.999.999"])
 def test_pipeline_accepts_supported_version(tmp_path: Path, version: str) -> None:
-    # Default policy has an open-ended upper bound, so any version >= 1.100.0 is
-    # accepted; the pipeline proceeds past version enforcement and writes a
-    # bundle. (Upper-bound enforcement is covered in tests/.../test_versioning.py.)
+    # Default policy is the closed range >=1.100.0,<2.0.0: both edges are
+    # exercised here (lowest supported version and the highest version below
+    # the exclusive 2.0.0 bound). Unvalidated majors are rejected above.
     result = run_semgrep_pipeline(_request(tmp_path, version))
     assert result.output_path.exists()
 

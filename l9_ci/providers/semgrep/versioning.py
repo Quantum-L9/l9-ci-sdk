@@ -21,9 +21,14 @@ class SemgrepVersionPolicy:
         return True
 
 
+# Closed supported range (DWA-004/QA-004): versions validated against this SDK.
+# The upper bound is exclusive at the next major: Semgrep 2.x output has not
+# been validated against the normalization contract, so it must be rejected
+# (fail-closed) rather than silently accepted. Raise the bound only after the
+# new major's JSON output is verified against the provider tests.
 DEFAULT_SEMGREP_VERSION_POLICY = SemgrepVersionPolicy(
     minimum=SemanticVersion.parse("1.100.0"),
-    maximum_exclusive=None,
+    maximum_exclusive=SemanticVersion.parse("2.0.0"),
 )
 
 
@@ -41,11 +46,15 @@ def require_supported_semgrep_version(
 ) -> SemanticVersion:
     version = parse_semgrep_version(raw)
     if not policy.supports(version):
+        minimum = (
+            f"{policy.minimum.major}.{policy.minimum.minor}.{policy.minimum.patch}"
+        )
+        if policy.maximum_exclusive is not None:
+            bound = policy.maximum_exclusive
+            supported = f">={minimum},<{bound.major}.{bound.minor}.{bound.patch}"
+        else:
+            supported = f">={minimum}"
         raise ValueError(
-            f"unsupported Semgrep version: {raw!r}; "
-            f"minimum is "
-            f"{policy.minimum.major}."
-            f"{policy.minimum.minor}."
-            f"{policy.minimum.patch}"
+            f"unsupported Semgrep version: {raw!r}; supported range is {supported}"
         )
     return version
