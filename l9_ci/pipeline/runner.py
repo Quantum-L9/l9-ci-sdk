@@ -88,7 +88,9 @@ def execute_and_normalize(
             ),
         )
 
-    configuration_errors = tuple(provider.validate_configuration(request.repository_root))
+    configuration_errors = tuple(
+        provider.validate_configuration(request.repository_root)
+    )
     if configuration_errors:
         return _failed(
             provider,
