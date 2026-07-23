@@ -30,6 +30,13 @@ _DURATION = re.compile(r"\b\d+(?:\.\d+)?\s*(?:s|ms|us|ns|seconds?|minutes?)\b")
 _PORT_NUMBER = re.compile(r"(?:localhost|127\.0\.0\.1):\d+")
 _WHITESPACE = re.compile(r"\s+")
 _LONG_NUMBER = re.compile(r"\b\d{5,}\b")
+# Bare hex tokens of 16+ chars (no dashes, no 0x prefix): run-random
+# object IDs (e.g. ContractViolation[gs_<32hex>]), content hashes, and
+# digests embedded in failure messages. Without this, fingerprints for
+# such failures churn on every run.
+_BARE_HEX_TOKEN = re.compile(
+    r"(?<![0-9a-fA-F])[0-9a-fA-F]{16,64}(?![0-9a-fA-F])"
+)
 
 
 def normalize_failure_text(text: str) -> str:
@@ -44,6 +51,7 @@ def normalize_failure_text(text: str) -> str:
     value = _PORT_NUMBER.sub("HOST:PORT", value)
     value = _DURATION.sub("DURATION", value)
     value = _LINE_REFERENCE.sub(":LINE", value)
+    value = _BARE_HEX_TOKEN.sub("HEX", value)
     value = _LONG_NUMBER.sub("NUM", value)
     value = _WHITESPACE.sub(" ", value)
     return value.strip()
