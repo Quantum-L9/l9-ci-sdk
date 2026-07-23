@@ -82,13 +82,20 @@ def test_missing_executable_becomes_structured_required_failure(
     monkeypatch.setenv("PATH", str(tmp_path / "empty-bin"))
     result = run_semgrep_pipeline(request(tmp_path))
     assert result.bundle.coverage[0].status is CoverageStatus.FAILED
-    assert result.bundle.provider_failures[0].failure_type is ProviderFailureType.NOT_INSTALLED
+    assert (
+        result.bundle.provider_failures[0].failure_type
+        is ProviderFailureType.NOT_INSTALLED
+    )
     assert evaluate_gate(result.bundle).status is GateStatus.INCOMPLETE
 
 
 def test_import_requires_explicit_version(tmp_path: Path) -> None:
     report = tmp_path / "report.json"
-    report.write_text(json.dumps({"results": [], "errors": [], "paths": {"scanned": ["x.py"], "skipped": []}}))
+    report.write_text(
+        json.dumps(
+            {"results": [], "errors": [], "paths": {"scanned": ["x.py"], "skipped": []}}
+        )
+    )
     base = dict(
         report_path=report,
         repository_root=tmp_path,
@@ -97,4 +104,6 @@ def test_import_requires_explicit_version(tmp_path: Path) -> None:
         output_path=tmp_path / "bundle.json",
     )
     with pytest.raises(ValueError, match="provider_version"):
-        run_semgrep_pipeline(SemgrepPipelineRequest(**base, generated_at="2026-01-01T00:00:00Z"))
+        run_semgrep_pipeline(
+            SemgrepPipelineRequest(**base, generated_at="2026-01-01T00:00:00Z")
+        )
