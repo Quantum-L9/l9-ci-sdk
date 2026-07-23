@@ -37,6 +37,21 @@ _LONG_NUMBER = re.compile(r"\b\d{5,}\b")
 _BARE_HEX_TOKEN = re.compile(
     r"(?<![0-9a-fA-F])[0-9a-fA-F]{16,64}(?![0-9a-fA-F])"
 )
+# Rendered set literals like {'b', 'a'}: Python set iteration order is
+# hash-seed dependent, so the same logical failure renders elements in
+# a different order on every run (PYTHONHASHSEED randomization).
+# Canonicalize by sorting the elements. Only simple flat literals
+# (quoted strings / bare tokens separated by commas, no nesting) are
+# rewritten to avoid touching dict reprs or nested structures.
+_SET_LITERAL = re.compile(r"\{([^{}:]+)\}")
+
+
+def _canonicalize_set_literal(match: re.Match[str]) -> str:
+    inner = match.group(1)
+    parts = [part.strip() for part in inner.split(",")]
+    if len(parts) < 2 or any(not part for part in parts):
+        return match.group(0)
+    return "{" + ", ".join(sorted(parts)) + "}"
 
 
 def normalize_failure_text(text: str) -> str:
@@ -53,6 +68,7 @@ def normalize_failure_text(text: str) -> str:
     value = _LINE_REFERENCE.sub(":LINE", value)
     value = _BARE_HEX_TOKEN.sub("HEX", value)
     value = _LONG_NUMBER.sub("NUM", value)
+    value = _SET_LITERAL.sub(_canonicalize_set_literal, value)
     value = _WHITESPACE.sub(" ", value)
     return value.strip()
 
