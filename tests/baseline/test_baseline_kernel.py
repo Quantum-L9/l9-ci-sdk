@@ -103,6 +103,32 @@ class TestFingerprints:
         )
         assert a == b
 
+    def test_set_literal_order_does_not_change_fingerprint(self) -> None:
+        # Set iteration order is hash-seed dependent, so the same
+        # logical failure renders {'a', 'b'} or {'b', 'a'} per run.
+        sig_one = (
+            "Failed: T5-03: engine/x.py imports chassis \u2014 only "
+            "{'handlers.py', 'boot.py'} may do this"
+        )
+        sig_two = (
+            "Failed: T5-03: engine/x.py imports chassis \u2014 only "
+            "{'boot.py', 'handlers.py'} may do this"
+        )
+        a = fingerprint_for_test_failure(
+            "t::n", "Failed", normalize_failure_text(sig_one)
+        )
+        b = fingerprint_for_test_failure(
+            "t::n", "Failed", normalize_failure_text(sig_two)
+        )
+        assert a == b
+
+    def test_dict_reprs_are_not_reordered(self) -> None:
+        # Dict reprs contain ':' and must not be rewritten; insertion
+        # order in dicts is deterministic and meaningful.
+        sig = "AssertionError: got {'b': 1, 'a': 2}"
+        normalized = normalize_failure_text(sig)
+        assert "{'b': 1, 'a': 2}" in normalized
+
     def test_component_boundaries_do_not_collide(self) -> None:
         assert scanner_finding_fingerprint(
             "ab", "c", "d"
