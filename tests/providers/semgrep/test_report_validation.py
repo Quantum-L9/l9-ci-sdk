@@ -1,12 +1,14 @@
 import json
 from pathlib import Path
+from typing import Any
 from l9_ci.providers.semgrep import validate_semgrep_report
 
 FIXTURE_ROOT = Path("tests/fixtures/semgrep")
 
 
-def load_fixture(name: str) -> dict:
-    return json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
+def load_fixture(name: str) -> dict[str, Any]:
+    data: dict[str, Any] = json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
+    return data
 
 
 def test_representative_report_is_valid() -> None:

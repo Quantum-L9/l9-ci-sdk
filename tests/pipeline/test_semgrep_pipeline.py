@@ -1,3 +1,4 @@
+from typing import Any
 from pathlib import Path
 import pytest
 from l9_ci.artifacts import load_and_validate_bundle
@@ -61,7 +62,7 @@ def test_pipeline_emits_valid_bundle(tmp_path: Path) -> None:
             snapshot_id="snapshot-1",
             SDK_version="2.0.0-test",
             output_path=output,
-            provider_version="fixture-version",
+            provider_version="1.100.0",
             identity_map_path=identity_map,
             policy_path=policy,
             strict=True,
@@ -118,12 +119,12 @@ def test_pipeline_output_is_reproducible(tmp_path: Path) -> None:
     write_policy(policy)
     first_path = tmp_path / "first.json"
     second_path = tmp_path / "second.json"
-    common = {
+    common: dict[str, Any] = {
         "report_path": FIXTURE,
         "repository_root": Path(".").resolve(),
         "snapshot_id": "snapshot-1",
         "SDK_version": "2.0.0-test",
-        "provider_version": "fixture-version",
+        "provider_version": "1.100.0",
         "identity_map_path": identity_map,
         "policy_path": policy,
         "strict": True,
@@ -142,3 +143,42 @@ def test_pipeline_output_is_reproducible(tmp_path: Path) -> None:
         )
     )
     assert first_path.read_bytes() == second_path.read_bytes()
+
+
+def test_pipeline_content_identity_is_clock_independent(tmp_path: Path) -> None:
+    # QA-003: exercise the production pipeline across a simulated clock boundary
+    # (two different generated_at values). The canonical content digest must be
+    # identical, proving reproducibility does not depend on wall-clock time,
+    # even though the raw bundle bytes differ by the timestamp field.
+    identity_map = tmp_path / "identity.yaml"
+    policy = tmp_path / "policy.yaml"
+    write_identity_map(identity_map)
+    write_policy(policy)
+    common: dict[str, Any] = {
+        "report_path": FIXTURE,
+        "repository_root": Path(".").resolve(),
+        "snapshot_id": "snapshot-1",
+        "SDK_version": "2.0.0-test",
+        "provider_version": "1.100.0",
+        "identity_map_path": identity_map,
+        "policy_path": policy,
+        "strict": True,
+    }
+    early = run_semgrep_pipeline(
+        SemgrepPipelineRequest(
+            **common,
+            output_path=tmp_path / "early.json",
+            generated_at="2026-07-17T00:00:00Z",
+        )
+    )
+    late = run_semgrep_pipeline(
+        SemgrepPipelineRequest(
+            **common,
+            output_path=tmp_path / "late.json",
+            generated_at="2027-01-01T12:34:56Z",
+        )
+    )
+    assert early.bundle.canonical_digest() == late.bundle.canonical_digest()
+    assert (tmp_path / "early.json").read_bytes() != (
+        tmp_path / "late.json"
+    ).read_bytes()

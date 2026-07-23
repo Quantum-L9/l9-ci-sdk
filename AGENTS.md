@@ -2,6 +2,12 @@
 `l9-ci-sdk` owns canonical analysis contracts, provider adapters, normalized
 findings, validation, and deterministic artifact generation.
 It does not own CI workflow orchestration.
+
+## Audit remediation status
+Open and completed audit findings are tracked in `.l9/audit-findings.md`.
+Consult it before working on architecture, gate, provider, or test-coverage
+changes so you build on the current remediation state instead of re-opening
+closed findings.
 ## Architectural rules
 1. Provider parsing must remain policy-independent.
 2. Native provider rule IDs must always be preserved.

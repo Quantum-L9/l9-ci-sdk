@@ -17,8 +17,8 @@ def evaluate_gate(
     """Evaluate a validated canonical bundle.
     Evaluation order:
     1. Invalid references or missing classifications produce INVALID.
-    2. Fatal required-provider failures or incomplete required coverage
-       produce INCOMPLETE.
+    2. Any required-provider failure (fatal or non-fatal) or incomplete
+       required coverage produces INCOMPLETE.
     3. Blocking findings produce FAIL.
     4. Strict unresolved findings produce INCOMPLETE.
     5. Otherwise the result is PASS.
@@ -48,17 +48,29 @@ def evaluate_gate(
         for failure in bundle.provider_failures
         if failure.required and failure.fatal
     }
+    # Any failure on a REQUIRED provider is gate-significant, regardless of the
+    # `fatal` flag. Fatal required failures are reported as fatal; non-fatal
+    # required failures still make that provider's evidence untrustworthy, so
+    # they force INCOMPLETE rather than being silently ignored (which would be
+    # a fail-open result). Failures on OPTIONAL providers remain visible in the
+    # bundle but do not independently fail the gate, per the integration
+    # contract's requiredness semantics.
+    nonfatal_required_failure_ids = {
+        failure.provider_id
+        for failure in bundle.provider_failures
+        if failure.required and not failure.fatal
+    } - fatal_provider_ids
     required_provider_ids = {
         provider.provider_id for provider in bundle.providers if provider.required
     }
     coverage_by_provider = {
         coverage.provider_id: coverage for coverage in bundle.coverage
     }
-    incomplete_provider_ids: set[str] = set()
+    coverage_incomplete_ids: set[str] = set()
     for provider_id in required_provider_ids:
         coverage = coverage_by_provider.get(provider_id)
         if coverage is None:
-            incomplete_provider_ids.add(provider_id)
+            coverage_incomplete_ids.add(provider_id)
             continue
         if coverage.status in {
             CoverageStatus.FAILED,
@@ -66,15 +78,21 @@ def evaluate_gate(
             CoverageStatus.SKIPPED,
             CoverageStatus.UNSUPPORTED,
         }:
-            incomplete_provider_ids.add(provider_id)
+            coverage_incomplete_ids.add(provider_id)
+    incomplete_provider_ids = coverage_incomplete_ids | nonfatal_required_failure_ids
     if fatal_provider_ids:
         reasons.append(
             "required providers failed: " + ", ".join(sorted(fatal_provider_ids))
         )
-    if incomplete_provider_ids:
+    if nonfatal_required_failure_ids:
+        reasons.append(
+            "required providers reported non-fatal failures: "
+            + ", ".join(sorted(nonfatal_required_failure_ids))
+        )
+    if coverage_incomplete_ids:
         reasons.append(
             "required provider coverage is incomplete: "
-            + ", ".join(sorted(incomplete_provider_ids))
+            + ", ".join(sorted(coverage_incomplete_ids))
         )
     if fatal_provider_ids or incomplete_provider_ids:
         return GateResult(

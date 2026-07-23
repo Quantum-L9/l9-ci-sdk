@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 from l9_ci.capabilities import detect_repository_capabilities
 from l9_ci.cli import ExitCode, OutputFormat, render_success
+from l9_ci.commands.errors import emit_error
 from l9_ci.providers import ProviderRegistry, SemgrepProvider
 
 
@@ -40,42 +41,42 @@ def register_provider_commands(
 
 
 def handle_list(args: argparse.Namespace) -> int:
-    registry = default_registry()
-    payload = {
-        "providers": [provider.metadata.to_dict() for provider in registry.providers()]
-    }
-    print(
-        render_success(
-            payload,
-            output_format=OutputFormat(args.format),
-        )
-    )
+    try:
+        registry = default_registry()
+        payload = {
+            "providers": [
+                provider.metadata.to_dict() for provider in registry.providers()
+            ]
+        }
+    except Exception as exc:
+        return emit_error(exc, output_format=OutputFormat(args.format))
+    print(render_success(payload, output_format=OutputFormat(args.format)))
     return int(ExitCode.SUCCESS)
 
 
 def handle_detect(args: argparse.Namespace) -> int:
-    registry = default_registry()
-    root = args.root.resolve()
-    capabilities = detect_repository_capabilities(root)
-    providers = []
-    for provider in registry.providers():
-        providers.append(
-            {
-                "provider_id": provider.metadata.provider_id,
-                "installed": provider.detect(root),
-                "version": provider.detect_version(),
-                "candidate": (
-                    provider.metadata.provider_id in capabilities.provider_candidates
-                ),
-            }
-        )
-    print(
-        render_success(
-            {
-                "capabilities": capabilities.to_dict(),
-                "providers": providers,
-            },
-            output_format=OutputFormat(args.format),
-        )
-    )
+    try:
+        registry = default_registry()
+        root = args.root.resolve()
+        capabilities = detect_repository_capabilities(root)
+        providers = []
+        for provider in registry.providers():
+            providers.append(
+                {
+                    "provider_id": provider.metadata.provider_id,
+                    "installed": provider.detect(root),
+                    "version": provider.detect_version(),
+                    "candidate": (
+                        provider.metadata.provider_id
+                        in capabilities.provider_candidates
+                    ),
+                }
+            )
+        payload = {
+            "capabilities": capabilities.to_dict(),
+            "providers": providers,
+        }
+    except Exception as exc:
+        return emit_error(exc, output_format=OutputFormat(args.format))
+    print(render_success(payload, output_format=OutputFormat(args.format)))
     return int(ExitCode.SUCCESS)

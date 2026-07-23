@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "l9-ci-sdk"
+description = "L9 CI SDK: canonical analysis contracts, provider adapters, normalized findings, validation, and deterministic artifact generation."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+dynamic = ["version"]
+# Runtime dependencies. Abstract ranges here; exact pins for reproducible CI
+# installs live in constraints.txt (install with `pip install -c constraints.txt`).
+dependencies = [
+    "jsonschema>=4.18,<5",
+    "referencing>=0.30,<1",
+    "PyYAML>=6,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff==0.15.22",
+    "mypy==2.3.0",
+    "pytest==9.1.1",
+    "pytest-cov>=5,<8",
+    "types-jsonschema",
+    "types-PyYAML",
+]
+
+[project.scripts]
+l9-ci = "l9_ci.__main__:main"
+
+# Single version source of truth: the l9_ci.__version__ constant. The build
+# manifest derives its version from it, so an installed package and a source run
+# report the same value (AUD-009).
+[tool.setuptools.dynamic]
+version = { attr = "l9_ci.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["l9_ci*"]
+
+[tool.setuptools.package-data]
+l9_ci = ["schemas/v1/*.json"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["l9_ci", "tests", "scripts"]
+
+# Tests are type-checked for real type errors, but are not required to annotate
+# every fixture/helper (strict-on-tests would be churn without defect-detection
+# value). Product code (l9_ci) stays fully strict.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+branch = true
+source = ["l9_ci"]
+
+[tool.coverage.report]
+show_missing = true
+# Ratcheting repository baseline. Raise this as coverage improves; CI fails on
+# regression below it. Critical decision modules are asserted at 100% branch
+# coverage by dedicated tests (gates/evaluator.py, artifacts/validator.py).
+fail_under = 80

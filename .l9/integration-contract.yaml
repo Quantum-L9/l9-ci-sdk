@@ -6,7 +6,7 @@ metadata:
   status: authoritative
 boundary:
   SDK_owns:
-    - provider execution contract
+    - provider acquisition and bounded execution contract
     - provider-native report import
     - canonical evidence
     - canonical findings
@@ -18,6 +18,7 @@ boundary:
     - semantic validation
     - deterministic serialization
     - agent-review payload projection
+    - canonical gate evaluation
   Core_owns:
     - GitHub Actions orchestration
     - workflow permissions
@@ -26,12 +27,13 @@ boundary:
     - policy file selection
     - artifact upload
     - artifact retention
-    - gate publication
+    - publication of the SDK-emitted gate result
     - pull-request summaries
     - organization rollout policy
   prohibited:
     - Core parsing provider-native scanner reports
     - Core reconstructing canonical findings
+    - Core reconstructing or overriding the SDK gate verdict
     - SDK uploading workflow artifacts
     - SDK reading GitHub workflow context directly
     - SDK deciding organization-wide provider promotion
@@ -40,32 +42,46 @@ CLI:
   commands:
     semgrep_normalize:
       syntax: >-
-        l9-ci semgrep normalize
-        --input REPORT
-        --output BUNDLE
-        --root ROOT
-        --snapshot-id SNAPSHOT
-        [--provider-version VERSION]
-        [--identity-map PATH]
-        [--policy PATH]
-        [--strict]
-        [--required]
-        [--generated-at TIMESTAMP]
-        [--revision REVISION]
+        l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT
+        --snapshot-id SNAPSHOT --provider-version VERSION
+        [--identity-map PATH] [--policy PATH] [--strict] [--required]
+        [--generated-at TIMESTAMP] [--revision REVISION]
         [--dirty | --no-dirty]
+      supported_provider_range: ">=1.100.0,<2.0.0"
+      guarantees:
+        - imported report provenance is explicit and range-validated
+        - no canonical bundle is written for unsupported provider provenance
+    semgrep_run:
+      syntax: >-
+        l9-ci semgrep run --report REPORT --output BUNDLE --root ROOT
+        --snapshot-id SNAPSHOT [--identity-map PATH] [--policy PATH]
+        [--strict] [--required] [--generated-at TIMESTAMP]
+        [--revision REVISION] [--dirty | --no-dirty]
+        [--timeout-seconds SECONDS] [--output-size-limit-bytes BYTES]
+        [--execution-arg ARG]...
+      supported_provider_range: ">=1.100.0,<2.0.0"
+      guarantees:
+        - installed provider version is detected and range-validated
+        - timeout and output limits are enforced
+        - execution failures are represented in the canonical bundle
     bundle_validate:
       syntax: l9-ci bundle validate BUNDLE
     bundle_project_agent_payload:
       syntax: >-
-        l9-ci bundle project-agent-payload
-        --input BUNDLE
-        --output PAYLOAD
+        l9-ci bundle project-agent-payload --input BUNDLE --output PAYLOAD
         [--strict]
     compatibility_check:
       syntax: >-
-        l9-ci compatibility check
-        --bundle BUNDLE
+        l9-ci compatibility check --bundle BUNDLE
         [--minimum-SDK-version VERSION]
+    gate_evaluate:
+      syntax: >-
+        l9-ci gate evaluate --bundle BUNDLE [--output GATE_RESULT]
+        [--strict-unresolved | --no-strict-unresolved]
+      description: >-
+        Evaluate a validated canonical bundle and emit the canonical gate-result
+        artifact. Core routes, verifies, and publishes this result rather than
+        reconstructing a verdict.
 exit_codes:
   success: 0
   gate_failure: 1
@@ -85,6 +101,7 @@ artifact_layout:
     root: artifacts/l9
     bundle: artifacts/l9/finding-bundle.json
     agent_payload: artifacts/l9/agent-review-payload.json
+    gate_result: artifacts/l9/gate-result.json
   publication:
     owner: Core
     SDK_behavior: local_filesystem_only
@@ -103,5 +120,5 @@ version_negotiation:
   rules:
     - unsupported artifact major versions are rejected
     - minimum SDK requirements are explicit
-    - exact SDK pinning is recommended for CI
+    - exact SDK pinning is required for CI
     - consumers must not infer compatibility from artifact shape alone

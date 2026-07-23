@@ -1,0 +1,121 @@
+schema: l9.public-api/v1
+metadata:
+  status: authoritative
+  description: >-
+    The single canonical public Python API surface. Root exports
+    (l9_ci.__all__), the public-api docs, and the exact-equality architecture
+    test (tests/architecture/test_public_api.py) all derive from this file. A
+    package's __all__ must equal exactly the symbols listed here plus any entry
+    in compatibility_allowlist. Adding or removing a public symbol is a
+    versioned compatibility decision (see .l9/compatibility.yaml).
+# The 11 public packages (must match .l9/architecture.yaml public_surface).
+packages:
+  l9_ci.contracts:
+    - Confidence
+    - Coverage
+    - CoverageStatus
+    - EvidenceRecord
+    - FINDING_BUNDLE_PROTOCOL
+    - FINDING_BUNDLE_SCHEMA_VERSION
+    - Finding
+    - FindingBundle
+    - FindingClassification
+    - ProviderFailure
+    - ProviderFailureType
+    - ProviderRun
+    - ResolutionStatus
+    - RuleMode
+    - SemanticVersion
+    - Severity
+    - SnapshotDescriptor
+    - SourceLocation
+    - normalize_repository_path
+  l9_ci.repository:
+    - GitRepositoryState
+    - RepositorySnapshot
+    - build_repository_snapshot
+    - enumerate_repository_files
+    - inspect_git_repository
+    - is_git_repository
+  l9_ci.capabilities:
+    - RepositoryCapabilities
+    - detect_repository_capabilities
+  l9_ci.providers:
+    - NetworkRequirement
+    - Provider
+    - ProviderExecutionRequest
+    - ProviderExecutionResult
+    - ProviderMetadata
+    - ProviderNormalizationContext
+    - ProviderNormalizationResult
+    - ProviderRegistry
+    - ProviderState
+    - SemgrepProvider
+  l9_ci.identity:
+    - IdentityResolution
+    - IdentityResolutionStatus
+    - RuleIdentityMap
+    - resolve_rule_identity
+  l9_ci.policy:
+    - ClassificationResult
+    - FindingPolicy
+    - PolicyRule
+    - classify_findings
+  l9_ci.execution:
+    - PROFILES
+    - ExecutionProfile
+    - ExecutionProfileName
+    - get_execution_profile
+    - select_providers
+  l9_ci.artifacts:
+    - CompatibilityResult
+    - ValidationResult
+    - bundle_bytes
+    - canonical_json_bytes
+    - canonicalize
+    - check_bundle_compatibility
+    - load_and_validate_bundle
+    - load_bundle_schema
+    - validate_bundle
+    - validate_bundle_schema
+    - validate_bundle_semantics
+    - validate_raw_summary
+    - write_bundle_atomic
+  l9_ci.gates:
+    - GATE_RESULT_PROTOCOL
+    - GATE_RESULT_SCHEMA_VERSION
+    - GateResult
+    - GateStatus
+    - evaluate_gate
+  # SemanticVersion is canonical in l9_ci.contracts (AUD-005: one canonical
+  # home per symbol); l9_ci.integration carries only a deprecated
+  # compatibility alias, recorded in compatibility_allowlist below (AUD-001).
+  l9_ci.integration:
+    - AGENT_REVIEW_PAYLOAD_PROTOCOL
+    - AGENT_REVIEW_PAYLOAD_SCHEMA_VERSION
+    - AgentFinding
+    - AgentReviewPayload
+    - OperationalLimits
+    - RedactionResult
+    - VersionNegotiationResult
+    - negotiate_versions
+    - project_agent_review_payload
+    - validate_record_counts
+    - validate_redaction
+    - validate_report_size
+  l9_ci.cli:
+    - Diagnostic
+    - ExitCode
+    - OutputFormat
+    - render_success
+# Intentional deviations from the exact set, if any, recorded for compatibility
+# review. Empty = every package's __all__ must equal its list above exactly.
+compatibility_allowlist:
+  # AUD-001 remediation: SemanticVersion originally shipped from
+  # l9_ci.integration and was moved to l9_ci.contracts (65715d0) without an
+  # alias — a breaking change for existing importers. This deprecated
+  # re-export preserves compatibility; removal is a versioned decision under
+  # .l9/compatibility.yaml (deprecate now, drop no earlier than the next
+  # major release).
+  l9_ci.integration:
+    - SemanticVersion

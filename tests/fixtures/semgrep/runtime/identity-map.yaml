@@ -1,0 +1,11 @@
+schema: l9.identity-map/v1
+# Companion to the runtime-captured fixture (see provenance.yaml): maps the
+# single native check_id observed in results.json to a canonical rule id so
+# the strict full-path test resolves identity deterministically.
+metadata:
+  provider_id: semgrep
+  version: 1.0.0
+  status: fixture
+rules:
+  python.django.security.injection.command.subprocess-injection.subprocess-injection:
+    canonical_rule_id: L9-PY-SUBPROCESS-INJECTION
