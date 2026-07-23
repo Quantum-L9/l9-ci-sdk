@@ -80,6 +80,29 @@ class TestFingerprints:
         )
         assert a == b
 
+    def test_run_random_hex_ids_do_not_change_fingerprint(self) -> None:
+        sig_one = (
+            "ContractViolationError: ContractViolation"
+            "[gs_8a1d37f6a143440eb2844cab0f824394]: content_hash mismatch: "
+            "expected='ba582c36c79d949f8d56a8599b0a11faa671efcab3933c8b1eb867"
+            "5379f9cc89' got='afcfe5aca59e4a544fc3152748ba9482f2241dbdfec607"
+            "d690b1163a032150fd'"
+        )
+        sig_two = (
+            "ContractViolationError: ContractViolation"
+            "[gs_766c921b5be44092bbb742d98bd1f06e]: content_hash mismatch: "
+            "expected='ba582c36c79d949f8d56a8599b0a11faa671efcab3933c8b1eb867"
+            "5379f9cc89' got='049e16832f433963dfbc27c5e3bed0d1bca57062293c232"
+            "165449e6bb5822f94'"
+        )
+        a = fingerprint_for_test_failure(
+            "t::n", "ContractViolationError", normalize_failure_text(sig_one)
+        )
+        b = fingerprint_for_test_failure(
+            "t::n", "ContractViolationError", normalize_failure_text(sig_two)
+        )
+        assert a == b
+
     def test_component_boundaries_do_not_collide(self) -> None:
         assert scanner_finding_fingerprint(
             "ab", "c", "d"
