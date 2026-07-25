@@ -26,7 +26,9 @@ import urllib.request
 API = "https://api.github.com"
 
 
-def _request(method: str, url: str, token: str, payload: dict | None = None) -> tuple[int, object]:
+def _request(
+    method: str, url: str, token: str, payload: dict | None = None
+) -> tuple[int, object]:
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", f"Bearer {token}")
@@ -62,7 +64,9 @@ def main() -> int:
         print(f"[WARN] cannot read {body_path}: {exc}; skipping")
         return 0
     if marker not in body:
-        print(f"[WARN] marker {marker!r} not present in body; skipping to avoid unmanaged comment")
+        print(
+            f"[WARN] marker {marker!r} not present in body; skipping to avoid unmanaged comment"
+        )
         return 0
 
     list_url = f"{API}/repos/{repo}/issues/{pr_number}/comments?per_page=100"
@@ -72,7 +76,11 @@ def main() -> int:
         return 0
 
     existing = next(
-        (c for c in comments if isinstance(c, dict) and marker in (c.get("body") or "")),
+        (
+            c
+            for c in comments
+            if isinstance(c, dict) and marker in (c.get("body") or "")
+        ),
         None,
     )
     if existing:
