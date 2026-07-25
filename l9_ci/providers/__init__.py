@@ -14,6 +14,7 @@ from .spi import (
     ProviderNormalizationResult,
 )
 from .semgrep import SemgrepProvider
+from .defaults import build_default_registry
 
 __all__ = [
     "NetworkRequirement",
@@ -26,4 +27,5 @@ __all__ = [
     "ProviderRegistry",
     "ProviderState",
     "SemgrepProvider",
+    "build_default_registry",
 ]

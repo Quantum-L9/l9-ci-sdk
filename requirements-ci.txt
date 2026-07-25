@@ -1,0 +1,29 @@
+# CI / local-gate tooling for l9-ci-sdk.
+#
+# These are NOT runtime dependencies of the SDK (those live in requirements.txt
+# and are installed into l9-ci-core's provisioning venv). This file pins the
+# analysis toolchain so the local gate documented in AGENTS.md
+#   ruff check . && ruff format --check . && mypy l9_ci && pytest -q
+# is reproducible in CI regardless of what a fresh runner would otherwise
+# resolve.
+#
+# The runtime requirements are pulled in so mypy can resolve the third-party
+# imports it type-checks (jsonschema, referencing, yaml); without them mypy
+# degrades to "library stubs not installed" import errors that mask real
+# findings.
+-r requirements.txt
+
+# Linter / formatter. ruff.toml pins the rule set, so any ruff in this range
+# produces the same result.
+ruff>=0.15,<0.17
+
+# Static type checker + the stub packages that give mypy real signatures for
+# the SDK's untyped third-party imports. These stubs are the "mypy" half of the
+# gate: PyYAML and jsonschema ship no inline types, and referencing is typed via
+# its own py.typed (installed through requirements.txt above).
+mypy>=1.19
+types-PyYAML>=6.0.12
+types-jsonschema>=4.18
+
+# Test runner.
+pytest>=8,<10

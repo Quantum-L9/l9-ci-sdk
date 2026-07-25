@@ -1,12 +1,11 @@
 from pathlib import Path
 from l9_ci.capabilities import RepositoryCapabilities
 from l9_ci.execution import get_execution_profile, select_providers
-from l9_ci.providers import ProviderRegistry, SemgrepProvider
+from l9_ci.providers import build_default_registry
 
 
 def test_import_profile_selects_candidate(tmp_path: Path) -> None:
-    registry = ProviderRegistry()
-    registry.register(SemgrepProvider())
+    registry = build_default_registry()
     caps = RepositoryCapabilities(".", ("python",), (), (), ("semgrep",))
     selected = select_providers(
         registry=registry,

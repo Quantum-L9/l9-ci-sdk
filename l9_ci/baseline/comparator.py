@@ -136,9 +136,9 @@ def compare(
             )
 
     for finding in observed:
-        entry = entry_by_fingerprint.get(finding.fingerprint)
-        if entry is not None:
-            if entry.is_expired(evaluated_on):
+        matched_entry = entry_by_fingerprint.get(finding.fingerprint)
+        if matched_entry is not None:
+            if matched_entry.is_expired(evaluated_on):
                 violations.append(
                     BaselineViolation(
                         kind=ViolationKind.EXPIRED_EXCEPTION,
@@ -146,11 +146,12 @@ def compare(
                         rule=finding.rule,
                         identity=finding.identity,
                         detail=(
-                            f"ledger entry {entry.id!r} expired on "
-                            f"{entry.expires.isoformat()}; the finding is still present"
+                            f"ledger entry {matched_entry.id!r} expired on "
+                            f"{matched_entry.expires.isoformat()}; "
+                            "the finding is still present"
                         ),
                         fingerprint=finding.fingerprint,
-                        entry_id=entry.id,
+                        entry_id=matched_entry.id,
                         path=finding.path,
                     )
                 )

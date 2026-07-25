@@ -228,6 +228,10 @@ class BaselineEntry:
 class TestQuarantineEntry:
     """A single quarantined failing test node, fully owned and expiring."""
 
+    # Domain type whose name begins with "Test"; tell pytest not to collect it
+    # as a test case (it has an __init__, which pytest warns about otherwise).
+    __test__ = False
+
     id: str
     test_node_id: str
     fingerprint: str

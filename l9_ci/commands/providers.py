@@ -5,13 +5,7 @@ import argparse
 from pathlib import Path
 from l9_ci.capabilities import detect_repository_capabilities
 from l9_ci.cli import ExitCode, OutputFormat, render_success
-from l9_ci.providers import ProviderRegistry, SemgrepProvider
-
-
-def default_registry() -> ProviderRegistry:
-    registry = ProviderRegistry()
-    registry.register(SemgrepProvider())
-    return registry
+from l9_ci.providers import build_default_registry
 
 
 def register_provider_commands(
@@ -40,7 +34,7 @@ def register_provider_commands(
 
 
 def handle_list(args: argparse.Namespace) -> int:
-    registry = default_registry()
+    registry = build_default_registry()
     payload = {
         "providers": [provider.metadata.to_dict() for provider in registry.providers()]
     }
@@ -54,7 +48,7 @@ def handle_list(args: argparse.Namespace) -> int:
 
 
 def handle_detect(args: argparse.Namespace) -> int:
-    registry = default_registry()
+    registry = build_default_registry()
     root = args.root.resolve()
     capabilities = detect_repository_capabilities(root)
     providers = []
