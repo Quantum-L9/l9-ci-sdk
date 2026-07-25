@@ -6,6 +6,7 @@ from pathlib import Path
 from l9_ci.artifacts import validate_bundle, write_bundle_atomic
 from l9_ci.contracts import (
     FindingBundle,
+    FindingClassification,
     ProviderRun,
     SnapshotDescriptor,
 )
@@ -91,7 +92,7 @@ def run_semgrep_pipeline(
             raise ValueError(
                 f"strict identity resolution failed for findings: {joined}"
             )
-    classifications = ()
+    classifications: tuple[FindingClassification, ...] = ()
     if request.policy_path:
         policy = FindingPolicy.load(request.policy_path)
         classification_result = classify_findings(
@@ -102,33 +103,38 @@ def run_semgrep_pipeline(
         classifications = classification_result.classifications
     elif request.strict and normalization.findings:
         raise ValueError("strict mode requires a policy for non-empty findings")
-    bundle_arguments = {
-        "SDK_version": request.SDK_version,
-        "snapshot": SnapshotDescriptor(
-            snapshot_id=snapshot_id,
-            repository_root=".",
-            revision=request.revision,
-            dirty=request.dirty,
+    snapshot = SnapshotDescriptor(
+        snapshot_id=snapshot_id,
+        repository_root=".",
+        revision=request.revision,
+        dirty=request.dirty,
+    )
+    providers = (
+        ProviderRun(
+            provider_id="semgrep",
+            adapter_version=provider.metadata.adapter_version,
+            provider_version=request.provider_version,
+            mode="import",
+            required=request.required,
         ),
-        "providers": (
-            ProviderRun(
-                provider_id="semgrep",
-                adapter_version=provider.metadata.adapter_version,
-                provider_version=request.provider_version,
-                mode="import",
-                required=request.required,
-            ),
-        ),
-        "evidence": normalization.evidence,
-        "findings": normalization.findings,
-        "classifications": classifications,
-        "provider_failures": normalization.failures,
-        "coverage": (normalization.coverage,),
-        "limitations": normalization.limitations,
-    }
+    )
+    # generated_at has a default_factory on FindingBundle; only override it when
+    # the caller supplied an explicit value.
+    optional_fields: dict[str, str] = {}
     if request.generated_at is not None:
-        bundle_arguments["generated_at"] = request.generated_at
-    bundle = FindingBundle(**bundle_arguments)
+        optional_fields["generated_at"] = request.generated_at
+    bundle = FindingBundle(
+        SDK_version=request.SDK_version,
+        snapshot=snapshot,
+        providers=providers,
+        evidence=normalization.evidence,
+        findings=normalization.findings,
+        classifications=classifications,
+        provider_failures=normalization.failures,
+        coverage=(normalization.coverage,),
+        limitations=normalization.limitations,
+        **optional_fields,
+    )
     validation = validate_bundle(bundle)
     validation.require_valid()
     validate_redaction(bundle.to_dict()).require_valid()

@@ -34,9 +34,7 @@ _LONG_NUMBER = re.compile(r"\b\d{5,}\b")
 # object IDs (e.g. ContractViolation[gs_<32hex>]), content hashes, and
 # digests embedded in failure messages. Without this, fingerprints for
 # such failures churn on every run.
-_BARE_HEX_TOKEN = re.compile(
-    r"(?<![0-9a-fA-F])[0-9a-fA-F]{16,64}(?![0-9a-fA-F])"
-)
+_BARE_HEX_TOKEN = re.compile(r"(?<![0-9a-fA-F])[0-9a-fA-F]{16,64}(?![0-9a-fA-F])")
 # Rendered set literals like {'b', 'a'}: Python set iteration order is
 # hash-seed dependent, so the same logical failure renders elements in
 # a different order on every run (PYTHONHASHSEED randomization).

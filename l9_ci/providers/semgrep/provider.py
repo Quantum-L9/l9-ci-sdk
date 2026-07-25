@@ -36,6 +36,21 @@ from .identities import (
 from .report import validate_semgrep_report
 from .versioning import require_supported_semgrep_version
 
+
+def _as_text(value: str | bytes | None) -> str:
+    """Coerce captured subprocess output to text.
+
+    Execution uses ``text=True`` so the runtime value is already ``str``, but
+    ``subprocess.TimeoutExpired`` types its ``stdout``/``stderr`` as
+    ``bytes | None``; normalize both shapes to a plain string.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", "replace")
+    return value
+
+
 _SEVERITY_MAP: dict[str, Severity] = {
     "ERROR": Severity.HIGH,
     "WARNING": Severity.MEDIUM,
@@ -152,8 +167,8 @@ class SemgrepProvider:
                 report_path=(
                     request.output_path if request.output_path.exists() else None
                 ),
-                stdout=exc.stdout or "",
-                stderr=exc.stderr or "",
+                stdout=_as_text(exc.stdout),
+                stderr=_as_text(exc.stderr),
                 timed_out=True,
             )
         stdout = completed.stdout

@@ -11,6 +11,7 @@ Input sources, in order:
 
 Output is JSON by default. Use --plain to print only the class.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -24,7 +25,9 @@ from typing import Any
 import yaml
 
 DEFAULT_CONFIG_PATH = Path(".github/governance/l9-ci-shared-spec.yaml")
-SCRIPT_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "governance" / "l9-ci-shared-spec.yaml"
+SCRIPT_DEFAULT_CONFIG_PATH = (
+    Path(__file__).resolve().parents[1] / "governance" / "l9-ci-shared-spec.yaml"
+)
 
 
 @dataclass(frozen=True)
@@ -98,7 +101,9 @@ def load_policy(config_path: Path | None = None) -> ClassifierPolicy:
     taxonomy = classifier.get("taxonomy")
     unknown_class = classifier.get("unknown_class", "unknown_diff")
     docs_only_class = classifier.get("docs_only_class", "docs_only")
-    if not isinstance(canonical, list) or not all(isinstance(v, str) for v in canonical):
+    if not isinstance(canonical, list) or not all(
+        isinstance(v, str) for v in canonical
+    ):
         raise SystemExit("classifier.canonical_classes must be a list of strings")
     if not isinstance(priority, list) or not all(isinstance(v, str) for v in priority):
         raise SystemExit("classifier.priority must be a list of strings")
@@ -215,11 +220,15 @@ def _tags_for(path: str, policy: ClassifierPolicy) -> list[tuple[str, str]]:
     return tags
 
 
-def classify(paths: list[str], policy: ClassifierPolicy | None = None) -> Classification:
+def classify(
+    paths: list[str], policy: ClassifierPolicy | None = None
+) -> Classification:
     active_policy = policy or load_policy()
     changed = sorted(dict.fromkeys(_norm(p) for p in paths if _norm(p)))
     if not changed:
-        return Classification(active_policy.unknown_class, [], ["no changed files supplied"], {})
+        return Classification(
+            active_policy.unknown_class, [], ["no changed files supplied"], {}
+        )
 
     observed: dict[str, list[str]] = {}
     unknown: list[str] = []
@@ -251,14 +260,20 @@ def classify(paths: list[str], policy: ClassifierPolicy | None = None) -> Classi
         if cls in observed and cls != active_policy.docs_only_class:
             return Classification(cls, changed, observed[cls], observed)
 
-    return Classification(active_policy.unknown_class, changed, ["no canonical class matched"], observed)
+    return Classification(
+        active_policy.unknown_class, changed, ["no canonical class matched"], observed
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Classify changed files into one canonical L9 CI PR class.")
+    parser = argparse.ArgumentParser(
+        description="Classify changed files into one canonical L9 CI PR class."
+    )
     parser.add_argument("files", nargs="*")
     parser.add_argument("--config", type=Path, help="Classifier policy YAML path.")
-    parser.add_argument("--plain", action="store_true", help="Print only the canonical class.")
+    parser.add_argument(
+        "--plain", action="store_true", help="Print only the canonical class."
+    )
     args = parser.parse_args(argv)
 
     policy = load_policy(args.config)

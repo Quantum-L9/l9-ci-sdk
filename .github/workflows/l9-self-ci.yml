@@ -298,12 +298,50 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install ruff
-        run: pip install --quiet ruff
+      - name: Install ruff (pinned via requirements-ci.txt)
+        run: |
+          # Pinned toolchain so the advisory lint gate is deterministic; ruff.toml
+          # pins the rule set so any ruff in that range produces the same result.
+          if [ -f requirements-ci.txt ]; then
+            pip install --quiet -r requirements-ci.txt
+          else
+            pip install --quiet ruff
+          fi
       - name: Ruff check (advisory)
         run: |
           ruff check . --output-format=github || echo "::warning::ruff findings (advisory)"
           ruff format --check . || echo "::warning::ruff format drift (advisory)"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # TYPECHECK — advisory mypy gate, only when Python present
+  # ────────────────────────────────────────────────────────────────────────
+  typecheck:
+    name: Typecheck (mypy, advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: classify
+    if: needs.classify.outputs.python_changed == 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install type-check toolchain
+        run: |
+          if [ ! -f requirements-ci.txt ]; then
+            echo "[SKIP] no requirements-ci.txt (type-check toolchain undeclared)"
+            exit 0
+          fi
+          # requirements-ci.txt pulls in runtime deps + type stubs so mypy has
+          # real signatures for jsonschema / referencing / yaml.
+          pip install --quiet -r requirements-ci.txt
+      - name: Run mypy (advisory)
+        run: |
+          if [ ! -f requirements-ci.txt ] || [ ! -d l9_ci ]; then
+            echo "[SKIP] type-check surface not present"
+            exit 0
+          fi
+          mypy l9_ci || echo "::warning::mypy findings (advisory)"
 
   # ────────────────────────────────────────────────────────────────────────
   # SEMGREP — advisory/shadow L9 AST rules, only when Python present
@@ -413,6 +451,7 @@ jobs:
       - secret_scan
       - validate
       - lint
+      - typecheck
       - semgrep
       - audit
       - supply_chain
@@ -435,6 +474,7 @@ jobs:
           R_SECRET: ${{ needs.secret_scan.result }}
           R_VALIDATE: ${{ needs.validate.result }}
           R_LINT: ${{ needs.lint.result }}
+          R_TYPECHECK: ${{ needs.typecheck.result }}
           R_SEMGREP: ${{ needs.semgrep.result }}
           R_AUDIT: ${{ needs.audit.result }}
           R_SUPPLY: ${{ needs.supply_chain.result }}
@@ -470,6 +510,7 @@ jobs:
                   "secret_scan": os.environ.get("R_SECRET", "missing"),
                   "validate": os.environ.get("R_VALIDATE", "missing"),
                   "lint": os.environ.get("R_LINT", "missing"),
+                  "typecheck": os.environ.get("R_TYPECHECK", "missing"),
                   "semgrep": os.environ.get("R_SEMGREP", "missing"),
                   "audit": os.environ.get("R_AUDIT", "missing"),
                   "supply_chain": os.environ.get("R_SUPPLY", "missing"),
