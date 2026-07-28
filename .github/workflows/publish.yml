@@ -42,10 +42,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.12"
       - name: Verify tag matches package version
@@ -71,7 +72,7 @@ jobs:
       - name: Twine metadata check
         run: python -m twine check dist/*
       - name: Upload distribution artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: l9-ci-dist
           path: dist/*
@@ -90,15 +91,15 @@ jobs:
     permissions:
       # OIDC token for PyPI Trusted Publishing — no API token is stored anywhere.
       id-token: write
-      # actions/download-artifact@v4 fetches the build artifact from the current
+      # actions/download-artifact fetches the build artifact from the current
       # run via the Actions API, which requires actions: read when the job
       # overrides the default (restricted) permission set.
       actions: read
     steps:
       - name: Download distribution artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           name: l9-ci-dist
           path: dist
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@ec4db0b4ddc65acdf4bff5fa45ac92d78b56bdf0  # v1.9.0

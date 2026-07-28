@@ -35,11 +35,15 @@ python -m pip install "l9-ci @ git+https://github.com/Quantum-L9/l9-ci-sdk.git@<
 ```
 
 **Private repo (token):** set an `SDK_TOKEN` with read access to
-`Quantum-L9/l9-ci-sdk`, then rewrite the transport before installing (the token
-is never placed on the command line or echoed):
+`Quantum-L9/l9-ci-sdk`. The example below rewrites GitHub HTTPS URLs via
+`git config` for the install step. That places the token in the git config
+value (GitHub Actions secret masking still redacts `${SDK_TOKEN}` in logs,
+but this is not stronger than that — do not leave the rewrite configured on
+shared runners or developer machines):
 ```bash
 git config --global url."https://x-access-token:${SDK_TOKEN}@github.com/".insteadOf "https://github.com/"
 python -m pip install "l9-ci @ git+https://github.com/Quantum-L9/l9-ci-sdk.git@<COMMIT_SHA>"
+git config --global --unset-all url."https://x-access-token:${SDK_TOKEN}@github.com/".insteadOf || true
 ```
 
 `l9-ci-core`'s reusable workflows default `l9-ci-install-command` to the public
