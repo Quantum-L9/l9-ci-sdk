@@ -1,105 +1,53 @@
+---
 # l9-ci-sdk
 
 Canonical analysis contracts, provider adapters, normalized findings,
-validation, and deterministic artifact generation for Quantum-L9 CI.
+validation, and deterministic artifact generation for the L9 CI constellation.
 
-This SDK does **not** own CI workflow orchestration — that responsibility
-belongs to [`l9-ci-core`](https://github.com/Quantum-L9/l9-ci-core), which
-consumes this package to run analysis and evaluate gates inside a caller's
-CI pipeline. See [`AGENTS.md`](./AGENTS.md) for the full architectural
-contract, Phase 1 restrictions, and provider requirements.
+See [`AGENTS.md`](AGENTS.md) for architectural rules and agent operating notes.
 
-## What this SDK owns
+## Local gate
 
-- Provider-independent parsing of scanner output into canonical findings
-- Explicit rule-identity resolution (native provider rule IDs are always
-  preserved; canonical rule IDs require explicit resolution)
-- Schema and semantic validation of canonical artifacts (`l9_ci/schemas/v1/`)
-- Deterministic, atomic canonical bundle writes
-- Gate evaluation over normalized findings
-
-## Installation
+Mechanical checks are owned by [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
+The root [`Makefile`](Makefile) orchestrates that suite plus `mypy` / `pytest`.
+Push is fail-closed: use `make push`, and a git `pre-push` hook runs `make check`
+even for raw `git push` (unless `make push` already cleared the gate).
 
 ```bash
-pip install -e ".[ci]"
+make bootstrap   # .venv + deps + install pre-commit/pre-push hooks + doctor
+make fmt         # intentional autofix via pre-commit (commit results)
+make check       # hooks + clean tree + mypy + pytest
+make push        # check, then git push
 ```
 
-The `ci` extra installs the local validation toolchain (`ruff`, `mypy`,
-`pytest`, and the type stub packages mypy needs to resolve this SDK's
-third-party imports). Runtime-only installs (`pip install -e .`) pull in
-just `jsonschema`, `referencing`, and `PyYAML`.
+`make deps` creates `.venv/` when missing (PEP 668–safe). Override with
+`make check PYTHON=/path/to/python` if you manage your own environment.
 
-In production, `l9-ci-core`'s `provision-sdk` action installs this package
-from source over `PYTHONPATH` rather than from a package index — this repo
-ships no build manifest for PyPI distribution (see Phase 1 restrictions in
-`AGENTS.md`). `pyproject.toml` exists so the package is locally installable
-and editable (`pip install -e .`) and so `l9-ci` resolves as a console
-script; it is not a signal that this SDK is published anywhere.
+Do not bypass with `git push --no-verify`. Prefer `make push` / `make check`.
+Known CI-only gap: `actionlint` (yaml-governance workflow); local zizmor is stricter
+than the dogfood caller’s advisory setting.
 
-## CLI
+## YAML governance
 
-```bash
-l9-ci --help
-```
+This repository owns a reusable GitHub Actions workflow for YAML/workflow
+static checks (yamllint, governance JSON contract, Action SHA pins, actionlint,
+zizmor).
 
-### Repository manifest
-
-Deterministic inventory generation for root `MANIFEST.md`:
-
-```bash
-PYTHONPATH=. python -m l9_ci manifest generate --repository-root . --output MANIFEST.md --tracked-only --exclude-dir memory-bank
-PYTHONPATH=. python -m l9_ci manifest check --repository-root . --output MANIFEST.md --tracked-only --exclude-dir memory-bank
-```
-
-`memory-bank/` (including WIP packs) is a local scratchpad — gitignored and
-excluded from the inventory; it is not part of the SDK codebase.
-
-`generate` always exits successfully after reconciliation. `check` writes a
-correction when drift is found and exits with the gate-failure code.
-
-### Manifest auto-fix (CI)
-
-[`.github/workflows/l9-manifest-reconcile.yml`](./.github/workflows/l9-manifest-reconcile.yml)
-is a dual-purpose PR auto-fix bot: it dogfoods in this repo and is the
-copy-in template for downstream consumers.
-
-- Same-repo PRs: bot commits reconciled `MANIFEST.md` to the PR head.
-- Fork PRs: uploads `manifest-reconcile.patch` (no write to the fork).
-- Consumers: copy the workflow, keep `contents: write`, replace the dogfood
-  `PYTHONPATH=.` generate step with existing Core `provision-sdk` plus
-  `"$EXECUTABLE" manifest generate ...`, and pin an SDK revision that
-  includes the `manifest` CLI. See
-  [`docs/architecture/repository-manifest.md`](./docs/architecture/repository-manifest.md).
-
-## Local validation gate
-
-```bash
-ruff check l9_ci tests .github/scripts
-ruff format --check l9_ci tests .github/scripts
-mypy l9_ci
-pytest -q
-```
-
-These match the local gate in `requirements-ci.txt` and the advisory Python
-jobs in [`.github/workflows/l9-self-ci.yml`](./.github/workflows/l9-self-ci.yml).
-
-## Repository layout
-
-| Path | Purpose |
+| Artifact | Path |
 |---|---|
-| `l9_ci/` | The SDK package: providers, gates, execution, repository scanning, schemas |
-| `l9_ci/schemas/v1/` | JSON Schemas for canonical artifacts (findings, evidence, gate results, etc.) |
-| `tests/` | Unit and pipeline tests |
-| `docs/` | Architecture notes and ADRs |
-| `.l9/` | Machine-readable SDK metadata (integration contract, tool stack spec) consumed by `l9-ci-core` |
+| Reusable workflow | [`.github/workflows/l9-yaml-governance.yml`](.github/workflows/l9-yaml-governance.yml) |
+| Dogfood caller | [`.github/workflows/l9-yaml-governance-dogfood.yml`](.github/workflows/l9-yaml-governance-dogfood.yml) |
+| Configs + checkers | [`lint/`](lint/) |
+| Consumer template | [`docs/templates/l9-yaml-governance-caller.yml`](docs/templates/l9-yaml-governance-caller.yml) |
+| Architecture | [`docs/architecture/yaml-governance.md`](docs/architecture/yaml-governance.md) |
+| ADR | [`docs/adr/0010-yaml-governance-static-checks.md`](docs/adr/0010-yaml-governance-static-checks.md) |
 
-## Contributing
+Downstream: copy `lint/`, pin an immutable SDK SHA in the caller template.
+Do not use `Quantum-L9/.github` or `l9-ci-core` as the host for this capability.
 
-Architectural rules, change policy, and provider requirements are defined in
-[`AGENTS.md`](./AGENTS.md) — read it before making changes. Contribution and
-security policies are inherited from
-[`Quantum-L9/.github`](https://github.com/Quantum-L9/.github).
+## Repository manifest
 
-## License
-
-See [`LICENSE`](./LICENSE).
+Root [`MANIFEST.md`](MANIFEST.md) is reconciled from Git tracked truth by
+[`.github/workflows/l9-manifest-reconcile.yml`](.github/workflows/l9-manifest-reconcile.yml)
+(`l9-ci manifest generate --tracked-only --exclude-dir memory-bank`).
+Same-repo PRs get bot commits; fork PRs get a patch artifact.

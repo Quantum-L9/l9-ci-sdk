@@ -4,14 +4,7 @@
   "title": "ProviderFailure",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "provider_id",
-    "failure_type",
-    "message",
-    "required",
-    "fatal",
-    "diagnostics"
-  ],
+  "required": ["provider_id", "failure_type", "message", "required", "fatal", "diagnostics"],
   "properties": {
     "provider_id": {
       "type": "string",

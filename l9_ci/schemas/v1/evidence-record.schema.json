@@ -65,22 +65,10 @@
       "minLength": 1
     },
     "severity": {
-      "enum": [
-        "critical",
-        "high",
-        "medium",
-        "low",
-        "informational",
-        "unknown"
-      ]
+      "enum": ["critical", "high", "medium", "low", "informational", "unknown"]
     },
     "confidence": {
-      "enum": [
-        "high",
-        "medium",
-        "low",
-        "unknown"
-      ]
+      "enum": ["high", "medium", "low", "unknown"]
     },
     "provider_fingerprint": {
       "type": "string",

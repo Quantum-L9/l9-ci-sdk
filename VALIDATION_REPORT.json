@@ -1,12 +1,7 @@
 {
   "schema": "l9.validation-report/v1",
   "repository": "Quantum-L9/l9-ci-sdk",
-  "consolidated_phases": [
-    1,
-    2,
-    3,
-    4
-  ],
+  "consolidated_phases": [1, 2, 3, 4],
   "file_count": 158,
   "checks": {
     "python_compileall": "passed",
@@ -24,8 +19,5 @@
     "A runtime-captured and redacted Semgrep fixture was not supplied, so no fabricated results.captured.json or provenance values were created.",
     "Live l9-ci-core invocation remains unverified."
   ],
-  "source_files": [
-    "docs/source/sdk-spec.md",
-    "docs/source/phase-4.md"
-  ]
+  "source_files": ["docs/source/sdk-spec.md", "docs/source/phase-4.md"]
 }

@@ -1,0 +1,36 @@
+---
+# Downstream caller template for L9 Biome Static Checks.
+# Copy to .github/workflows/l9-biome-scan.yml in the consuming repo.
+# Replace the zero SHA below with a full 40-character l9-ci-sdk commit SHA.
+# Also copy biome.json from l9-ci-sdk into the consumer repository root and
+# adjust files.includes for the consumer's JSON/JS/TS footprint.
+#
+# Forbidden hosts for this capability:
+#   - Quantum-L9/.github
+#   - Quantum-L9/l9-ci-core/.github/workflows/l9-biome-scan.yml
+name: L9 Biome Static Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l9-biome-scan-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  biome-scan:
+    # Replace 0000… with the immutable SDK commit that contains biome-scan.
+    uses: Quantum-L9/l9-ci-sdk/.github/workflows/l9-biome-scan.yml@0000000000000000000000000000000000000000
+    permissions:
+      contents: read
+    with:
+      scan-path: '.'
+      # First activation: advisory only. Promote per promotion-policy.
+      enforce-biome: false
