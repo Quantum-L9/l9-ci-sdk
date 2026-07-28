@@ -12,6 +12,24 @@ FORBIDDEN_IMPORTS = {
     "l9_ci/artifacts": {
         "l9_ci.providers",
     },
+    # l9_ci.rulesets is pure packaged data + an importlib.resources path
+    # resolver (see .l9/architecture.yaml); it must stay a leaf the SDK's
+    # own logic packages never need to reach into, or every downstream
+    # consumer inherits that coupling through the packaged ruleset import.
+    "l9_ci/rulesets": {
+        "l9_ci.providers",
+        "l9_ci.policy",
+        "l9_ci.gates",
+        "l9_ci.pipeline",
+        "l9_ci.integration",
+    },
+    "l9_ci/rulesets/semgrep": {
+        "l9_ci.providers",
+        "l9_ci.policy",
+        "l9_ci.gates",
+        "l9_ci.pipeline",
+        "l9_ci.integration",
+    },
 }
 
 

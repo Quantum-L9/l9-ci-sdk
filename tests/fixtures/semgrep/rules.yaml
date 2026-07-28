@@ -1,0 +1,25 @@
+rules:
+  - id: python.lang.security.audit.exec-used.exec-used
+    languages: [python]
+    severity: ERROR
+    message: Use of exec detected.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+        - "CWE-95"
+      technology:
+        - python
+      references:
+        - https://example.invalid/redacted
+    pattern: exec(...)
+  - id: python.lang.correctness.useless-comparison.useless-comparison
+    languages: [python]
+    severity: WARNING
+    message: Comparison result is unused.
+    metadata:
+      category: correctness
+      confidence: MEDIUM
+      technology:
+        - python
+    pattern: $X == $Y
