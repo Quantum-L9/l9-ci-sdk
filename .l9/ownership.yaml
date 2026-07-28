@@ -57,6 +57,11 @@ ownership:
       - stable exit codes
       - CLI output format
       - structured diagnostics
+  l9_ci/rulesets:
+    owns:
+      - versioned, SDK-packaged provider rule files (shipped as package data)
+      - packaged provider identity maps
+      - packaged-path resolution (source tree or installed wheel)
 external_boundaries:
   l9-ci-core:
     relationship: consumer

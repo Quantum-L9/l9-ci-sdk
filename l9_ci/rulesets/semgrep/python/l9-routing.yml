@@ -1,9 +1,8 @@
----
 # --- L9_META ---
 # l9_schema: 1
 # origin: l9-ci-universal-base
 # layer: [ci, semgrep, routing]
-# tags: [L9_TEMPLATE, GateClient, routing, advisory-mode]
+# tags: [L9_TEMPLATE, GateClient, routing, shadow-mode]
 # owner: platform
 # status: active
 # --- /L9_META ---
@@ -13,8 +12,9 @@ rules:
     severity: WARNING
     message: Direct node dispatch via requests is forbidden. Route follow-up work through GateClient.send_to_gate(packet).
     metadata:
-      l9_rule_id: AST-ROUTING-001
-      mode: advisory
+      l9:
+        canonical_rule_id: AST-ROUTING-001
+      mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
     pattern: requests.post($URL, ...)
@@ -24,8 +24,9 @@ rules:
     severity: WARNING
     message: Direct node dispatch via httpx is forbidden. Route follow-up work through GateClient.send_to_gate(packet).
     metadata:
-      l9_rule_id: AST-ROUTING-002
-      mode: advisory
+      l9:
+        canonical_rule_id: AST-ROUTING-002
+      mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
     pattern: httpx.post($URL, ...)
@@ -35,19 +36,21 @@ rules:
     severity: WARNING
     message: Hardcoded peer node URLs are forbidden in runtime/orchestrator code. Gate is routing authority.
     metadata:
-      l9_rule_id: AST-ROUTING-003
-      mode: advisory
+      l9:
+        canonical_rule_id: AST-ROUTING-003
+      mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
-    pattern-regex: 'http://[a-z0-9-]+:8000|https://[a-z0-9-]+\.internal'
+    pattern-regex: 'http://[a-z0-9-]+:8000|https://[a-z0-9-]+\\.internal'
 
   - id: l9.routing.gateclient-bypass-execute
     languages: [python]
     severity: WARNING
     message: Raw /execute calls bypass GateClient and are forbidden for node follow-up work.
     metadata:
-      l9_rule_id: AST-ROUTING-004
-      mode: advisory
+      l9:
+        canonical_rule_id: AST-ROUTING-004
+      mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
     pattern-regex: '/v1/execute|/execute'

@@ -11,6 +11,11 @@ __pycache__/
 # previously swallowed that package, requiring a force-add to track it.
 /artifacts/
 
+# Build artifacts from `python -m build` / `hatchling` (pyproject.toml).
+dist/
+build/
+*.egg-info/
+
 # Agent/session scratchpad only — never part of the SDK codebase inventory.
 /memory-bank/
 

@@ -46,6 +46,14 @@ norecursedirs = ["memory-bank", ".git", ".venv", "venv", "node_modules"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["l9_ci"]
+# hatchling's default artifact selection is VCS-tracked-file based, so
+# schema JSON (l9_ci/schemas/v1/) and the packaged Semgrep rulesets
+# (l9_ci/rulesets/semgrep/) ship automatically once committed -- verified by
+# tests/rulesets/test_packaging.py, which builds a real wheel and asserts
+# both directories are present inside it. No `force-include`/`include` list
+# is added here: it would duplicate files hatchling already selects and
+# hatchling fails the build loud on that duplication (see git history of
+# this file), which is itself the fail-closed guard against silent drift.
 
 # Ruff and mypy are intentionally NOT configured here: ruff.toml is the single
 # lint authority (see its header comment) and takes precedence over any

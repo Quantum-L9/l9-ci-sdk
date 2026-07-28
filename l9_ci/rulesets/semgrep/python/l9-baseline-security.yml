@@ -1,0 +1,134 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-ci-sdk-global-ruleset
+# layer: [ci, semgrep, baseline, python]
+# tags: [L9_TEMPLATE, baseline-security, shadow-mode, global-ruleset]
+# owner: platform
+# status: active
+# --- /L9_META ---
+#
+# Global Python baseline security/quality ruleset shipped with l9-ci-sdk.
+# Every downstream consumer inherits this file via `l9-ci semgrep run
+# --language python` -- no per-repository authoring required. All rules ship
+# with trusted `metadata.l9.canonical_rule_id` from creation (never guessed
+# from severity/message text) and start in `mode: shadow` per
+# `.github/governance/promotion-policy.yaml`'s staged
+# disabled -> shadow -> advisory -> blocking rollout.
+rules:
+  - id: l9.baseline.python.exec-eval-use
+    languages: [python]
+    severity: WARNING
+    message: Use of exec()/eval() executes arbitrary code and is forbidden on untrusted input paths.
+    metadata:
+      l9:
+        canonical_rule_id: L9-PYTHON-EXEC-EVAL-USE
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: exec(...)
+      - pattern: eval(...)
+
+  - id: l9.baseline.python.subprocess-shell-true
+    languages: [python]
+    severity: WARNING
+    message: subprocess call with shell=True is forbidden; pass a command list without a shell.
+    metadata:
+      l9:
+        canonical_rule_id: L9-PYTHON-SUBPROCESS-SHELL-TRUE
+      mode: shadow
+      category: security
+      autofix_safe: false
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(..., shell=True, ...)
+          - pattern: subprocess.call(..., shell=True, ...)
+          - pattern: subprocess.Popen(..., shell=True, ...)
+          - pattern: subprocess.check_call(..., shell=True, ...)
+          - pattern: subprocess.check_output(..., shell=True, ...)
+
+  - id: l9.baseline.python.unsafe-deserialization
+    languages: [python]
+    severity: WARNING
+    message: Unsafe deserialization (pickle.load/loads or yaml.load without SafeLoader) can execute arbitrary code on untrusted input.
+    metadata:
+      l9:
+        canonical_rule_id: L9-PYTHON-UNSAFE-DESERIALIZATION
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+      - pattern: yaml.load($DATA)
+      - pattern: yaml.load($DATA, Loader=yaml.Loader)
+      - pattern: yaml.load($DATA, Loader=yaml.UnsafeLoader)
+      - pattern: yaml.load($DATA, Loader=yaml.FullLoader)
+
+  - id: l9.baseline.python.sql-string-format
+    languages: [python]
+    severity: WARNING
+    message: SQL built via string formatting/concatenation is forbidden; use parameterized queries.
+    metadata:
+      l9:
+        canonical_rule_id: L9-PYTHON-SQL-STRING-FORMAT
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: $CURSOR.execute($QUERY % (...))
+      - pattern: $CURSOR.execute($QUERY.format(...))
+      - pattern: $CURSOR.execute(f"...")
+
+  - id: l9.baseline.python.hardcoded-credential
+    languages: [python]
+    severity: WARNING
+    message: Hardcoded credential-looking assignment detected. Load secrets from environment or a secret manager instead.
+    metadata:
+      l9:
+        canonical_rule_id: L9-PYTHON-HARDCODED-CREDENTIAL
+      mode: shadow
+      category: security
+      autofix_safe: false
+    patterns:
+      - pattern-regex: '(?i)(password|passwd|api_key|secret|token)\s*=\s*["''][^"'']{4,}["'']'
+      - pattern-not-regex: '(?i)(password|passwd|api_key|secret|token)\s*=\s*["'']["'']'
+
+  - id: l9.baseline.python.tls-verify-disabled
+    languages: [python]
+    severity: WARNING
+    message: TLS certificate verification disabled. Do not set verify=False / check_hostname=False on network calls.
+    metadata:
+      l9:
+        canonical_rule_id: L9-PYTHON-TLS-VERIFY-DISABLED
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: requests.$METHOD(..., verify=False, ...)
+      - pattern: requests.Session(..., verify=False, ...)
+      - pattern: httpx.$METHOD(..., verify=False, ...)
+      - pattern: httpx.Client(..., verify=False, ...)
+      - pattern: ssl._create_unverified_context(...)
+
+  - id: l9.baseline.python.broad-except
+    languages: [python]
+    severity: INFO
+    message: Bare or overly broad except clause swallows unrelated errors. Catch a specific exception type.
+    metadata:
+      l9:
+        canonical_rule_id: L9-PYTHON-BROAD-EXCEPT
+      mode: shadow
+      category: correctness
+      autofix_safe: false
+    pattern-either:
+      - pattern: |
+          try:
+            ...
+          except:
+            ...
+      - pattern: |
+          try:
+            ...
+          except Exception:
+            ...

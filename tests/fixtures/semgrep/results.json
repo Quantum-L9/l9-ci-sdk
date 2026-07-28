@@ -1,18 +1,18 @@
 {
-  "version": "representative-fixture",
+  "version": "1.171.0",
   "results": [
     {
       "check_id": "python.lang.security.audit.exec-used.exec-used",
       "path": "src/example.py",
       "start": {
-        "line": 4,
+        "line": 2,
         "col": 5,
-        "offset": 42
+        "offset": 25
       },
       "end": {
-        "line": 4,
+        "line": 2,
         "col": 21,
-        "offset": 58
+        "offset": 41
       },
       "extra": {
         "message": "Use of exec detected.",
@@ -31,21 +31,23 @@
             "https://example.invalid/redacted"
           ]
         },
-        "lines": "exec(user_input)"
+        "lines": "exec(user_input)",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
       }
     },
     {
       "check_id": "python.lang.correctness.useless-comparison.useless-comparison",
       "path": "src/example.py",
       "start": {
-        "line": 8,
+        "line": 6,
         "col": 5,
-        "offset": 83
+        "offset": 62
       },
       "end": {
-        "line": 8,
+        "line": 6,
         "col": 11,
-        "offset": 89
+        "offset": 68
       },
       "extra": {
         "message": "Comparison result is unused.",
@@ -58,7 +60,9 @@
             "python"
           ]
         },
-        "lines": "x == 1"
+        "lines": "x == 1",
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
       }
     }
   ],
