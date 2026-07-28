@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/provider-failure.schema.json",
+  "title": "ProviderFailure",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider_id",
+    "failure_type",
+    "message",
+    "required",
+    "fatal",
+    "diagnostics"
+  ],
+  "properties": {
+    "provider_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "failure_type": {
+      "enum": [
+        "not_installed",
+        "unsupported_version",
+        "configuration_error",
+        "execution_error",
+        "timeout",
+        "output_limit_exceeded",
+        "report_missing",
+        "report_malformed",
+        "report_unsupported",
+        "normalization_error",
+        "internal_error"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "required": {
+      "type": "boolean"
+    },
+    "fatal": {
+      "type": "boolean"
+    },
+    "provider_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "report_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exit_code": {
+      "type": "integer"
+    },
+    "diagnostics": {
+      "type": "object"
+    }
+  }
+}

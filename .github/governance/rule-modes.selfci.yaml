@@ -1,0 +1,53 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-ci-kernel (self-CI dogfood policy)
+# layer: [ci, governance, rule-modes, self-ci]
+# tags: [L9_TEMPLATE, self-ci, advisory-first]
+# owner: platform
+# status: active
+# --- /L9_META ---
+#
+# Rule-mode policy for THIS repo's own self-triggering CI (l9-self-ci.yml).
+#
+# Kept SEPARATE from the canonical .github/governance/rule-modes.yaml on
+# purpose: this repo authors the canonical policy as a library for other repos;
+# its OWN dogfood pipeline runs advisory-first so self-check findings surface
+# without blocking. Promote individual rules via promotion-policy.yaml.
+#
+# Modes: blocking | advisory | shadow | disabled
+# First activation for this repo: every rule is advisory (no shadow, no blocking).
+version: 1
+default_mode: advisory
+rules:
+  SECRET-LEAK-NEW: advisory
+  UNKNOWN-DIFF: advisory
+  PY-SYNTAX: advisory
+  TRANSPORT-PACKET-CONTRACT: advisory
+  DEPRECATED-API: advisory
+  DIRECT-NODE-DISPATCH: advisory
+  HANDLER-SIGNATURE: advisory
+  PII-LOGGING: advisory
+  OPTIONAL-STAGE-MISSING: advisory
+  SEMGREP-EXPERIMENTAL: advisory
+  AST-TRANSPORT-001: advisory
+  AST-TRANSPORT-002: advisory
+  AST-TRANSPORT-003: advisory
+  AST-TRANSPORT-004: advisory
+  AST-ROUTING-001: advisory
+  AST-ROUTING-002: advisory
+  AST-ROUTING-003: advisory
+  AST-ROUTING-004: advisory
+  AST-LOGGING-001: advisory
+  AST-LOGGING-002: advisory
+  AST-LOGGING-003: advisory
+  AST-HANDLER-001: advisory
+  AST-HANDLER-002: advisory
+  AST-HANDLER-003: advisory
+  AST-HANDLER-004: advisory
+promotion:
+  allowed_transitions:
+    - advisory_to_blocking
+  blocking_requires:
+    - l9-validated:approve
+    - platform_owner_review
+  telemetry_artifact: artifacts/agent_review_payload.json

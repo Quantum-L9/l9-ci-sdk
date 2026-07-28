@@ -1,0 +1,32 @@
+- name: Bootstrap analysis artifacts
+  run: |
+    mkdir -p artifacts/raw/semgrep
+    mkdir -p artifacts/l9
+- name: Run Semgrep
+  run: |
+    semgrep scan \
+      --config "${SEMGREP_CONFIG}" \
+      --json-output artifacts/raw/semgrep/results.json \
+      .
+- name: Build canonical finding bundle
+  run: |
+    l9-ci semgrep normalize \
+      --input artifacts/raw/semgrep/results.json \
+      --output artifacts/l9/finding-bundle.json \
+      --root . \
+      --snapshot-id "${GITHUB_SHA}" \
+      --revision "${GITHUB_SHA}" \
+      --provider-version "$(semgrep --version)" \
+      --identity-map .l9/semgrep-identity-map.yaml \
+      --policy .github/governance/rule-modes.yaml \
+      --required \
+      --strict
+- name: Validate canonical bundle
+  run: |
+    l9-ci bundle validate artifacts/l9/finding-bundle.json
+- name: Project agent-review payload
+  run: |
+    l9-ci bundle project-agent-payload \
+      --input artifacts/l9/finding-bundle.json \
+      --output artifacts/l9/agent-review-payload.json \
+      --strict

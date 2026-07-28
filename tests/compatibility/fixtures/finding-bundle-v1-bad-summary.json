@@ -1,0 +1,25 @@
+{
+  "schema": "l9.finding-bundle/v1",
+  "schema_version": "1.0.0",
+  "SDK_version": "1.0.0",
+  "generated_at": "2026-07-17T00:00:00Z",
+  "snapshot": {
+    "snapshot_id": "fixture-minimal",
+    "repository_root": "."
+  },
+  "providers": [],
+  "evidence": [],
+  "findings": [],
+  "classifications": [],
+  "provider_failures": [],
+  "coverage": [],
+  "limitations": [],
+  "summary": {
+    "provider_count": 999,
+    "evidence_count": 0,
+    "finding_count": 0,
+    "classification_count": 0,
+    "provider_failure_count": 0,
+    "coverage_count": 0
+  }
+}

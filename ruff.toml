@@ -1,0 +1,33 @@
+# Ruff configuration for l9-ci-sdk.
+#
+# This repository intentionally ships no build manifest: the SDK runs from
+# source over PYTHONPATH via l9-ci-core's `provision-sdk` action (see AGENTS.md
+# "Runtime packaging"), so there is no `pyproject.toml` and therefore no
+# `[tool.ruff]` table to inherit from. This standalone file is the single lint
+# authority and is kept coherent with the repository's real configuration
+# sources:
+#   * requirements.txt / requirements-ci.txt  -> runtime + CI tooling
+#   * .l9/tool-stack.yaml (minimum_version: 3.11) -> target-version below
+#   * .pre-commit-config.yaml (ruff + ruff-format hooks) -> format settings
+#
+# The rule selection is pinned EXPLICITLY rather than relying on Ruff's built-in
+# defaults. Ruff's implicit default `select` changed between 0.15.x and 0.16.0,
+# and CI installs Ruff unpinned; without an explicit `select` the advisory lint
+# gate would surface a different rule set depending on which Ruff version the
+# runner happened to resolve. Pinning the rule set makes `ruff check` and
+# `ruff format --check` deterministic across those versions.
+
+target-version = "py311"
+line-length = 88
+src = ["l9_ci", "tests"]
+extend-exclude = ["docs"]
+
+[lint]
+# E4/E7/E9 (import/statement/syntax subset of pycodestyle), F (pyflakes), and
+# W (pycodestyle warnings). This is the contract the current tree already
+# satisfies; widening it (I, UP, B, ...) is a deliberate follow-up, not a
+# silent side effect of this config.
+select = ["E4", "E7", "E9", "F", "W"]
+
+[format]
+quote-style = "double"

@@ -1,0 +1,41 @@
+---
+# Downstream caller template for L9 YAML Governance.
+# Copy to .github/workflows/l9-yaml-governance.yml in the consuming repo.
+# Replace the zero SHA below with a full 40-character l9-ci-sdk commit SHA.
+# Also copy the lint/ directory from l9-ci-sdk into the consumer repository root.
+#
+# Forbidden hosts for this capability:
+#   - Quantum-L9/.github
+#   - Quantum-L9/l9-ci-core/.github/workflows/l9-yaml-governance.yml
+name: L9 YAML Governance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l9-yaml-governance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  yaml-governance:
+    # Replace 0000… with the immutable SDK commit that contains yaml-governance.
+    uses: Quantum-L9/l9-ci-sdk/.github/workflows/l9-yaml-governance.yml@0000000000000000000000000000000000000000
+    permissions:
+      contents: read
+    with:
+      infra-paths: '.github/ .l9/ .semgrep/'
+      data-paths: 'tests/fixtures/'
+      config-root: 'lint'
+      tools-root: 'lint'
+      # First activation: all finding gates advisory. Promote per promotion-policy.
+      enforce-yamllint: false
+      enforce-governance: false
+      enforce-actionlint: false
+      enforce-zizmor: false

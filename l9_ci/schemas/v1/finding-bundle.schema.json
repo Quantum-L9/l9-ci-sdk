@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/finding-bundle.schema.json",
+  "title": "FindingBundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "SDK_version",
+    "generated_at",
+    "snapshot",
+    "providers",
+    "evidence",
+    "findings",
+    "classifications",
+    "provider_failures",
+    "coverage",
+    "limitations",
+    "summary"
+  ],
+  "properties": {
+    "schema": {
+      "const": "l9.finding-bundle/v1"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "SDK_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_id",
+        "repository_root"
+      ],
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string"
+        },
+        "dirty": {
+          "type": "boolean"
+        }
+      }
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider_id",
+          "adapter_version",
+          "mode",
+          "required"
+        ],
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "adapter_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "enum": [
+              "execute",
+              "import"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "evidence-record.schema.json"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "finding.schema.json"
+      }
+    },
+    "classifications": {
+      "type": "array",
+      "items": {
+        "$ref": "finding-classification.schema.json"
+      }
+    },
+    "provider_failures": {
+      "type": "array",
+      "items": {
+        "$ref": "provider-failure.schema.json"
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "$ref": "coverage.schema.json"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_count",
+        "evidence_count",
+        "finding_count",
+        "classification_count",
+        "provider_failure_count",
+        "coverage_count"
+      ],
+      "properties": {
+        "provider_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "classification_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "provider_failure_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

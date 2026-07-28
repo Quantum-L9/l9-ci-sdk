@@ -1,0 +1,64 @@
+# Pre-commit hooks — mechanical enforcement before commit and push.
+# Install both hook types (also: make install-hooks / make bootstrap):
+#   pre-commit install --hook-type pre-commit --hook-type pre-push
+# Run manually: pre-commit run --all-files   (or: make hooks / make check)
+# Ship path: make push  (raw git push still hits the pre-push make-check gate)
+
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.5
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        name: yamllint (infra profile)
+        args: ['--strict', '-c', 'lint/yamllint-infra.yml']
+        files: ^(\.github/(workflows|actions)/|\.l9/|\.semgrep/).*\.ya?ml$
+        exclude: ^.*/governance/.*$
+      - id: yamllint
+        alias: yamllint-data
+        name: yamllint (data profile)
+        args: ['-c', 'lint/yamllint-data.yml']
+        files: ^(tests/fixtures/).*\.ya?ml$
+
+  - repo: local
+    hooks:
+      - id: l9-governance-json
+        name: governance documents parse as strict JSON
+        entry: python3 lint/check_governance_json.py
+        language: system
+        pass_filenames: false
+        files: ^\.github/governance/.*\.ya?ml$
+
+      - id: l9-action-pins
+        name: uses refs are SHA-pinned and Core pin is consistent
+        entry: python3 lint/check_action_pins.py
+        language: system
+        pass_filenames: false
+        files: ^.*(\.github/workflows/|\.github/actions/).*\.ya?ml$
+
+      - id: l9-zizmor
+        name: zizmor workflow security audit
+        entry: zizmor --format plain
+        language: python
+        additional_dependencies: ['zizmor==1.28.0']
+        pass_filenames: false
+        args: ['.']
+        files: ^\.github/(workflows|actions)/.*\.ya?ml$
+
+      # Fail-closed push gate: raw `git push` cannot skip .pre-commit-config.yaml.
+      # `make push` sets L9_MAKE_PUSH=1 after `make check` to avoid a double run.
+      - id: l9-make-check
+        name: make check (push gate)
+        entry: bash -c 'if [ "${L9_MAKE_PUSH:-}" = "1" ]; then exit 0; fi; make check'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

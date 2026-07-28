@@ -1,0 +1,14 @@
+{
+  "results": [
+    {
+      "check_id": "",
+      "path": "../outside.py",
+      "start": {
+        "line": 0,
+        "col": 0
+      },
+      "extra": {}
+    }
+  ],
+  "errors": "not-an-array"
+}

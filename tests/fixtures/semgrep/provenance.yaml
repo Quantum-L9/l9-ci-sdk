@@ -1,0 +1,28 @@
+schema: l9.fixture-provenance/v1
+fixture: results.json
+provider_id: semgrep
+verification_status: representative_not_runtime_captured
+capture_required_before_supported_state: true
+expected_capture_command:
+  - semgrep
+  - scan
+  - --config
+  - tests/fixtures/semgrep/rules.yaml
+  - --json-output
+  - tests/fixtures/semgrep/results.captured.json
+  - tests/fixtures/semgrep/source
+redaction_rules:
+  - replace repository-specific paths with fixture-relative paths
+  - remove source code except minimal non-sensitive examples
+  - replace fingerprints with stable redacted values
+  - preserve JSON structure
+  - preserve provider rule IDs
+  - preserve location shape
+  - preserve severity values
+required_provenance_fields_after_capture:
+  - Semgrep_version
+  - capture_timestamp
+  - command
+  - input_checksum
+  - output_checksum
+  - redaction_reviewed_by

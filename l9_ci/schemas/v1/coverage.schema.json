@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/coverage.schema.json",
+  "title": "Coverage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider_id",
+    "status",
+    "files_considered",
+    "files_analyzed",
+    "limitations"
+  ],
+  "properties": {
+    "provider_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "partial",
+        "skipped",
+        "unsupported",
+        "failed"
+      ]
+    },
+    "files_considered": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "files_analyzed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
