@@ -176,7 +176,7 @@ jobs:
 
       - name: Project agent-review payload
         if: steps.gov.outputs.enabled == 'true'
-        uses: Quantum-L9/l9-ci-core/.github/actions/invoke-sdk@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
+        uses: Quantum-L9/l9-ci-core/.github/actions/invoke-sdk@c3f04e1268364e3623fc57f963937e2a0665e0e0
         with:
           executable: ${{ steps.sdk.outputs.executable }}
           operation: bundle-project-agent-payload
