@@ -23,13 +23,13 @@
 #                                   + .github/governance/l9-ci-shared-spec.yaml
 #   * rule-mode governance       -> .github/governance/rule-modes.yaml
 #   * canonical governance set   -> audit-policy / audit-baseline / thresholds
-#   * L9 AST rules (shadow)      -> .semgrep/l9-*.yml
+#   * L9 AST rules (advisory)    -> .semgrep/l9-*.yml
 #
 # Philosophy: "CI is a routing system, not a nightclub bouncer."
 #   1. Classify the PR from changed files (policy-driven, 7 canonical classes).
 #   2. Run only the gates whose surface is present; skip cleanly otherwise.
-#   3. Block merge ONLY on a rule whose mode == blocking (rule-modes.yaml).
-#      Debt-node default: only a newly-introduced secret leak blocks.
+#   3. First activation: every rule mode is advisory (rule-modes.selfci.yaml).
+#      No shadow mode. No blocking. Findings annotate; they do not fail closed.
 #   4. Emit machine-readable state (ci_summary.json, agent payload) and one
 #      stable-marker PR comment (<!-- l9-ci-audit-marker: v1 -->).
 # The job named "L9 Self-CI Gate" is the branch-protection required check.
@@ -164,10 +164,10 @@ jobs:
           PY
 
   # ────────────────────────────────────────────────────────────────────────
-  # SECRET SCAN — the only hard-blocking gate (diff-scoped, license-free CLI)
+  # SECRET SCAN — advisory (diff-scoped, license-free CLI); does not fail closed
   # ────────────────────────────────────────────────────────────────────────
   secret_scan:
-    name: Secret Scan (new secrets only)
+    name: Secret Scan (new secrets only, advisory)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: classify
@@ -203,17 +203,16 @@ jobs:
             ./gitleaks detect --source . --log-opts="-1" $CONFIG_ARG \
               --report-format json --report-path gitleaks.json --redact --no-banner
           fi
-          CODE=$?
+          _gitleaks_exit=$?
           set -e
           COUNT=0
           if [ -f gitleaks.json ]; then
             COUNT=$(python3 -c "import json,sys; d=json.load(open('gitleaks.json')); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null || echo 0)
           fi
           echo "findings=$COUNT" >> "$GITHUB_OUTPUT"
-          echo "Newly-introduced secret findings: $COUNT"
+          echo "Newly-introduced secret findings: $COUNT (gitleaks exit ${_gitleaks_exit})"
           if [ "$COUNT" -gt 0 ]; then
-            echo "::error::$COUNT newly-introduced secret(s) detected — this blocks merge."
-            exit 1
+            echo "::warning::$COUNT newly-introduced secret(s) detected (advisory — does not fail the job)."
           fi
           exit 0
       - name: Upload gitleaks report
@@ -351,10 +350,10 @@ jobs:
           mypy l9_ci || echo "::warning::mypy findings (advisory)"
 
   # ────────────────────────────────────────────────────────────────────────
-  # SEMGREP — advisory/shadow L9 AST rules, only when Python present
+  # SEMGREP — advisory L9 AST rules, only when Python present
   # ────────────────────────────────────────────────────────────────────────
   semgrep:
-    name: Semgrep (L9 AST, shadow/advisory)
+    name: Semgrep (L9 AST, advisory)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: classify
@@ -366,7 +365,7 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Run semgrep (advisory; L9 AST rules are shadow-mode)
+      - name: Run semgrep (advisory)
         run: |
           if [ ! -d .semgrep ]; then
             echo "[SKIP] no .semgrep rules directory"
@@ -374,7 +373,7 @@ jobs:
           fi
           pip install --quiet semgrep
           semgrep --config .semgrep/ --quiet --json --output semgrep.json || true
-          semgrep --config .semgrep/ --quiet || echo "::warning::semgrep findings (advisory / shadow telemetry)"
+          semgrep --config .semgrep/ --quiet || echo "::warning::semgrep findings (advisory)"
       - name: Upload semgrep telemetry
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
@@ -560,7 +559,7 @@ jobs:
             agent_review_payload.json
           if-no-files-found: ignore
           retention-days: 30
-      - name: Evaluate gate (rule-mode aware; blocks only on blocking-mode rules)
+      - name: Evaluate gate (rule-mode aware; advisory-first — blocks only if a rule is blocking)
         env:
           RULE_MODES_PATH: .github/governance/rule-modes.selfci.yaml
         run: python3 .github/scripts/evaluate_ci_gate.py

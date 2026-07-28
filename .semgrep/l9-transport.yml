@@ -3,7 +3,7 @@
 # l9_schema: 1
 # origin: l9-ci-universal-base
 # layer: [ci, semgrep, transport]
-# tags: [L9_TEMPLATE, TransportPacket, shadow-mode, ast-governance]
+# tags: [L9_TEMPLATE, TransportPacket, advisory-mode, ast-governance]
 # owner: platform
 # status: active
 # --- /L9_META ---
@@ -14,7 +14,7 @@ rules:
     message: PacketEnvelope is forbidden as an active contract. Use TransportPacket only.
     metadata:
       l9_rule_id: AST-TRANSPORT-001
-      mode: shadow
+      mode: advisory
       contract: TransportPacket_only
       autofix_safe: false
     pattern-either:
@@ -27,7 +27,7 @@ rules:
     message: PacketEnvelope instantiation is forbidden. Construct or derive TransportPacket instead.
     metadata:
       l9_rule_id: AST-TRANSPORT-002
-      mode: shadow
+      mode: advisory
       contract: TransportPacket_only
       autofix_safe: false
     pattern: PacketEnvelope(...)
@@ -38,7 +38,7 @@ rules:
     message: Alternate packet contracts are forbidden in core paths. TransportPacket is the only wire format.
     metadata:
       l9_rule_id: AST-TRANSPORT-003
-      mode: shadow
+      mode: advisory
       contract: TransportPacket_only
       autofix_safe: false
     pattern-either:
@@ -52,7 +52,7 @@ rules:
     message: Raw dict execute contracts are forbidden. Execution boundaries must use TransportPacket.
     metadata:
       l9_rule_id: AST-TRANSPORT-004
-      mode: shadow
+      mode: advisory
       contract: TransportPacket_only
       autofix_safe: false
     patterns:

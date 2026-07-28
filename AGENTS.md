@@ -73,12 +73,16 @@ declared in `.github/governance/execution-profiles.yaml`:
   provision-sdk -> `semgrep normalize` -> validate-bundle -> agent payload ->
   route -> manifest -> upload -> Core's `publish-analysis.yml`.
 Governance notes:
-- All profiles are currently `advisory` and non-strict. Community `p/python`
-  rules carry no L9 canonical rule identity, so strict identity resolution would
-  reject any finding at `semgrep normalize`; advisory-first surfaces findings
-  without blocking. Promote to `blocking` only after adopting L9-authored rules
-  (which embed `metadata.l9.canonical_rule_id`) or an explicit identity map,
-  per `.github/governance/promotion-policy.yaml`.
+- All Core analysis profiles are `advisory` and `strict: false`. Self-CI
+  (`rule-modes.selfci.yaml`) is advisory-first too: no `shadow`, no `blocking`
+  on first activation (including secret scan). Community `p/python` rules carry
+  no L9 canonical rule identity, so strict identity resolution would reject
+  every finding at `semgrep normalize`; advisory-first surfaces findings without
+  failing closed. Promote individual rules/profiles later per
+  `.github/governance/promotion-policy.yaml`.
+- Core's `publish-analysis.yml` always defines jobs named `shadow` and
+  `publish`; when mode is `advisory`, `publish` runs and `shadow` is skipped
+  (UI still lists the skipped job — that is Core layout, not shadow mode).
 - Governance files use a `.yaml` extension but are parsed as JSON — keep them
   valid JSON (no comments, no trailing commas). Self-CI companions
   `rule-modes.selfci.yaml` and `l9-ci-shared-spec.yaml` are real YAML and are

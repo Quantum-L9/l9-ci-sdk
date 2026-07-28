@@ -3,7 +3,7 @@
 # l9_schema: 1
 # origin: l9-ci-universal-base
 # layer: [ci, semgrep, handler]
-# tags: [L9_TEMPLATE, TransportPacket, handler-signature, shadow-mode]
+# tags: [L9_TEMPLATE, TransportPacket, handler-signature, advisory-mode]
 # owner: platform
 # status: active
 # --- /L9_META ---
@@ -14,7 +14,7 @@ rules:
     message: Handler packet parameter must be TransportPacket, not dict.
     metadata:
       l9_rule_id: AST-HANDLER-001
-      mode: shadow
+      mode: advisory
       contract: handler_signature
       autofix_safe: false
     pattern-either:
@@ -31,7 +31,7 @@ rules:
     message: Handler must accept a TransportPacket boundary object, not raw payload/input dictionaries.
     metadata:
       l9_rule_id: AST-HANDLER-002
-      mode: shadow
+      mode: advisory
       contract: handler_signature
       autofix_safe: false
     pattern-either:
@@ -51,7 +51,7 @@ rules:
     message: Node handler functions must be async and return TransportPacket.
     metadata:
       l9_rule_id: AST-HANDLER-003
-      mode: shadow
+      mode: advisory
       contract: handler_signature
       autofix_safe: false
     pattern: |
@@ -64,7 +64,7 @@ rules:
     message: Handler return annotation should be TransportPacket.
     metadata:
       l9_rule_id: AST-HANDLER-004
-      mode: shadow
+      mode: advisory
       contract: handler_signature
       autofix_safe: false
     pattern: |
