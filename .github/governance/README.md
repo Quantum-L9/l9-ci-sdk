@@ -43,13 +43,16 @@ identity map or stricter policy is in place.
 
 Validated with Core's own `validate-governance` (`status: valid`).
 
-## Rolling a provider out safely (shadow → advisory → blocking)
+## Rolling a provider out safely (advisory → blocking)
 
-Start a new provider or a stricter policy in **`shadow`** (runs, artifacts
-retained as promotion evidence, **no** GitHub check), then promote per
-`promotion-policy.yaml`:
+This repository's dogfood profiles and self-CI start in **`advisory`** (full
+run, GitHub check, findings annotated, do not fail closed). The promotion
+ladder still allows `shadow` for other consumers, but this repo does not use
+`shadow` on first activation:
 
-`disabled → shadow → advisory → blocking`
+`disabled → shadow → advisory → blocking` (library ladder)
+
+Dogfood today: stay on `advisory` until promoting a rule/profile to `blocking`.
 
 Change the mode in `rule-modes.yaml` `defaults` (or a `provider_overrides`
 entry). `promotion-policy.yaml` records the evidence bar for each hop

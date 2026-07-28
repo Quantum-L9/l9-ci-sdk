@@ -1,0 +1,41 @@
+# L9_META: origin=Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e; repo=l9-ci-sdk; updated=2026-07-27
+
+name: Feature Request
+description: Propose an SDK feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What contract or workflow gap does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Define deterministic completion criteria.
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested Priority
+      options:
+        - Critical (blocks current work)
+        - High (significant improvement)
+        - Medium (nice to have)
+        - Low (future consideration)

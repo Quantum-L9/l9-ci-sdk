@@ -1,0 +1,322 @@
+---
+# L9 YAML and Workflow Governance (reusable) — owned by Quantum-L9/l9-ci-sdk
+#
+# Independent gates, all read-only, no external GitHub Actions:
+#   yamllint (infra)  - style + structure on human-authored YAML
+#   yamllint (data)   - structural integrity only on fixtures/prompts/eval configs
+#   governance-json   - .github/governance/*.yaml must be strict JSON (except
+#                       real-YAML self-CI companions skipped by the checker)
+#   action-pins       - every `uses:` is a full 40-char SHA; Core pin consistent
+#   actionlint        - workflow semantics + shellcheck, checksum-verified binary
+#   zizmor            - workflow security audit, version-pinned from PyPI
+#
+# Conventions:
+#   - immutable event-revision checkout (no floating action ref)
+#   - zero external GitHub Actions in this reusable workflow
+#   - permissions: contents: read only
+#   - tool configs live under lint/ (not .github/lint/)
+#
+# Dogfood (this repo):
+#   uses: ./.github/workflows/l9-yaml-governance.yml
+#
+# Downstream consumer:
+#   uses: Quantum-L9/l9-ci-sdk/.github/workflows/l9-yaml-governance.yml@<40-char-sdk-sha>
+#   Copy lint/ from this repository into the consumer root.
+#   Do NOT pin Quantum-L9/.github or l9-ci-core for this capability.
+
+name: L9 YAML Governance
+
+on:
+  workflow_call:
+    inputs:
+      infra-paths:
+        description: Space-separated paths linted with the strict infra profile.
+        required: false
+        type: string
+        default: '.github/ .l9/ .semgrep/'
+      data-paths:
+        description: Space-separated paths linted with the structural data profile. Empty disables.
+        required: false
+        type: string
+        default: ''
+      config-root:
+        description: Directory containing yamllint-infra.yml and yamllint-data.yml.
+        required: false
+        type: string
+        default: 'lint'
+      tools-root:
+        description: Directory containing check_governance_json.py and check_action_pins.py.
+        required: false
+        type: string
+        default: 'lint'
+      python-version:
+        required: false
+        type: string
+        default: '3.12'
+      enforce-yamllint:
+        description: Fail the job on yamllint findings. false = full scan, annotate, exit 0.
+        required: false
+        type: boolean
+        default: false
+      enforce-governance:
+        description: Fail the job on governance-JSON / action-pin findings. false = advisory.
+        required: false
+        type: boolean
+        default: false
+      enforce-actionlint:
+        description: Fail the job on actionlint findings. false = full scan, annotate, exit 0.
+        required: false
+        type: boolean
+        default: false
+      enforce-zizmor:
+        description: Fail the job on zizmor findings. false = full scan, annotate, exit 0.
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  YAMLLINT_VERSION: '1.38.0'
+  ZIZMOR_VERSION: '1.28.0'
+  ACTIONLINT_VERSION: '1.7.12'
+  ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+
+jobs:
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch -q --depth=1 origin "${REVISION}"
+          git checkout -q --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+
+      - name: Install yamllint
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check \
+            "yamllint==${YAMLLINT_VERSION}"
+          yamllint --version
+
+      - name: yamllint (infra profile, strict)
+        env:
+          CONFIG_ROOT: ${{ inputs.config-root }}
+          INFRA_PATHS: ${{ inputs.infra-paths }}
+          ENFORCE: ${{ inputs.enforce-yamllint }}
+        run: |
+          set -uo pipefail
+          config="${CONFIG_ROOT}/yamllint-infra.yml"
+          if [ ! -f "${config}" ]; then
+            echo "::error::missing ${config}"
+            exit 1
+          fi
+          set +e
+          # shellcheck disable=SC2086
+          yamllint --strict --format github -c "${config}" ${INFRA_PATHS}
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::yamllint infra findings are advisory for this caller (exit ${code})"
+          exit 0
+
+      - name: yamllint (data profile, structural only)
+        if: inputs.data-paths != ''
+        env:
+          CONFIG_ROOT: ${{ inputs.config-root }}
+          DATA_PATHS: ${{ inputs.data-paths }}
+          ENFORCE: ${{ inputs.enforce-yamllint }}
+        run: |
+          set -uo pipefail
+          config="${CONFIG_ROOT}/yamllint-data.yml"
+          if [ ! -f "${config}" ]; then
+            echo "::error::missing ${config}"
+            exit 1
+          fi
+          set +e
+          # shellcheck disable=SC2086
+          yamllint --format github -c "${config}" ${DATA_PATHS}
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::yamllint data findings are advisory for this caller (exit ${code})"
+          exit 0
+
+  governance-json:
+    name: Governance JSON contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch -q --depth=1 origin "${REVISION}"
+          git checkout -q --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+
+      - name: Validate governance documents parse as strict JSON
+        env:
+          TOOLS_ROOT: ${{ inputs.tools-root }}
+          ENFORCE: ${{ inputs.enforce-governance }}
+        run: |
+          set -uo pipefail
+          set +e
+          python3 "${TOOLS_ROOT}/check_governance_json.py" .
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::governance JSON findings are advisory for this caller (exit ${code})"
+          exit 0
+
+      - name: Validate action pins and Core pin consistency
+        env:
+          TOOLS_ROOT: ${{ inputs.tools-root }}
+          ENFORCE: ${{ inputs.enforce-governance }}
+        run: |
+          set -uo pipefail
+          set +e
+          python3 "${TOOLS_ROOT}/check_action_pins.py" .
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::action-pin findings are advisory for this caller (exit ${code})"
+          exit 0
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch -q --depth=1 origin "${REVISION}"
+          git checkout -q --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+
+      - name: Install actionlint (checksum-verified binary)
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          curl -fsSL --retry 3 -o "${archive}" "${url}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check --status
+          tar -xzf "${archive}" actionlint
+          chmod +x actionlint
+          ./actionlint --version
+
+      - name: Run actionlint
+        env:
+          ENFORCE: ${{ inputs.enforce-actionlint }}
+        run: |
+          set -uo pipefail
+          # Always run the full scan (actionlint reports every finding, then exits).
+          # Fail the step only when the caller opts into enforce mode.
+          set +e
+          ./actionlint -color -shellcheck=shellcheck
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::actionlint findings are advisory for this caller (exit ${code})"
+          exit 0
+
+  zizmor:
+    name: zizmor security audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch -q --depth=1 origin "${REVISION}"
+          git checkout -q --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+
+      - name: Install zizmor
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check \
+            "zizmor==${ZIZMOR_VERSION}"
+          zizmor --version
+
+      - name: Run zizmor
+        env:
+          ENFORCE: ${{ inputs.enforce-zizmor }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          # SARIF upload is deliberately omitted: it requires security-events: write.
+          # Always run the full audit; fail the step only when enforce is true.
+          set +e
+          zizmor --format plain .
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::zizmor findings are advisory for this caller (exit ${code})"
+          exit 0

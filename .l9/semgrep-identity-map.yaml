@@ -1,3 +1,4 @@
+---
 schema: l9.identity-map/v1
 metadata:
   provider_id: semgrep
