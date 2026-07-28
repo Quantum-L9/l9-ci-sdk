@@ -20,6 +20,7 @@ Files: 298
 - `.github/governance/quality-thresholds.yaml`
 - `.github/governance/rule-modes.selfci.yaml`
 - `.github/governance/rule-modes.yaml`
+- `.github/governance/semgrep-policy.yaml`
 - `.github/governance/waivers.yaml`
 - `.github/scripts/agent_review_payload.py`
 - `.github/scripts/classify_pr.py`
