@@ -1,0 +1,168 @@
+{
+  "repo": "/mnt/data/l9-ci-sdk-doc-remediation-workspace",
+  "exit_code": 1,
+  "counts": {
+    "PASS": 5,
+    "FAIL": 9,
+    "WARN": 11,
+    "SKIP": 1
+  },
+  "findings": [
+    {
+      "check_id": "DOC-F01",
+      "tier": "MUST",
+      "status": "PASS",
+      "detail": "LICENSE present at root"
+    },
+    {
+      "check_id": "DOC-F02-README.md",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "README.md present"
+    },
+    {
+      "check_id": "DOC-F02-QUICKSTART.md",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "QUICKSTART.md present"
+    },
+    {
+      "check_id": "DOC-F04-AGENTS.md",
+      "tier": "MUST",
+      "status": "PASS",
+      "detail": "AGENTS.md present"
+    },
+    {
+      "check_id": "DOC-F04-ARCHITECTURE.md",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "ARCHITECTURE.md present"
+    },
+    {
+      "check_id": "DOC-F04-SECURITY.md",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "SECURITY.md present"
+    },
+    {
+      "check_id": "DOC-F04-CONTRIBUTING.md",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "CONTRIBUTING.md present"
+    },
+    {
+      "check_id": "DOC-F04-RUNBOOK.md",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "RUNBOOK.md present"
+    },
+    {
+      "check_id": "DOC-F04-VALIDATION.md",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "VALIDATION.md present"
+    },
+    {
+      "check_id": "DOC-F04-ALIGNMENT.md",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "ALIGNMENT.md present"
+    },
+    {
+      "check_id": "DOC-F04-adj-INVARIANTS.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "INVARIANTS.md present"
+    },
+    {
+      "check_id": "DOC-agent-CLAUDE.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "CLAUDE.md present"
+    },
+    {
+      "check_id": "DOC-F05-ROADMAP.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "ROADMAP.md present"
+    },
+    {
+      "check_id": "DOC-F05-MIGRATION.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "MIGRATION.md present"
+    },
+    {
+      "check_id": "DOC-F05-CHANGE_SUMMARY.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "CHANGE_SUMMARY.md present"
+    },
+    {
+      "check_id": "DOC-org-CODE_OF_CONDUCT.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "CODE_OF_CONDUCT.md present"
+    },
+    {
+      "check_id": "DOC-org-SUPPORT.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "SUPPORT.md present"
+    },
+    {
+      "check_id": "DOC-F05-docs/ISSUE_INDEX.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "docs/ISSUE_INDEX.md present"
+    },
+    {
+      "check_id": "DOC-F05-docs/COMPATIBILITY_MATRIX.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "docs/COMPATIBILITY_MATRIX.md present"
+    },
+    {
+      "check_id": "DOC-org-.github/PULL_REQUEST_TEMPLATE.md",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": ".github/PULL_REQUEST_TEMPLATE.md present"
+    },
+    {
+      "check_id": "DOC-F03",
+      "tier": "MUST",
+      "status": "PASS",
+      "detail": "ADR ledger present (8 ADR files found)"
+    },
+    {
+      "check_id": "DOC-F03-idx",
+      "tier": "SHOULD",
+      "status": "WARN",
+      "detail": "ADR ledger index present"
+    },
+    {
+      "check_id": "DOC-E02",
+      "tier": "COND",
+      "status": "SKIP",
+      "detail": "no sealing tooling detected \u2014 pillar-E rows conditional"
+    },
+    {
+      "check_id": "DOC-E01",
+      "tier": "MUST",
+      "status": "FAIL",
+      "detail": "L9_META headers valid on root docs \u2014 missing/invalid: AGENTS.md"
+    },
+    {
+      "check_id": "DOC-E04",
+      "tier": "SHOULD",
+      "status": "PASS",
+      "detail": "doc L9_META version matches pyproject"
+    },
+    {
+      "check_id": "DOC-SUBSTANCE",
+      "tier": "SHOULD",
+      "status": "PASS",
+      "detail": "docs meet substance floor (>=3 content lines)"
+    }
+  ]
+}

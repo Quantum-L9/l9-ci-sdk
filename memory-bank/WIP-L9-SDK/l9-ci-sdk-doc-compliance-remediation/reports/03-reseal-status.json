@@ -1,0 +1,5 @@
+{
+  "status": "SKIP_BLOCKED",
+  "reason": "No canonical generate_manifest tooling is present in the connector-grounded tracked inventory.",
+  "action": "Do not hand-edit MANIFEST.md or VALIDATION_REPORT.json. Restore/add authoritative tooling, then regenerate."
+}
