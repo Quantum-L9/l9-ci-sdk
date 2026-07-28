@@ -1,0 +1,1440 @@
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.yml b/.github/ISSUE_TEMPLATE/bug_report.yml
+new file mode 100644
+index 0000000..4a311bb
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/bug_report.yml
+@@ -0,0 +1,45 @@
++# L9_META: origin=Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e; repo=l9-ci-sdk; updated=2026-07-27
++
++name: Bug Report
++description: Report a reproducible bug in l9-ci-sdk
++title: "[Bug]: "
++labels: ["bug", "triage"]
++assignees: []
++body:
++  - type: textarea
++    id: description
++    attributes:
++      label: Bug Description
++      description: A clear description of the bug.
++    validations:
++      required: true
++  - type: textarea
++    id: reproduction
++    attributes:
++      label: Steps to Reproduce
++      description: Exact commands and inputs.
++    validations:
++      required: true
++  - type: textarea
++    id: expected
++    attributes:
++      label: Expected Behavior
++    validations:
++      required: true
++  - type: textarea
++    id: actual
++    attributes:
++      label: Actual Behavior
++    validations:
++      required: true
++  - type: input
++    id: revision
++    attributes:
++      label: SDK Version or Commit SHA
++    validations:
++      required: true
++  - type: textarea
++    id: logs
++    attributes:
++      label: Redacted Logs or Diagnostics
++      render: shell
+diff --git a/.github/ISSUE_TEMPLATE/ci-failure.yml b/.github/ISSUE_TEMPLATE/ci-failure.yml
+new file mode 100644
+index 0000000..16bf8dc
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/ci-failure.yml
+@@ -0,0 +1,45 @@
++# L9_META: origin=Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e; repo=l9-ci-sdk; updated=2026-07-27
++
++name: CI Pipeline Failure
++description: Report an l9-ci-sdk workflow failure
++title: "[CI Failure]: "
++labels: ["ci-failure", "triage"]
++assignees: []
++body:
++  - type: input
++    id: workflow-run-url
++    attributes:
++      label: Workflow Run URL
++    validations:
++      required: true
++  - type: input
++    id: failed-job
++    attributes:
++      label: Failed Job Name
++    validations:
++      required: true
++  - type: dropdown
++    id: trigger
++    attributes:
++      label: Triggered By
++      options:
++        - Pull Request
++        - Push to main
++        - Scheduled
++        - Workflow Dispatch
++        - Tag push
++    validations:
++      required: true
++  - type: textarea
++    id: error-output
++    attributes:
++      label: Redacted Error Output
++      render: shell
++    validations:
++      required: true
++  - type: input
++    id: revision
++    attributes:
++      label: Commit SHA and Core Pin
++    validations:
++      required: true
+diff --git a/.github/ISSUE_TEMPLATE/feature_request.yml b/.github/ISSUE_TEMPLATE/feature_request.yml
+new file mode 100644
+index 0000000..6f0f388
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/feature_request.yml
+@@ -0,0 +1,41 @@
++# L9_META: origin=Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e; repo=l9-ci-sdk; updated=2026-07-27
++
++name: Feature Request
++description: Propose an SDK feature or enhancement
++title: "[Feature]: "
++labels: ["enhancement", "triage"]
++assignees: []
++body:
++  - type: textarea
++    id: problem
++    attributes:
++      label: Problem Statement
++      description: What contract or workflow gap does this solve?
++    validations:
++      required: true
++  - type: textarea
++    id: solution
++    attributes:
++      label: Proposed Solution
++    validations:
++      required: true
++  - type: textarea
++    id: alternatives
++    attributes:
++      label: Alternatives Considered
++  - type: textarea
++    id: acceptance
++    attributes:
++      label: Acceptance Criteria
++      description: Define deterministic completion criteria.
++    validations:
++      required: true
++  - type: dropdown
++    id: priority
++    attributes:
++      label: Suggested Priority
++      options:
++        - Critical (blocks current work)
++        - High (significant improvement)
++        - Medium (nice to have)
++        - Low (future consideration)
+diff --git a/.github/ISSUE_TEMPLATE/gov-violation.yml b/.github/ISSUE_TEMPLATE/gov-violation.yml
+new file mode 100644
+index 0000000..81cc155
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/gov-violation.yml
+@@ -0,0 +1,45 @@
++# L9_META: origin=Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e; repo=l9-ci-sdk; updated=2026-07-27
++
++name: Governance Violation
++description: Report a repository contract or governance violation
++title: "[Gov Violation]: "
++labels: ["governance", "violation", "triage"]
++assignees: []
++body:
++  - type: dropdown
++    id: violation-type
++    attributes:
++      label: Violation Type
++      options:
++        - SDK/Core ownership boundary
++        - Provider policy-independence
++        - Canonical identity resolution
++        - Artifact or schema compatibility
++        - Secret or redaction handling
++        - CI rule-mode enforcement
++        - Generated evidence integrity
++        - Other
++    validations:
++      required: true
++  - type: textarea
++    id: evidence
++    attributes:
++      label: Evidence
++      render: shell
++    validations:
++      required: true
++  - type: dropdown
++    id: severity
++    attributes:
++      label: Severity
++      options:
++        - Critical
++        - High
++        - Medium
++        - Low
++    validations:
++      required: true
++  - type: textarea
++    id: proposed-fix
++    attributes:
++      label: Proposed Fix
+diff --git a/.github/PULL_REQUEST_TEMPLATE.md b/.github/PULL_REQUEST_TEMPLATE.md
+new file mode 100644
+index 0000000..28035ff
+--- /dev/null
++++ b/.github/PULL_REQUEST_TEMPLATE.md
+@@ -0,0 +1,50 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: .github/PULL_REQUEST_TEMPLATE.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++origin: Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e
++/L9_META -->
++## Summary
++
++<!-- One-sentence description of what this PR does. -->
++
++## Type of Change
++
++- [ ] Bug fix
++- [ ] Feature / enhancement
++- [ ] Refactor (no behavior change)
++- [ ] Documentation
++- [ ] CI / governance change
++- [ ] Breaking change (see rollback plan below)
++
++## Governance Checklist
++
++- [ ] Repository contracts and `AGENTS.md` reviewed
++- [ ] All required CI gates green; no bypasses
++- [ ] Architecture boundaries and anti-patterns checked
++- [ ] CODEOWNERS notified for blast-radius files
++- [ ] Contract/schema/tests updated together where applicable
++- [ ] ADR updated when architectural semantics changed
++- [ ] Core callers remain pinned to one verified immutable commit SHA
++- [ ] Generated evidence was regenerated by tooling, not hand-edited
++
++## Breaking Change
++
++- [ ] This is a breaking change
++
++Describe impact and migration path:
++
++<!-- What breaks? Who is affected? How do they migrate? -->
++
++## Rollback Plan
++
++<!-- Exact rollback for contract, workflow, or release changes. -->
++
++## Related Issues
++
++Closes #<!-- issue number -->
+diff --git a/AGENTS.md b/AGENTS.md
+index a07793c..b3bf6dd 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -1,3 +1,13 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: AGENTS.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
+ ## Repository purpose
+ `l9-ci-sdk` owns canonical analysis contracts, provider adapters, normalized
+ findings, validation, and deterministic artifact generation.
+@@ -81,3 +91,74 @@ Governance notes:
+   per `.github/governance/promotion-policy.yaml`.
+ - Governance files use a `.yaml` extension but are parsed as JSON — keep them
+   valid JSON (no comments, no trailing commas).
++
++
++## Live repository metrics
++
++| Metric | Grounded value |
++|---|---:|
++| Architectural package areas | 13 |
++| Public SDK packages | 11 |
++| Versioned JSON schemas | 10 |
++| Accepted ADRs | 8 |
++| L9 analysis profile callers | 5 |
++| Self-CI jobs | 9 |
++| Pre-commit hooks | 2 |
++| Sealed baseline tests | 75 passed |
++
++The `MANIFEST.md` and `VALIDATION_REPORT.json` 158-file count predates later CI
++and governance additions. Treat it as historical evidence, not a live tree
++count, until canonical reseal tooling exists.
++
++## CI enforcement map
++
++### Blocking path
++
++| Job/rule | Behavior |
++|---|---|
++| `Secret Scan (new secrets only)` | Fails when newly introduced secrets are found |
++| `L9 Self-CI Gate` | Aggregates all results and blocks only rules configured as `blocking` |
++
++### Advisory or shadow path
++
++| Job | Behavior |
++|---|---|
++| Validate | YAML and Python syntax; warnings are non-blocking |
++| Lint | Ruff check and format; advisory |
++| Typecheck | mypy over `l9_ci`; advisory |
++| Semgrep | L9 AST telemetry; advisory/shadow |
++| Audit | Runs only when `tools/audit_engine.py` exists; advisory |
++| Supply chain | SBOM generation; advisory |
++| Five Core analysis profiles | Advisory and non-strict until canonical identity is available |
++
++Do not describe an advisory result as merge-blocking. Do not weaken the secret
++scan or final rule-mode gate.
++
++## Pre-commit
++
++| Hook | Revision | Behavior |
++|---|---|---|
++| `ruff` | `ruff-pre-commit` v0.15.5 | Runs `ruff --fix` |
++| `ruff-format` | `ruff-pre-commit` v0.15.5 | Formats Python |
++
++## Lint and type configuration
++
++- Python target: 3.11
++- Line length: 88
++- Ruff sources: `l9_ci`, `tests`
++- Ruff excludes: `docs`
++- Ruff rules: `E4`, `E7`, `E9`, `F`, `W`
++- Quote style: double
++- mypy floor: 1.19
++
++## Known intentional exceptions
++
++- `docs/` is excluded from Ruff because it is documentation, not Python source.
++- Community Semgrep `p/python` rules lack L9 canonical IDs. The profile callers
++  remain advisory/non-strict until L9-authored rules or an explicit identity map
++  is adopted.
++- Advisory jobs intentionally use warning fallbacks so one report does not stop
++  later evidence collection. The final gate still fails configured blocking
++  rules.
++- No project-specific `.claude` adapter or skill registry was found in the live
++  tracked inventory. Do not invent one.
+diff --git a/ALIGNMENT.md b/ALIGNMENT.md
+new file mode 100644
+index 0000000..6e24dea
+--- /dev/null
++++ b/ALIGNMENT.md
+@@ -0,0 +1,57 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: ALIGNMENT.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Alignment
++
++## Authority order
++
++1. `.l9/integration-contract.yaml` for SDK/Core ownership, CLI, and exit codes
++2. `.l9/architecture.yaml` for package boundaries and canonical flow
++3. `.l9/tool-stack.yaml` for supported stack, scope, and Python floor
++4. `.l9/compatibility.yaml` for version and schema rules
++5. Code and tests
++6. `AGENTS.md` for contributor constraints
++7. Human-readable documentation
++
++## Alignment passes
++
++| Pass | Rule | Evidence |
++|---|---|---|
++| Boundary | SDK must not own Core orchestration | Architecture and integration contracts |
++| Identity | Canonical IDs require explicit resolution | Identity resolver and provider tests |
++| Artifact | Schema and semantic validation are both required | Artifact validator and contract tests |
++| Requiredness | Missing required evidence cannot pass | Gate evaluator and failure contracts |
++| Determinism | Serialization and snapshot identity are stable | Determinism and repository tests |
++| Redaction | Secret material is not retained | Integration redaction tests and gitleaks |
++| Compatibility | Unsupported majors are rejected | Compatibility fixtures and rules |
++
++## Known alignment gaps
++
++1. `MANIFEST.md` and `VALIDATION_REPORT.json` describe the earlier 158-file
++   bundle and omit later CI/governance scaffolding. No tracked reseal generator
++   exists, so generated evidence cannot be truthfully refreshed in this pass.
++2. Open issue #9 tracks packaging/scaffolding. The live branch intentionally has
++   no `pyproject.toml`; runtime execution is source-based over `PYTHONPATH`.
++3. Open issue #5 tracks immutable SHA pinning for remaining first-party actions.
++4. The organization contributing template prefers `@v1` for thin callers, while
++   this repository's deployed profile callers deliberately pin Core by commit
++   SHA. The repository-specific immutable pin is the live authority.
++5. The architecture spec revision is `1.1.0`, while the SDK runtime and
++   integration contract version are `1.0.0`. These are distinct axes and must
++   remain explicitly labeled.
++
++## Allow-lists and intentional exclusions
++
++- Ruff excludes `docs/`.
++- Community Semgrep rules remain advisory because canonical L9 identity is not
++  embedded.
++- Advisory CI jobs may continue after findings so the final gate can aggregate
++  evidence.
++- Generated evidence files are never hand-edited to manufacture freshness.
+diff --git a/ARCHITECTURE.md b/ARCHITECTURE.md
+new file mode 100644
+index 0000000..73df119
+--- /dev/null
++++ b/ARCHITECTURE.md
+@@ -0,0 +1,86 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: ARCHITECTURE.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Architecture
++
++## Version axes
++
++- SDK runtime version: `1.0.0`
++- Architecture specification revision: `1.1.0`
++- Artifact protocol: `l9.finding-bundle/v1`
++- Schema version: `1.0.0`
++
++These are separate axes. Do not infer SDK compatibility from artifact shape.
++
++## Canonical flow
++
++```text
++repository -> capabilities -> execution -> providers -> identity
++           -> policy -> gates -> artifacts -> projections
++```
++
++`l9-ci-sdk` produces local deterministic evidence. `l9-ci-core` owns GitHub
++Actions orchestration, permissions, provider enablement, uploads, retention,
++publication, and organization rollout.
++
++## Package index
++
++| Package | Responsibility | Key boundary |
++|---|---|---|
++| `contracts` | Immutable canonical models, enums, invariants | Standard library only |
++| `repository` | Enumeration, Git inspection, snapshot identity | No provider/policy/gate/integration imports |
++| `capabilities` | Repository capability detection | Contracts + repository |
++| `providers` | SPI, execution/import, normalization, coverage | No artifacts/gates/integration/workflow imports |
++| `identity` | Explicit canonical rule identity | Contracts only |
++| `policy` | Policy loading and classification | No providers/artifacts/gates |
++| `execution` | Profiles and provider selection | Capabilities + providers |
++| `artifacts` | Serialization, schema/semantic validation, atomic writes | No providers/policy/gates |
++| `gates` | Gate evaluation | No providers/policy/integration |
++| `pipeline` | Public SDK composition | Composes public layers |
++| `integration` | Limits, versioning, redaction, projections | No providers/pipeline |
++| `cli` | Exit codes, diagnostics, output | Standard library boundary |
++| `commands` | Public command composition | Public SDK packages only |
++
++## Public surface
++
++The authoritative public package set is `contracts`, `repository`,
++`capabilities`, `providers`, `identity`, `policy`, `execution`, `artifacts`,
++`gates`, `integration`, and `cli`. `pipeline` and `commands` are composition
++layers rather than independent contract roots.
++
++## CI/CD topology
++
++```text
++PR/push/dispatch
++  -> l9-self-ci.yml
++     -> classify
++     -> secret_scan (only default hard block)
++     -> validate, lint, typecheck, semgrep, audit, supply_chain (advisory)
++     -> pr_pipeline_gate (rule-mode aware)
++
++profile trigger
++  -> l9-analysis*.yml
++     -> resolve governance from pinned l9-ci-core
++     -> Semgrep JSON report
++     -> provision immutable SDK
++     -> normalize and validate bundle
++     -> project agent payload
++     -> route and manifest artifacts
++     -> publish analysis check through l9-ci-core
++```
++
++All five profile callers pin Core to commit
++`f7a4ee8c1f4e4413cb3645d088cafa3e9c798235`.
++
++## Non-goals
++
++The SDK does not own workflow orchestration, hosted services, LLM orchestration,
++repair, LSP/editor diagnostics, historical corpus storage, or repository
++mutation.
+diff --git a/CHANGE_SUMMARY.md b/CHANGE_SUMMARY.md
+new file mode 100644
+index 0000000..0cd2ee4
+--- /dev/null
++++ b/CHANGE_SUMMARY.md
+@@ -0,0 +1,37 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: CHANGE_SUMMARY.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Change Summary
++
++## Current main snapshot
++
++- Commit: `bfaf4d29a775f5801e8dad932000ec8451d4217a`
++- Change: preflight hardening, type-gate coherence, config, and provider-registry wiring
++- SDK runtime version: `1.0.0`
++
++## Recent changes
++
++| Commit | Change |
++|---|---|
++| `bfaf4d2` | Preflight hardening and dormant provider-registry wiring |
++| `ed62c76` | Added Ruff pre-commit hooks for local parity |
++| `0c53d5f` | Documented runtime packaging and self-analysis CI wiring |
++| `da733d7` | Added self-triggering L9 Self CI |
++| `2ff9f1f` | Applied the Quantum AI Partners proprietary license |
++
++## Documentation remediation prepared
++
++This remediation adds the complete root documentation matrix, imports pinned
++organization health files and issue templates, creates the ADR index, documents
++live CI enforcement, and records manifest/evidence staleness without modifying
++generated evidence.
++
++No source code, workflows, dependencies, release state, commit, push, or pull
++request is included in this change set.
+diff --git a/CLAUDE.md b/CLAUDE.md
+new file mode 100644
+index 0000000..cb6b585
+--- /dev/null
++++ b/CLAUDE.md
+@@ -0,0 +1,58 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: CLAUDE.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Agent Operating Contract
++
++## Always
++
++- Read `AGENTS.md`, `.l9/integration-contract.yaml`, and
++  `.l9/architecture.yaml` before changing contracts.
++- Preserve native provider rule IDs and explicit identity resolution.
++- Update Python models, JSON Schemas, compatibility analysis, invariant tests,
++  and schema tests together for canonical contract changes.
++- Use real machine-readable, redacted provider fixtures.
++- Keep outputs deterministic, atomic, repository-relative, and validated.
++- Run `ruff check .`, `ruff format --check .`, `mypy l9_ci`, and `pytest -q`.
++- Distinguish advisory CI from blocking CI in every review summary.
++- Update an ADR when architectural semantics change.
++
++## Never
++
++- Parse human-readable scanner output when structured output exists.
++- Derive canonical identity from severity or guess unknown identities.
++- Convert required provider failures or missing evidence into PASS.
++- Import workflow orchestration into the SDK.
++- Import artifact internals into providers.
++- Retain secrets or absolute source paths in canonical artifacts.
++- Fabricate test fixtures, counts, validation results, or manifest freshness.
++- Hand-edit generated evidence files.
++- Change the Core SHA in only one profile caller.
++
++## Live CI facts
++
++- Self-CI has 9 jobs.
++- New-secret scanning is the only default hard-blocking job.
++- The final gate is rule-mode aware.
++- Ruff, mypy, validation, Semgrep, audit, and SBOM are advisory.
++- Five Core analysis profile callers are advisory/non-strict.
++- Pre-commit has two hooks: `ruff --fix` and `ruff-format`.
++
++## References
++
++- Architecture: `ARCHITECTURE.md`
++- Invariants: `INVARIANTS.md`
++- Operations: `RUNBOOK.md`
++- Validation: `VALIDATION.md`
++- Alignment gaps: `ALIGNMENT.md`
++- ADR ledger: `docs/adr/README.md`
++- Compatibility: `docs/COMPATIBILITY_MATRIX.md`
++
++No repository-local `.claude` adapter or skill registry was found. Do not claim
++one is installed inside this repository.
+diff --git a/CODE_OF_CONDUCT.md b/CODE_OF_CONDUCT.md
+new file mode 100644
+index 0000000..3376585
+--- /dev/null
++++ b/CODE_OF_CONDUCT.md
+@@ -0,0 +1,52 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: CODE_OF_CONDUCT.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++origin: Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e
++/L9_META -->
++# Code of Conduct
++
++## Our Pledge
++
++We pledge to make participation in the Quantum-L9 community harassment-free and
++to act in ways that contribute to an open, welcoming, diverse, inclusive, and
++healthy community.
++
++## Our Standards
++
++Positive behavior includes empathy, respect for differing viewpoints,
++constructive feedback, accountability, and focus on the overall community.
++Unacceptable behavior includes sexualized conduct, trolling, personal attacks,
++harassment, publishing private information without permission, and conduct that
++is inappropriate in a professional setting.
++
++## Enforcement Responsibilities
++
++The Quantum-L9 platform team (`@Quantum-L9/platform`) is responsible for
++clarifying and enforcing this Code of Conduct.
++
++## Scope
++
++This Code applies in community spaces and when an individual officially
++represents the community in public.
++
++## Enforcement
++
++Report unacceptable behavior through GitHub Security Advisories or directly to
++`@Quantum-L9/platform`. Complaints will be reviewed promptly and fairly.
++
++## Enforcement Guidelines
++
++1. Correction: private warning, clarity, and requested remediation.
++2. Warning: consequences for continued behavior and restricted interaction.
++3. Temporary ban: temporary removal from community interaction.
++4. Permanent ban: removal for sustained, severe, or repeated violations.
++
++## Attribution
++
++Adapted from Contributor Covenant v2.1.
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+new file mode 100644
+index 0000000..ed3ba2b
+--- /dev/null
++++ b/CONTRIBUTING.md
+@@ -0,0 +1,68 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: CONTRIBUTING.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++origin: Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e
++/L9_META -->
++# Contributing to Quantum-L9
++
++## Governance setup checklist
++
++Before opening a pull request:
++
++- Review the repository `AGENTS.md` and architecture contracts.
++- Keep workspace governance wiring intact when it is installed.
++- Do not bypass required status checks.
++- Notify CODEOWNERS for blast-radius files.
++
++## Branch and commit conventions
++
++- Branches: `feat/<scope>`, `fix/<scope>`, `chore/<scope>`, `docs/<scope>`
++- Commits: Conventional Commits format, for example `feat(scope): message`
++
++
++## Repository-specific setup
++
++```bash
++python3 -m venv .venv
++. .venv/bin/activate
++python -m pip install --upgrade pip
++python -m pip install -r requirements-ci.txt
++```
++
++## Required local validation
++
++```bash
++ruff check .
++ruff format --check .
++mypy l9_ci
++pytest -q
++```
++
++## Live PR gate expectations
++
++| Surface | Current treatment |
++|---|---|
++| New secret scan | Blocking |
++| Final self-CI gate | Rule-mode aware; blocks configured blocking rules |
++| Ruff, mypy, validation, Semgrep, audit, SBOM | Advisory |
++| Five Core analysis profiles | Advisory/non-strict |
++
++The live repository differs from the organization template in one material way:
++its Core callers use an immutable commit SHA, not `@v1`. Preserve that pinning
++model unless an approved migration changes the contract.
++
++## Contract and architecture changes
++
++A canonical model change requires the Python model, JSON Schema, compatibility
++assessment, invariant tests, schema conformance tests, and an ADR update when
++architectural semantics change.
++
++Provider additions require a verified machine-readable format, real redacted
++fixture, provider version and provenance, malformed-report tests, path tests,
++determinism tests, failure tests, coverage behavior, and identity behavior.
+diff --git a/INVARIANTS.md b/INVARIANTS.md
+new file mode 100644
+index 0000000..a5dd255
+--- /dev/null
++++ b/INVARIANTS.md
+@@ -0,0 +1,43 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: INVARIANTS.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Invariants
++
++| ID | Invariant | Enforcement |
++|---|---|---|
++| INV-001 | Provider parsing is policy-independent | Architecture boundary tests and provider SPI |
++| INV-002 | Native provider rule IDs are preserved | Semgrep provider and determinism tests |
++| INV-003 | Canonical IDs require explicit resolution | Identity resolver tests |
++| INV-004 | Unknown identities remain unresolved | Strict/tolerant compatibility and identity tests |
++| INV-005 | Console output is not an integration contract | Provider report import contract |
++| INV-006 | Canonical writes are deterministic and atomic | Serializer and deterministic serialization tests |
++| INV-007 | Schema and semantic validation are both required | Artifact validator and schema conformance tests |
++| INV-008 | Required provider failures never become PASS | Gate evaluator and provider failure tests |
++| INV-009 | SDK contracts do not import workflow/scanner implementations | Dependency-boundary tests |
++| INV-010 | Providers do not import artifact internals | Dependency-boundary tests |
++| INV-011 | Canonical artifacts use repository-relative paths | Repository and provider path tests |
++| INV-012 | Secret material is not retained | Redaction tests and diff-scoped gitleaks |
++| INV-013 | Unsupported artifact majors are rejected | Compatibility fixtures |
++| INV-014 | Generated evidence is regenerated, never hand-edited | Documentation compliance process |
++
++## Enforcement reality
++
++Only newly introduced secrets are hard-blocking by default in self-CI. Other
++checks are advisory unless the rule-mode policy promotes them. An invariant may
++be structurally tested without being a branch-protection block; do not conflate
++test coverage with merge policy.
++
++## Intentional false positives and exclusions
++
++- Ruff ignores `docs/` because Markdown is outside the Python lint surface.
++- Community Semgrep rules may produce findings with no L9 canonical identity.
++  Those findings stay visible in advisory/non-strict mode.
++- Audit and SBOM jobs skip when their required engine or manifest is absent.
++  A clean skip is not proof that the absent control ran.
+diff --git a/MIGRATION.md b/MIGRATION.md
+new file mode 100644
+index 0000000..6218d70
+--- /dev/null
++++ b/MIGRATION.md
+@@ -0,0 +1,45 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: MIGRATION.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Migration
++
++## Current compatibility state
++
++The SDK runtime is `1.0.0`, the artifact protocol is
++`l9.finding-bundle/v1`, and the schema version is `1.0.0`. No active artifact
++major-version migration is required.
++
++## Source-run packaging
++
++The deployed integration provisions the SDK from source over `PYTHONPATH` and
++installs `requirements.txt`. A repository-local `l9-ci` console script is not
++available without packaging metadata. Issue #9 tracks the packaging/scaffolding
++decision.
++
++When packaging is introduced:
++
++1. Preserve `python -m l9_ci` behavior and the Core-facing command contract.
++2. Set the console entry point to `l9_ci.__main__:main`.
++3. Ship all `l9_ci/schemas/v1/*.json` package data.
++4. Keep runtime dependencies aligned with `requirements.txt`.
++5. Verify `l9_ci.__version__` and integration-contract metadata match.
++6. Run compatibility fixtures and all five profile smoke tests.
++
++## Breaking artifact changes
++
++Removing or renaming fields, changing identity inputs, or changing an artifact
++major requires a new schema major, migration guide, compatibility fixtures, and
++rollback plan. Readers must reject unsupported majors.
++
++## Rollback
++
++Revert the SDK source pin and all Core caller references together. Preserve raw
++provider reports and the last valid canonical bundle so the failed migration can
++be diagnosed without reinterpreting evidence.
+diff --git a/QUICKSTART.md b/QUICKSTART.md
+new file mode 100644
+index 0000000..b3d474e
+--- /dev/null
++++ b/QUICKSTART.md
+@@ -0,0 +1,61 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: QUICKSTART.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Quickstart
++
++## Prerequisites
++
++- Python 3.11 or newer
++- Git
++- A source checkout of `Quantum-L9/l9-ci-sdk`
++
++## Set up
++
++```bash
++git clone https://github.com/Quantum-L9/l9-ci-sdk.git
++cd l9-ci-sdk
++python3 -m venv .venv
++. .venv/bin/activate
++python -m pip install --upgrade pip
++python -m pip install -r requirements-ci.txt
++```
++
++## Verify the CLI contract
++
++```bash
++PYTHONPATH=. python -m l9_ci --help
++PYTHONPATH=. python -m l9_ci providers list
++PYTHONPATH=. python -m l9_ci providers detect --root .
++```
++
++## Run the local gate
++
++```bash
++ruff check .
++ruff format --check .
++mypy l9_ci
++pytest -q
++```
++
++## Normalize a Semgrep report
++
++```bash
++PYTHONPATH=. python -m l9_ci semgrep normalize   --input artifacts/raw/semgrep/report.json   --output artifacts/l9/finding-bundle.json   --root .   --snapshot-id LOCAL-SNAPSHOT
++PYTHONPATH=. python -m l9_ci bundle validate artifacts/l9/finding-bundle.json
++```
++
++Use a real machine-readable Semgrep JSON report. Do not fabricate fixtures or
++parse console output. Add `--strict` or `--required` only when the selected
++policy and identity map support those modes.
++
++## Expected result
++
++The CLI returns a stable exit code and writes a deterministic canonical bundle.
++Exit-code meanings are authoritative in `.l9/integration-contract.yaml`.
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..950c83d
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,104 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: README.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# l9-ci-sdk
++
++`l9-ci-sdk` is the canonical analysis and normalization SDK for Quantum-L9 CI.
++It owns provider execution/import contracts, normalized evidence and findings,
++explicit rule identity, policy classification, gate evaluation, deterministic
++artifact serialization, validation, and agent-review projections. GitHub Actions
++orchestration remains owned by `l9-ci-core`.
++
++## Current contract
++
++| Axis | Current value |
++|---|---|
++| SDK version | `1.0.0` from `l9_ci.__version__` |
++| Artifact protocol | `l9.finding-bundle/v1` |
++| Schema version | `1.0.0` |
++| Python floor | `3.11` |
++| Runtime model | source execution over `PYTHONPATH` |
++| Supported provider path | Semgrep JSON import/normalization |
++| Core pin | `f7a4ee8c1f4e4413cb3645d088cafa3e9c798235` |
++
++## Install for development
++
++The repository intentionally has no `pyproject.toml` on the current branch.
++Use a source checkout and install declared dependencies:
++
++```bash
++python3 -m venv .venv
++. .venv/bin/activate
++python -m pip install --upgrade pip
++python -m pip install -r requirements-ci.txt
++```
++
++## First use
++
++```bash
++PYTHONPATH=. python -m l9_ci --help
++PYTHONPATH=. python -m l9_ci providers list
++PYTHONPATH=. python -m l9_ci providers detect --root .
++```
++
++Core-facing commands and exit codes are defined in
++`.l9/integration-contract.yaml`. Machine-readable provider reports are the
++integration boundary. Console output is not.
++
++## Validation
++
++```bash
++ruff check .
++ruff format --check .
++mypy l9_ci
++pytest -q
++```
++
++The sealed validation report records 75 passing tests for the earlier 158-file
++bundle. The live tree has since gained CI and governance scaffolding, so that
++file count is historical until the repository gains and runs a canonical reseal
++tool.
++
++## CI and gates
++
++| Surface | Trigger | Enforcement |
++|---|---|---|
++| L9 Self CI | PR, push to `main`, dispatch | New secret findings are hard-blocking; final gate is rule-mode aware |
++| `pr_fast` analysis | Pull request, dispatch | Advisory/non-strict |
++| `merge` analysis | Push to `main`, dispatch | Advisory/non-strict |
++| `nightly` analysis | Schedule, dispatch | Advisory/non-strict |
++| `release` analysis | Tag push, dispatch | Advisory/non-strict |
++| `supply_chain` analysis | Schedule, dispatch | Advisory/non-strict |
++
++## Repository layout
++
++- `l9_ci/contracts`: immutable canonical models and enums
++- `l9_ci/providers`: provider SPI, registry, and Semgrep adapter
++- `l9_ci/repository`: deterministic repository enumeration and snapshots
++- `l9_ci/identity`: explicit canonical rule identity resolution
++- `l9_ci/policy`: policy loading and classification
++- `l9_ci/gates`: gate evaluation
++- `l9_ci/artifacts`: deterministic serialization and validation
++- `l9_ci/integration`: limits, compatibility, redaction, projections
++- `l9_ci/pipeline`: public composition flows
++- `l9_ci/commands` and `l9_ci/cli`: command composition and stable diagnostics
++- `l9_ci/schemas/v1`: ten versioned JSON schemas
++- `tests`: architecture, contracts, providers, compatibility, and integration
++- `docs/adr`: eight accepted architecture decisions plus the index
++
++## Status and known blockers
++
++Semgrep shadow rollout remains blocked on a runtime-captured redacted fixture and
++live `l9-ci-core` integration evidence. A second provider remains deferred until
++the Semgrep slice is supported without known protocol-breaking defects.
++
++## License
++
++Proprietary source-available software. See `LICENSE` before use or distribution.
+diff --git a/ROADMAP.md b/ROADMAP.md
+new file mode 100644
+index 0000000..b9e8a13
+--- /dev/null
++++ b/ROADMAP.md
+@@ -0,0 +1,49 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: ROADMAP.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Roadmap
++
++## Current state
++
++| Phase | Status | Result |
++|---|---|---|
++| P0 Architecture and contracts | Complete | Models, schemas, SPI, serializer, validation, boundary tests |
++| P1 Semgrep vertical slice | Complete with fixture limitation | Import, normalization, identity, policy, failure, bundle |
++| P2 Integration and release readiness | Complete | CLI, version negotiation, validation, projection, limits |
++| P3 Spec closure | Current | Gates, snapshots, capabilities, profiles, CLI, limits, architecture tests |
++| P4 Semgrep shadow rollout | Blocked | Runtime fixture and live Core evidence required |
++| P5 Second provider | Deferred | Gitleaks or SARIF only after Semgrep is supported |
++
++## Next milestones
++
++1. Capture and redact a real Semgrep report with provenance.
++2. Execute and preserve a live `l9-ci-core` integration run across all five
++   profiles.
++3. Restore or add canonical reseal tooling, then regenerate `manifest.json`,
++   `MANIFEST.md`, and validation evidence for the live tree.
++4. Resolve issue #9 packaging/scaffolding decision without violating the current
++   source-run contract.
++5. Resolve issue #5 by verifying and pinning remaining first-party action SHAs.
++6. Promote Semgrep rules only after canonical rule identity is explicit.
++
++## GA criteria
++
++- One supported provider
++- Stable v1 artifact protocol
++- Stable public Python API
++- Stable Core integration contract
++- Compatibility fixtures
++- Deterministic outputs
++- Documented migration and rollback
++
++## Deferred
++
++No second provider, repair loop, LSP integration, corpus analytics, hosted
++service, or LLM orchestration enters scope before the current blockers close.
+diff --git a/RUNBOOK.md b/RUNBOOK.md
+new file mode 100644
+index 0000000..09d0310
+--- /dev/null
++++ b/RUNBOOK.md
+@@ -0,0 +1,62 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: RUNBOOK.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Operations Runbook
++
++## Local preflight
++
++```bash
++python -m pip install -r requirements-ci.txt
++ruff check .
++ruff format --check .
++mypy l9_ci
++pytest -q
++PYTHONPATH=. python -m l9_ci providers list
++PYTHONPATH=. python -m l9_ci providers detect --root .
++```
++
++## Failure routing
++
++| Symptom | First action | Recovery |
++|---|---|---|
++| New secret finding | Stop merge, remove secret, rotate credential | Re-run self-CI on clean history |
++| Ruff/format warning | Run Ruff locally | Commit mechanical fixes |
++| mypy warning | Fix contract types at source | Re-run `mypy l9_ci` |
++| Semgrep execution failure | Validate ruleset and raw JSON path | Re-run without swallowing execution errors |
++| Bundle validation failure | Inspect schema and semantic diagnostics | Fix producer or report; never coerce PASS |
++| Unresolved identity in strict mode | Add approved identity mapping or L9-authored rule metadata | Keep advisory until explicit resolution exists |
++| Core publication failure | Check artifact upload, governance digest, Core pin | Re-dispatch the matching profile |
++
++## Profile smoke tests
++
++Each `l9-analysis*.yml` caller supports `workflow_dispatch`. Use the caller that
++matches the intended profile: `pr_fast`, `merge`, `nightly`, `release`, or
++`supply_chain`.
++
++## Core pin update
++
++1. Resolve and review the target `l9-ci-core` commit.
++2. Update every literal `uses: Quantum-L9/l9-ci-core/...@<sha>` together.
++3. Run all five profile callers with `workflow_dispatch`.
++4. Verify artifact manifest, bundle validation, agent payload, and published check.
++5. Roll back all callers to the prior SHA if any profile regresses.
++
++## Evidence and manifest recovery
++
++`MANIFEST.md` and `VALIDATION_REPORT.json` represent the earlier 158-file sealed
++bundle. The current tracked inventory contains no canonical manifest generator.
++Do not hand-edit generated evidence. Add or restore the authoritative generator,
++then regenerate the manifest pair and validation evidence in one controlled PR.
++
++## Incident evidence
++
++Preserve the workflow run URL, commit SHA, profile, governance digest, SDK
++revision, raw provider report, canonical bundle, agent payload, and manifest.
++Never attach unredacted secrets.
+diff --git a/SECURITY.md b/SECURITY.md
+new file mode 100644
+index 0000000..4ef50e1
+--- /dev/null
++++ b/SECURITY.md
+@@ -0,0 +1,66 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: SECURITY.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++origin: Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e
++/L9_META -->
++# Security Policy
++
++## Scope
++
++This policy applies to all repositories in the **Quantum-L9** GitHub organization.
++
++## Reporting a Vulnerability
++
++**Do NOT open a public GitHub issue for security vulnerabilities.**
++
++Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/Quantum-L9/.github/security/advisories/new).
++
++Include:
++- Affected repository and version/SHA
++- Vulnerability type and CVSS score estimate
++- Reproduction steps, preferably a minimal reproducer
++- Potential impact assessment
++- Proposed mitigations, if known
++
++## Response SLA
++
++| Severity | Acknowledge | Patch Target |
++|---|---|---|
++| Critical (CVSS 9.0-10.0) | 24 hours | 7 days |
++| High (CVSS 7.0-8.9) | 48 hours | 14 days |
++| Medium (CVSS 4.0-6.9) | 48 hours | 30 days |
++| Low (CVSS 0.1-3.9) | 5 business days | Next release cycle |
++
++## Automated Security Controls
++
++Organization controls include gitleaks, Semgrep, dependency audits, Dependabot,
++and OpenSSF Scorecard where wired.
++
++## Disclosure Policy
++
++Quantum-L9 follows coordinated disclosure and requests 90 days to remediate
++before public disclosure.
++
++
++## l9-ci-sdk threat model and controls
++
++| Risk | Control |
++|---|---|
++| Untrusted provider output | Structured JSON validation before normalization |
++| Canonical identity spoofing | Explicit identity resolution; unknown stays unresolved |
++| Secret retention | Redaction contract plus diff-scoped gitleaks in self-CI |
++| Path leakage | Normalized repository-relative source locations |
++| Missing required evidence | Structured provider failure; never converted to PASS |
++| Artifact drift | Deterministic serialization plus schema and semantic validation |
++| Workflow privilege creep | SDK/Core ownership boundary; SDK does not read GitHub context |
++
++Current enforcement is deliberately asymmetric: newly introduced secrets are
++hard-blocking, while lint, type checking, Semgrep, audit, SBOM, and profile
++analysis remain advisory. That is the live state, not a promise that all
++organization controls are already blocking in this repository.
+diff --git a/SUPPORT.md b/SUPPORT.md
+new file mode 100644
+index 0000000..b6dc855
+--- /dev/null
++++ b/SUPPORT.md
+@@ -0,0 +1,42 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: SUPPORT.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++origin: Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e
++/L9_META -->
++# Support
++
++## Getting Help
++
++Open an issue in the relevant repository using the appropriate template:
++
++| Issue type | Template |
++|---|---|
++| Bug report | Bug Report |
++| Feature request | Feature Request |
++| Governance violation | Gov Violation |
++| CI pipeline failure | CI Failure |
++
++Use GitHub Discussions for architecture questions and community input. Security
++vulnerabilities must follow `SECURITY.md`, not public issue channels.
++
++## Out of Scope
++
++- General AI/ML questions unrelated to Quantum-L9 infrastructure
++- Debugging third-party services without a repository integration defect
++- Questions answered by canonical governance documents
++- Requests to bypass CI gates or ownership requirements
++
++## Response Expectations
++
++| Channel | Expected response |
++|---|---|
++| Bugs and governance issues | 2 business days |
++| Features | 1 week |
++| Discussions | Best effort |
++| Security vulnerabilities | Per `SECURITY.md` |
+diff --git a/VALIDATION.md b/VALIDATION.md
+new file mode 100644
+index 0000000..d6bc31d
+--- /dev/null
++++ b/VALIDATION.md
+@@ -0,0 +1,58 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: VALIDATION.md
++layer: control_plane
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Validation
++
++## Evidence sets
++
++| Evidence | Current status |
++|---|---|
++| `VALIDATION_REPORT.json` | Historical sealed baseline; 75 tests passed |
++| `MANIFEST.md` | Historical 158-file inventory |
++| Self-CI artifacts | Live per-run CI context, summary, agent payload |
++| L9 analysis artifacts | Raw Semgrep report, canonical bundle, agent payload, metadata manifest |
++| Compatibility fixtures | Bundle v1 valid/invalid and unsupported v2 fixtures |
++
++## Live validation surfaces
++
++- Python compilation and YAML parsing
++- Ruff lint and format checks
++- mypy type checking
++- pytest suites across architecture, contracts, repository, providers, policy,
++  gates, pipeline, integration, and compatibility
++- Diff-scoped gitleaks for new secrets
++- Semgrep provider report import and normalized artifact validation
++- Rule-mode-aware final gate
++
++## Local regeneration
++
++```bash
++python -m pip install -r requirements-ci.txt
++ruff check .
++ruff format --check .
++mypy l9_ci
++pytest -q
++PYTHONPATH=. python -m l9_ci providers list
++PYTHONPATH=. python -m l9_ci providers detect --root .
++```
++
++## Baseline result
++
++The committed report records compile, Ruff, formatting, 75 tests, CLI provider
++listing/detection, and cache hygiene as passing. It also records two empirical
++blockers: no runtime-captured redacted Semgrep fixture and no verified live Core
++invocation.
++
++## Freshness rule
++
++Do not claim that the 158-file report covers the current CI-expanded tree. No
++`generate_manifest` tooling is present in the tracked inventory, so this
++remediation intentionally leaves generated evidence unchanged and records the
++reseal gap in `ALIGNMENT.md` and `ROADMAP.md`.
+diff --git a/docs/COMPATIBILITY_MATRIX.md b/docs/COMPATIBILITY_MATRIX.md
+new file mode 100644
+index 0000000..63f7e33
+--- /dev/null
++++ b/docs/COMPATIBILITY_MATRIX.md
+@@ -0,0 +1,43 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: docs/COMPATIBILITY_MATRIX.md
++layer: docs
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Compatibility Matrix
++
++| Axis | Supported/current | Source |
++|---|---|---|
++| Python runtime | `>=3.11`; upper bound not declared | `.l9/tool-stack.yaml` |
++| Self-CI default Python | `3.12` | `.github/workflows/l9-self-ci.yml` |
++| SDK runtime | `1.0.0` | `l9_ci.__version__` |
++| Artifact protocol | `l9.finding-bundle/v1` | `.l9/compatibility.yaml` |
++| Schema version | `1.0.0` | `.l9/compatibility.yaml` |
++| JSON Schema | Draft 2020-12 | `.l9/tool-stack.yaml` |
++| `jsonschema` | `>=4.18,<5` | `requirements.txt` |
++| `referencing` | `>=0.30,<1` | `requirements.txt` |
++| `PyYAML` | `>=6,<7` | `requirements.txt` |
++| Ruff | `>=0.15,<0.17`; pre-commit `v0.15.5` | CI requirements and pre-commit |
++| mypy | `>=1.19` | `requirements-ci.txt` |
++| pytest | `>=8,<10` | `requirements-ci.txt` |
++| Core integration | Pinned commit `f7a4ee8c...` | profile workflows |
++| Packaging | Source over `PYTHONPATH`; no `pyproject.toml` | runtime contract |
++
++## Reader rules
++
++Strict and tolerant readers both reject unsupported artifact major versions and
++broken references. Tolerant readers may preserve unknown optional fields, while
++strict readers reject unknown enum values and unresolved required
++classifications.
++
++## Change rules
++
++- Removing/renaming fields requires a schema major.
++- Adding enum members requires a schema minor.
++- Changing identity inputs requires a schema major.
++- Canonical ordering changes require compatibility review.
++- Schema validation never replaces semantic validation.
+diff --git a/docs/ISSUE_INDEX.md b/docs/ISSUE_INDEX.md
+new file mode 100644
+index 0000000..d290817
+--- /dev/null
++++ b/docs/ISSUE_INDEX.md
+@@ -0,0 +1,24 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: docs/ISSUE_INDEX.md
++layer: docs
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Issue Index
++
++Snapshot: 2026-07-27 at repository main `bfaf4d29`.
++
++| Number | State | Title | Documentation impact |
++|---:|---|---|---|
++| #5 | Open | Pin first-party GitHub Actions to immutable SHAs | Track remaining action-pin hardening |
++| #9 | Open | Restore repo-root scaffolding dropped by v2 overwrite | Packaging, CODEOWNERS, and gitignore decisions |
++
++## Notes
++
++The current root already contains `LICENSE`. The absence of `pyproject.toml`
++remains intentional in the live source-run documentation until issue #9 is
++resolved. Issue state should be refreshed from GitHub before release decisions.
+diff --git a/docs/adr/README.md b/docs/adr/README.md
+new file mode 100644
+index 0000000..185606d
+--- /dev/null
++++ b/docs/adr/README.md
+@@ -0,0 +1,28 @@
++<!-- L9_META
++l9_schema: 1
++repo: l9-ci-sdk
++path: docs/adr/README.md
++layer: docs
++owner: platform
++status: active
++version: 1.0.0
++updated: 2026-07-27
++/L9_META -->
++# Architecture Decision Record Index
++
++| ADR | Decision | Status |
++|---|---|---|
++| [0001](0001-canonical-evidence-and-findings.md) | Canonical evidence and findings | Accepted |
++| [0002](0002-policy-independent-normalization.md) | Policy-independent normalization | Accepted |
++| [0003](0003-explicit-rule-identity.md) | Explicit rule identity | Accepted |
++| [0004](0004-versioned-artifact-protocol.md) | Versioned artifact protocol | Accepted |
++| [0005](0005-provider-spi.md) | Provider SPI | Accepted |
++| [0006](0006-gate-evaluation.md) | Gate evaluation | Accepted |
++| [0007](0007-repository-snapshot-identity.md) | Repository snapshot identity | Accepted |
++| [0008](0008-agent-payload-is-a-projection.md) | Agent payload is a projection | Accepted |
++
++## Ledger rules
++
++Create a new ADR when architecture semantics, ownership boundaries, public
++contracts, identity inputs, artifact major versions, or irreversible operational
++choices change. Do not rewrite accepted history. Supersede it with a linked ADR.

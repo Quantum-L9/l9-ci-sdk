@@ -1,0 +1,28 @@
+[PASS] DOC-F01                      MUST   LICENSE present at root
+[PASS] DOC-F02-README.md            MUST   README.md present
+[PASS] DOC-F02-QUICKSTART.md        MUST   QUICKSTART.md present
+[PASS] DOC-F04-AGENTS.md            MUST   AGENTS.md present
+[PASS] DOC-F04-ARCHITECTURE.md      MUST   ARCHITECTURE.md present
+[PASS] DOC-F04-SECURITY.md          MUST   SECURITY.md present
+[PASS] DOC-F04-CONTRIBUTING.md      MUST   CONTRIBUTING.md present
+[PASS] DOC-F04-RUNBOOK.md           MUST   RUNBOOK.md present
+[PASS] DOC-F04-VALIDATION.md        MUST   VALIDATION.md present
+[PASS] DOC-F04-ALIGNMENT.md         MUST   ALIGNMENT.md present
+[PASS] DOC-F04-adj-INVARIANTS.md    SHOULD INVARIANTS.md present
+[PASS] DOC-agent-CLAUDE.md          SHOULD CLAUDE.md present
+[PASS] DOC-F05-ROADMAP.md           SHOULD ROADMAP.md present
+[PASS] DOC-F05-MIGRATION.md         SHOULD MIGRATION.md present
+[PASS] DOC-F05-CHANGE_SUMMARY.md    SHOULD CHANGE_SUMMARY.md present
+[PASS] DOC-org-CODE_OF_CONDUCT.md   SHOULD CODE_OF_CONDUCT.md present
+[PASS] DOC-org-SUPPORT.md           SHOULD SUPPORT.md present
+[PASS] DOC-F05-docs/ISSUE_INDEX.md  SHOULD docs/ISSUE_INDEX.md present
+[PASS] DOC-F05-docs/COMPATIBILITY_MATRIX.md SHOULD docs/COMPATIBILITY_MATRIX.md present
+[PASS] DOC-org-.github/PULL_REQUEST_TEMPLATE.md SHOULD .github/PULL_REQUEST_TEMPLATE.md present
+[PASS] DOC-F03                      MUST   ADR ledger present (8 ADR files found)
+[PASS] DOC-F03-idx                  SHOULD ADR ledger index present
+[SKIP] DOC-E02                      COND   no sealing tooling detected — pillar-E rows conditional
+[PASS] DOC-E01                      MUST   L9_META headers valid on root docs (19 docs checked)
+[PASS] DOC-E04                      SHOULD doc L9_META version matches pyproject
+[PASS] DOC-SUBSTANCE                SHOULD docs meet substance floor (>=3 content lines)
+
+Summary: 25 pass, 0 fail, 0 warn, 1 skip -> exit 0
