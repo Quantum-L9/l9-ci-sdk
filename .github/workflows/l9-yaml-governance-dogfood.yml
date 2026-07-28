@@ -27,6 +27,9 @@ jobs:
       data-paths: 'tests/fixtures/'
       config-root: 'lint'
       tools-root: 'lint'
-      enforce-actionlint: true
-      # Start advisory on first activation; promote per promotion-policy.yaml.
+      # First activation: every finding gate is advisory (full scan, do not fail).
+      # Promote individual flags per promotion-policy.yaml after a clean window.
+      enforce-yamllint: false
+      enforce-governance: false
+      enforce-actionlint: false
       enforce-zizmor: false

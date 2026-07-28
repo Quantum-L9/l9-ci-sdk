@@ -39,8 +39,10 @@ Downstream consumers pin an immutable SDK commit SHA and copy `lint/` into
 their repository root. Dogfood uses `uses: ./.github/workflows/…` to avoid a
 self-pin chicken/egg.
 
-Activation defaults: `enforce-actionlint: true`, `enforce-zizmor: false`
-(promote zizmor using the evidence bar in `.github/governance/promotion-policy.yaml`).
+Dogfood/first-activation defaults: all `enforce-*` inputs are `false`
+(`yamllint`, `governance`, `actionlint`, `zizmor`) — full scan, annotate all
+findings, do not fail the job. Promote individual flags to `true` using the
+evidence bar in `.github/governance/promotion-policy.yaml`.
 
 Hybrid governance: JSON pack files under `.github/governance/` remain strict
 JSON. Real-YAML self-CI companions (`rule-modes.selfci.yaml`,

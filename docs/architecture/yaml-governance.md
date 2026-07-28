@@ -28,8 +28,10 @@ because GitHub Actions requires that discovery path.
 | `data-paths` | `''` (disabled) | Dogfood sets `tests/fixtures/` |
 | `config-root` | `lint` | Yamllint configs |
 | `tools-root` | `lint` | Python checkers |
-| `enforce-actionlint` | `true` | Fail on findings |
-| `enforce-zizmor` | `true` | Dogfood sets `false` initially |
+| `enforce-yamllint` | `false` | Advisory until promoted |
+| `enforce-governance` | `false` | Covers governance JSON + action pins |
+| `enforce-actionlint` | `false` | Advisory until promoted |
+| `enforce-zizmor` | `false` | Advisory until promoted |
 
 ## Local validation
 

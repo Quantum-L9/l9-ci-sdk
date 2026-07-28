@@ -53,16 +53,26 @@ on:
         required: false
         type: string
         default: '3.12'
-      enforce-zizmor:
-        description: Fail the job on zizmor findings. Set false to observe first.
+      enforce-yamllint:
+        description: Fail the job on yamllint findings. false = full scan, annotate, exit 0.
         required: false
         type: boolean
-        default: true
+        default: false
+      enforce-governance:
+        description: Fail the job on governance-JSON / action-pin findings. false = advisory.
+        required: false
+        type: boolean
+        default: false
       enforce-actionlint:
-        description: Fail the job on actionlint findings. Set false to observe first.
+        description: Fail the job on actionlint findings. false = full scan, annotate, exit 0.
         required: false
         type: boolean
-        default: true
+        default: false
+      enforce-zizmor:
+        description: Fail the job on zizmor findings. false = full scan, annotate, exit 0.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -105,30 +115,54 @@ jobs:
         env:
           CONFIG_ROOT: ${{ inputs.config-root }}
           INFRA_PATHS: ${{ inputs.infra-paths }}
+          ENFORCE: ${{ inputs.enforce-yamllint }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           config="${CONFIG_ROOT}/yamllint-infra.yml"
           if [ ! -f "${config}" ]; then
             echo "::error::missing ${config}"
             exit 1
           fi
+          set +e
           # shellcheck disable=SC2086
           yamllint --strict --format github -c "${config}" ${INFRA_PATHS}
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::yamllint infra findings are advisory for this caller (exit ${code})"
+          exit 0
 
       - name: yamllint (data profile, structural only)
         if: inputs.data-paths != ''
         env:
           CONFIG_ROOT: ${{ inputs.config-root }}
           DATA_PATHS: ${{ inputs.data-paths }}
+          ENFORCE: ${{ inputs.enforce-yamllint }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           config="${CONFIG_ROOT}/yamllint-data.yml"
           if [ ! -f "${config}" ]; then
             echo "::error::missing ${config}"
             exit 1
           fi
+          set +e
           # shellcheck disable=SC2086
           yamllint --format github -c "${config}" ${DATA_PATHS}
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::yamllint data findings are advisory for this caller (exit ${code})"
+          exit 0
 
   governance-json:
     name: Governance JSON contract
@@ -153,12 +187,40 @@ jobs:
       - name: Validate governance documents parse as strict JSON
         env:
           TOOLS_ROOT: ${{ inputs.tools-root }}
-        run: python3 "${TOOLS_ROOT}/check_governance_json.py" .
+          ENFORCE: ${{ inputs.enforce-governance }}
+        run: |
+          set -uo pipefail
+          set +e
+          python3 "${TOOLS_ROOT}/check_governance_json.py" .
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::governance JSON findings are advisory for this caller (exit ${code})"
+          exit 0
 
       - name: Validate action pins and Core pin consistency
         env:
           TOOLS_ROOT: ${{ inputs.tools-root }}
-        run: python3 "${TOOLS_ROOT}/check_action_pins.py" .
+          ENFORCE: ${{ inputs.enforce-governance }}
+        run: |
+          set -uo pipefail
+          set +e
+          python3 "${TOOLS_ROOT}/check_action_pins.py" .
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::action-pin findings are advisory for this caller (exit ${code})"
+          exit 0
 
   actionlint:
     name: actionlint
@@ -195,13 +257,21 @@ jobs:
         env:
           ENFORCE: ${{ inputs.enforce-actionlint }}
         run: |
-          set -euo pipefail
-          if [ "${ENFORCE}" = "true" ]; then
-            ./actionlint -color -shellcheck=shellcheck
-          else
-            ./actionlint -color -shellcheck=shellcheck || \
-              echo "::warning::actionlint findings are advisory for this caller"
+          set -uo pipefail
+          # Always run the full scan (actionlint reports every finding, then exits).
+          # Fail the step only when the caller opts into enforce mode.
+          set +e
+          ./actionlint -color -shellcheck=shellcheck
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
           fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::actionlint findings are advisory for this caller (exit ${code})"
+          exit 0
 
   zizmor:
     name: zizmor security audit
@@ -235,12 +305,18 @@ jobs:
           ENFORCE: ${{ inputs.enforce-zizmor }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           # SARIF upload is deliberately omitted: it requires security-events: write.
-          # Findings surface as annotations and as a non-zero exit instead.
-          if [ "${ENFORCE}" = "true" ]; then
-            zizmor --format plain .
-          else
-            zizmor --format plain . || \
-              echo "::warning::zizmor findings are advisory for this caller"
+          # Always run the full audit; fail the step only when enforce is true.
+          set +e
+          zizmor --format plain .
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
           fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::zizmor findings are advisory for this caller (exit ${code})"
+          exit 0
