@@ -1,6 +1,9 @@
 from pathlib import Path
 
-from l9_ci.repository.manifest import build_repository_manifest, write_repository_manifest
+from l9_ci.repository.manifest import (
+    build_repository_manifest,
+    write_repository_manifest,
+)
 
 
 def test_manifest_is_sorted_and_excludes_itself(tmp_path: Path) -> None:
