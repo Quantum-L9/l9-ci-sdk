@@ -81,3 +81,23 @@ Governance notes:
   per `.github/governance/promotion-policy.yaml`.
 - Governance files use a `.yaml` extension but are parsed as JSON — keep them
   valid JSON (no comments, no trailing commas).
+## Biome static checks
+`l9-ci-sdk` owns the reusable Biome static-check workflow
+(`.github/workflows/l9-biome-scan.yml`) and root `biome.json` config,
+enforcing the Biome formatter/linter ownership over JSON/JS/TS assets.
+Dogfood runs via `.github/workflows/l9-biome-scan-dogfood.yml`.
+- Consumers pin `Quantum-L9/l9-ci-sdk/.github/workflows/l9-biome-scan.yml@<40-char-sha>`
+  and copy `biome.json` into their repo root (see
+  `docs/templates/l9-biome-scan-caller.yml`).
+- Do **not** host or pin this capability on `Quantum-L9/.github` or
+  `l9-ci-core`.
+- `biome.json` lives at the repository root (like `ruff.toml`).
+- Independent gate — not a Semgrep `providers` entry. Details:
+  `docs/architecture/biome.md`, ADR 0011.
+- Local: `pre-commit run biome-check --all-files` autofixes via the
+  `biome-check` hook; CI runs read-only `biome ci` and is advisory
+  (`enforce-biome: false`) until promoted per
+  `.github/governance/promotion-policy.yaml`.
+- `tests/fixtures/` and `tests/compatibility/fixtures/` are excluded from
+  Biome's scope — they intentionally hold malformed/non-canonical JSON for
+  provider-parsing failure tests.

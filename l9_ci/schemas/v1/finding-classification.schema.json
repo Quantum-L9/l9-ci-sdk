@@ -4,32 +4,17 @@
   "title": "FindingClassification",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "finding_id",
-    "mode",
-    "resolution_status",
-    "used_default"
-  ],
+  "required": ["finding_id", "mode", "resolution_status", "used_default"],
   "properties": {
     "finding_id": {
       "type": "string",
       "minLength": 1
     },
     "mode": {
-      "enum": [
-        "blocking",
-        "advisory",
-        "shadow",
-        "disabled",
-        "unresolved"
-      ]
+      "enum": ["blocking", "advisory", "shadow", "disabled", "unresolved"]
     },
     "resolution_status": {
-      "enum": [
-        "explicit",
-        "defaulted",
-        "unresolved"
-      ]
+      "enum": ["explicit", "defaulted", "unresolved"]
     },
     "used_default": {
       "type": "boolean"

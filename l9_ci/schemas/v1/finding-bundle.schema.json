@@ -38,10 +38,7 @@
     "snapshot": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "snapshot_id",
-        "repository_root"
-      ],
+      "required": ["snapshot_id", "repository_root"],
       "properties": {
         "snapshot_id": {
           "type": "string",
@@ -64,12 +61,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "provider_id",
-          "adapter_version",
-          "mode",
-          "required"
-        ],
+        "required": ["provider_id", "adapter_version", "mode", "required"],
         "properties": {
           "provider_id": {
             "type": "string",
@@ -84,10 +76,7 @@
             "minLength": 1
           },
           "mode": {
-            "enum": [
-              "execute",
-              "import"
-            ]
+            "enum": ["execute", "import"]
           },
           "required": {
             "type": "boolean"

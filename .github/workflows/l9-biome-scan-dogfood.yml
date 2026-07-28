@@ -1,0 +1,29 @@
+---
+# Dogfood caller for L9 Biome Static Checks in this repository.
+# Invokes the local reusable workflow (avoids chicken/egg SDK SHA pin).
+name: L9 Biome Static Checks Dogfood
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l9-biome-scan-dogfood-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  biome-scan:
+    uses: ./.github/workflows/l9-biome-scan.yml
+    permissions:
+      contents: read
+    with:
+      scan-path: '.'
+      # First activation: advisory only (full scan, annotate, do not fail).
+      # Promote after a clean window per .github/governance/promotion-policy.yaml.
+      enforce-biome: false

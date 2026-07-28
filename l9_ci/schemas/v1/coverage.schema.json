@@ -4,26 +4,14 @@
   "title": "Coverage",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "provider_id",
-    "status",
-    "files_considered",
-    "files_analyzed",
-    "limitations"
-  ],
+  "required": ["provider_id", "status", "files_considered", "files_analyzed", "limitations"],
   "properties": {
     "provider_id": {
       "type": "string",
       "minLength": 1
     },
     "status": {
-      "enum": [
-        "complete",
-        "partial",
-        "skipped",
-        "unsupported",
-        "failed"
-      ]
+      "enum": ["complete", "partial", "skipped", "unsupported", "failed"]
     },
     "files_considered": {
       "type": "integer",
