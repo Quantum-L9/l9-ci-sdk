@@ -1,11 +1,10 @@
 # Ruff configuration for l9-ci-sdk.
 #
-# This repository intentionally ships no build manifest: the SDK runs from
-# source over PYTHONPATH via l9-ci-core's `provision-sdk` action (see AGENTS.md
-# "Runtime packaging"), so there is no `pyproject.toml` and therefore no
-# `[tool.ruff]` table to inherit from. This standalone file is the single lint
-# authority and is kept coherent with the repository's real configuration
-# sources:
+# pyproject.toml exists (for local installability — see AGENTS.md "Runtime
+# packaging") but intentionally has no `[tool.ruff]` table: Ruff resolves a
+# standalone ruff.toml in preference to any `[tool.ruff]` table regardless of
+# whether one is present, so this file is the single lint authority either
+# way. It is kept coherent with the repository's real configuration sources:
 #   * requirements.txt / requirements-ci.txt  -> runtime + CI tooling
 #   * .l9/tool-stack.yaml (minimum_version: 3.11) -> target-version below
 #   * .pre-commit-config.yaml (ruff + ruff-format hooks) -> format settings
@@ -20,7 +19,9 @@
 target-version = "py311"
 line-length = 88
 src = ["l9_ci", "tests"]
-extend-exclude = ["docs"]
+# memory-bank/ holds local session resume + agent WIP; never part of the SDK
+# package surface and must not fail lint/format gates.
+extend-exclude = ["docs", "memory-bank"]
 
 [lint]
 # E4/E7/E9 (import/statement/syntax subset of pycodestyle), F (pyflakes), and

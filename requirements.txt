@@ -1,3 +1,8 @@
-jsonschema>=4.18,<5
-referencing>=0.30,<1
-PyYAML>=6,<7
+# Exact pins (not ranges): this is the version l9-ci-core's provision-sdk
+# action installs into its provisioning venv, and the version pip installs
+# via pyproject.toml's [project] dependencies (which must mirror these exact
+# pins). An unpinned range lets Core's runtime drift from what this repo
+# tests against; exact pins make the two identical by construction.
+jsonschema==4.26.0
+referencing==0.37.0
+PyYAML==6.0.3

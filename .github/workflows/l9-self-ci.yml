@@ -272,7 +272,7 @@ jobs:
       - name: Check Python syntax (advisory)
         run: |
           set +e
-          FILES=$(find . -name '*.py' -not -path './.venv/*' -not -path './venv/*' -not -path './node_modules/*' -not -path './build/*' -not -path './dist/*' 2>/dev/null)
+          FILES=$(find . -name '*.py' -not -path './.venv/*' -not -path './venv/*' -not -path './node_modules/*' -not -path './build/*' -not -path './dist/*' -not -path './memory-bank/*' 2>/dev/null)
           if [ -z "$FILES" ]; then
             echo "[SKIP] no Python files present"
             exit 0

@@ -19,6 +19,7 @@ boundary:
     - semantic validation
     - deterministic serialization
     - agent-review payload projection
+    - deterministic repository manifest generation
   Core_owns:
     - GitHub Actions orchestration
     - workflow permissions
@@ -67,6 +68,22 @@ CLI:
         l9-ci compatibility check
         --bundle BUNDLE
         [--minimum-SDK-version VERSION]
+    manifest_generate:
+      syntax: >-
+        l9-ci manifest generate
+        --repository-root ROOT
+        --output MANIFEST
+        [--tracked-only]
+        [--exclude-path PATH]
+        [--exclude-dir DIR]
+    manifest_check:
+      syntax: >-
+        l9-ci manifest check
+        --repository-root ROOT
+        --output MANIFEST
+        [--tracked-only]
+        [--exclude-path PATH]
+        [--exclude-dir DIR]
 exit_codes:
   success: 0
   gate_failure: 1

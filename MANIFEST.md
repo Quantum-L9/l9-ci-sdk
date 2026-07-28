@@ -1,9 +1,15 @@
 # Consolidated Manifest
 
-Files: 212
+Files: 252
 
 ## Contents
 
+- `.github/CODEOWNERS`
+- `.github/ISSUE_TEMPLATE/bug_report.yml`
+- `.github/ISSUE_TEMPLATE/ci-failure.yml`
+- `.github/ISSUE_TEMPLATE/feature_request.yml`
+- `.github/ISSUE_TEMPLATE/gov-violation.yml`
+- `.github/PULL_REQUEST_TEMPLATE.md`
 - `.github/governance/README.md`
 - `.github/governance/execution-profiles.yaml`
 - `.github/governance/l9-ci-shared-spec.yaml`
@@ -23,9 +29,13 @@ Files: 212
 - `.github/workflows/l9-analysis-release.yml`
 - `.github/workflows/l9-analysis-supply-chain.yml`
 - `.github/workflows/l9-analysis.yml`
+- `.github/workflows/l9-biome-scan-dogfood.yml`
+- `.github/workflows/l9-biome-scan.yml`
+- `.github/workflows/l9-manifest-reconcile.yml`
 - `.github/workflows/l9-self-ci.yml`
 - `.github/workflows/l9-yaml-governance-dogfood.yml`
 - `.github/workflows/l9-yaml-governance.yml`
+- `.github/workflows/publish.yml`
 - `.gitignore`
 - `.l9/architecture.yaml`
 - `.l9/compatibility.yaml`
@@ -41,12 +51,30 @@ Files: 212
 - `.semgrep/l9-logging.yml`
 - `.semgrep/l9-routing.yml`
 - `.semgrep/l9-transport.yml`
+- `.semgrepignore`
 - `AGENTS.md`
+- `ALIGNMENT.md`
+- `ARCHITECTURE.md`
+- `CHANGE_SUMMARY.md`
+- `CLAUDE.md`
+- `CODE_OF_CONDUCT.md`
+- `CONTRIBUTING.md`
+- `INVARIANTS.md`
 - `LICENSE`
-- `MANIFEST.md`
+- `MIGRATION.md`
 - `Makefile`
+- `QUICKSTART.md`
 - `README.md`
+- `ROADMAP.md`
+- `RUNBOOK.md`
+- `SECURITY.md`
+- `SUPPORT.md`
+- `VALIDATION.md`
 - `VALIDATION_REPORT.json`
+- `biome.json`
+- `docs/COMPATIBILITY_MATRIX.md`
+- `docs/ISSUE_INDEX.md`
+- `docs/PUBLISHING.md`
 - `docs/adr/0001-canonical-evidence-and-findings.md`
 - `docs/adr/0002-policy-independent-normalization.md`
 - `docs/adr/0003-explicit-rule-identity.md`
@@ -55,10 +83,14 @@ Files: 212
 - `docs/adr/0006-gate-evaluation.md`
 - `docs/adr/0007-repository-snapshot-identity.md`
 - `docs/adr/0008-agent-payload-is-a-projection.md`
+- `docs/adr/0009-repository-manifest-reconciliation.md`
 - `docs/adr/0010-yaml-governance-static-checks.md`
+- `docs/adr/0011-biome-static-checks.md`
+- `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
 - `docs/architecture/artifact-protocol.md`
+- `docs/architecture/biome.md`
 - `docs/architecture/capability-detection.md`
 - `docs/architecture/cli-contract.md`
 - `docs/architecture/core-integration.md`
@@ -69,6 +101,7 @@ Files: 212
 - `docs/architecture/provider-spi.md`
 - `docs/architecture/public-api.md`
 - `docs/architecture/redaction-contract.md`
+- `docs/architecture/repository-manifest.md`
 - `docs/architecture/repository-snapshots.md`
 - `docs/architecture/semgrep-provider.md`
 - `docs/architecture/validation-contract.md`
@@ -82,6 +115,7 @@ Files: 212
 - `docs/release/known-limitations.md`
 - `docs/source/phase-4.md`
 - `docs/source/sdk-spec.md`
+- `docs/templates/l9-biome-scan-caller.yml`
 - `docs/templates/l9-yaml-governance-caller.yml`
 - `l9_ci/__init__.py`
 - `l9_ci/__main__.py`
@@ -109,6 +143,7 @@ Files: 212
 - `l9_ci/commands/baseline.py`
 - `l9_ci/commands/gates.py`
 - `l9_ci/commands/integration.py`
+- `l9_ci/commands/manifest.py`
 - `l9_ci/commands/providers.py`
 - `l9_ci/commands/semgrep.py`
 - `l9_ci/contracts/__init__.py`
@@ -151,6 +186,7 @@ Files: 212
 - `l9_ci/repository/__init__.py`
 - `l9_ci/repository/enumerator.py`
 - `l9_ci/repository/git.py`
+- `l9_ci/repository/manifest.py`
 - `l9_ci/repository/snapshot.py`
 - `l9_ci/schemas/v1/agent-review-payload.schema.json`
 - `l9_ci/schemas/v1/coverage.schema.json`
@@ -166,6 +202,7 @@ Files: 212
 - `lint/check_governance_json.py`
 - `lint/yamllint-data.yml`
 - `lint/yamllint-infra.yml`
+- `pyproject.toml`
 - `requirements-ci.txt`
 - `requirements.txt`
 - `ruff.toml`
@@ -175,9 +212,11 @@ Files: 212
 - `tests/architecture/test_schema_inventory.py`
 - `tests/baseline/__init__.py`
 - `tests/baseline/test_baseline_kernel.py`
+- `tests/biome/test_biome_scan.py`
 - `tests/capabilities/test_detector.py`
 - `tests/cli/test_exit_codes.py`
 - `tests/cli/test_output.py`
+- `tests/commands/test_manifest_cli.py`
 - `tests/compatibility/fixtures/finding-bundle-v1-bad-summary.json`
 - `tests/compatibility/fixtures/finding-bundle-v1-minimal.json`
 - `tests/compatibility/fixtures/finding-bundle-v1-semgrep.json`
@@ -213,6 +252,7 @@ Files: 212
 - `tests/providers/semgrep/test_versioning.py`
 - `tests/providers/test_defaults.py`
 - `tests/repository/test_enumerator.py`
+- `tests/repository/test_manifest.py`
 - `tests/repository/test_snapshot.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`

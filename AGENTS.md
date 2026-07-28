@@ -415,6 +415,23 @@ make check PYTHON=$HOME/.cache/l9-ci-sdk/venv/bin/python \
 
 ---
 
+## Manifest auto-fix
+`.github/workflows/l9-manifest-reconcile.yml` reconciles root `MANIFEST.md`
+from Git tracked truth on PRs (`l9-ci manifest generate --tracked-only
+--exclude-dir memory-bank`).
+- Same-repo PRs: bot commits corrections (`contents: write` required).
+- Fork PRs: upload `manifest-reconcile.patch`; never use `pull_request_target`.
+- Downstream consumers copy that workflow and replace the dogfood
+  `PYTHONPATH=.` step with existing Core `provision-sdk` plus the provisioned
+  `l9-ci` executable. Pin an SDK revision that includes the `manifest` CLI.
+- `memory-bank/` (including WIP packs) is user/agent scratch only — gitignored
+  and excluded from `MANIFEST.md`; never treat it as product code.
+- This is repository inventory reconciliation, not analysis-artifact
+  manifests and not finding repair. See ADR 0009 and
+  `docs/architecture/repository-manifest.md`.
+
+---
+
 ## Biome static checks
 `l9-ci-sdk` owns the reusable Biome static-check workflow
 (`.github/workflows/l9-biome-scan.yml`) and root `biome.json` config,

@@ -44,3 +44,10 @@ zizmor).
 
 Downstream: copy `lint/`, pin an immutable SDK SHA in the caller template.
 Do not use `Quantum-L9/.github` or `l9-ci-core` as the host for this capability.
+
+## Repository manifest
+
+Root [`MANIFEST.md`](MANIFEST.md) is reconciled from Git tracked truth by
+[`.github/workflows/l9-manifest-reconcile.yml`](.github/workflows/l9-manifest-reconcile.yml)
+(`l9-ci manifest generate --tracked-only --exclude-dir memory-bank`).
+Same-repo PRs get bot commits; fork PRs get a patch artifact.
