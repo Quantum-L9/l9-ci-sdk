@@ -1,8 +1,8 @@
-# Manifest
+# Consolidated Manifest
 
-Files: 252>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
+Files: 284
 
-Files: 184
+## Contents
 
 - `.github/CODEOWNERS`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
@@ -24,6 +24,7 @@ Files: 184
 - `.github/scripts/evaluate_ci_gate.py`
 - `.github/scripts/render_ci_summary.py`
 - `.github/scripts/update_marker_comment.py`
+- `.github/workflows/ci.yml`
 - `.github/workflows/l9-analysis-merge.yml`
 - `.github/workflows/l9-analysis-nightly.yml`
 - `.github/workflows/l9-analysis-release.yml`
@@ -38,13 +39,16 @@ Files: 184
 - `.github/workflows/publish.yml`
 - `.gitignore`
 - `.l9/architecture.yaml`
+- `.l9/audit-findings.md`
 - `.l9/compatibility.yaml`
 - `.l9/integration-contract.yaml`
 - `.l9/ownership.yaml`
+- `.l9/public-api.yaml`
 - `.l9/release-policy.yaml`
 - `.l9/roadmap.yaml`
 - `.l9/semgrep-identity-map.yaml`
 - `.l9/semgrep-policy.example.yaml`
+- `.l9/semgrep-remediation-map.example.yaml`
 - `.l9/tool-stack.yaml`
 - `.pre-commit-config.yaml`
 - `.semgrep/l9-handler-signature.yml`
@@ -69,9 +73,10 @@ Files: 184
 - `RUNBOOK.md`
 - `SECURITY.md`
 - `SUPPORT.md`
+- `TODO.md`
 - `VALIDATION.md`
-- `VALIDATION_REPORT.json`
 - `biome.json`
+- `constraints.txt`
 - `docs/COMPATIBILITY_MATRIX.md`
 - `docs/ISSUE_INDEX.md`
 - `docs/PUBLISHING.md`
@@ -111,6 +116,7 @@ Files: 184
 - `docs/examples/core-semgrep-integration.sh`
 - `docs/examples/core-semgrep-workflow-fragment.yml`
 - `docs/migration/legacy-normalizer-to-sdk.md`
+- `docs/release/blocker-closure.md`
 - `docs/release/checklist.md`
 - `docs/release/known-limitations.md`
 - `docs/source/phase-4.md`
@@ -141,6 +147,7 @@ Files: 184
 - `l9_ci/commands/__init__.py`
 - `l9_ci/commands/artifacts.py`
 - `l9_ci/commands/baseline.py`
+- `l9_ci/commands/errors.py`
 - `l9_ci/commands/gates.py`
 - `l9_ci/commands/integration.py`
 - `l9_ci/commands/manifest.py`
@@ -154,6 +161,7 @@ Files: 184
 - `l9_ci/contracts/failure.py`
 - `l9_ci/contracts/finding.py`
 - `l9_ci/contracts/source.py`
+- `l9_ci/contracts/version.py`
 - `l9_ci/execution/__init__.py`
 - `l9_ci/execution/profiles.py`
 - `l9_ci/execution/selection.py`
@@ -169,10 +177,13 @@ Files: 184
 - `l9_ci/integration/redaction.py`
 - `l9_ci/integration/versioning.py`
 - `l9_ci/pipeline/__init__.py`
+- `l9_ci/pipeline/lifecycle.py`
+- `l9_ci/pipeline/runner.py`
 - `l9_ci/pipeline/semgrep.py`
 - `l9_ci/policy/__init__.py`
 - `l9_ci/policy/classifier.py`
 - `l9_ci/policy/model.py`
+- `l9_ci/policy/remediation.py`
 - `l9_ci/providers/__init__.py`
 - `l9_ci/providers/defaults.py`
 - `l9_ci/providers/metadata.py`
@@ -206,8 +217,10 @@ Files: 184
 - `requirements-ci.txt`
 - `requirements.txt`
 - `ruff.toml`
+- `scripts/generate_validation_report.py`
 - `tests/__init__.py`
 - `tests/architecture/test_dependency_boundaries.py`
+- `tests/architecture/test_l9_wiring.py`
 - `tests/architecture/test_public_api.py`
 - `tests/architecture/test_schema_inventory.py`
 - `tests/baseline/__init__.py`
@@ -216,7 +229,11 @@ Files: 184
 - `tests/capabilities/test_detector.py`
 - `tests/cli/test_exit_codes.py`
 - `tests/cli/test_output.py`
+- `tests/commands/__init__.py`
+- `tests/commands/test_cli.py`
+- `tests/commands/test_errors.py`
 - `tests/commands/test_manifest_cli.py`
+- `tests/commands/test_semgrep_run_contract.py`
 - `tests/compatibility/fixtures/finding-bundle-v1-bad-summary.json`
 - `tests/compatibility/fixtures/finding-bundle-v1-minimal.json`
 - `tests/compatibility/fixtures/finding-bundle-v1-semgrep.json`
@@ -230,7 +247,15 @@ Files: 184
 - `tests/execution/test_selection.py`
 - `tests/fixtures/semgrep/malformed.json`
 - `tests/fixtures/semgrep/provenance.yaml`
+- `tests/fixtures/semgrep/report-errors.json`
 - `tests/fixtures/semgrep/results.json`
+- `tests/fixtures/semgrep/runtime/identity-map.yaml`
+- `tests/fixtures/semgrep/runtime/policy.yaml`
+- `tests/fixtures/semgrep/runtime/provenance.yaml`
+- `tests/fixtures/semgrep/runtime/results.json`
+- `tests/fixtures/semgrep/skipped-only.json`
+- `tests/fixtures/semgrep/zero-findings-empty-scanned.json`
+- `tests/fixtures/semgrep/zero-findings-no-paths.json`
 - `tests/gates/test_evaluator.py`
 - `tests/gates/test_gate_result_schema.py`
 - `tests/identity/test_resolver.py`
@@ -239,20 +264,27 @@ Files: 184
 - `tests/integration/test_limits.py`
 - `tests/integration/test_redaction.py`
 - `tests/integration/test_versioning.py`
+- `tests/pipeline/test_lifecycle.py`
+- `tests/pipeline/test_runner.py`
+- `tests/pipeline/test_semgrep_execution_path.py`
 - `tests/pipeline/test_semgrep_pipeline.py`
 - `tests/pipeline/test_semgrep_release_path.py`
+- `tests/pipeline/test_semgrep_version_policy.py`
 - `tests/policy/test_classifier.py`
+- `tests/policy/test_remediation.py`
 - `tests/providers/__init__.py`
 - `tests/providers/semgrep/__init__.py`
 - `tests/providers/semgrep/test_determinism.py`
 - `tests/providers/semgrep/test_execution_limits.py`
 - `tests/providers/semgrep/test_failures.py`
+- `tests/providers/semgrep/test_promotion_gate.py`
 - `tests/providers/semgrep/test_provider.py`
 - `tests/providers/semgrep/test_report_validation.py`
+- `tests/providers/semgrep/test_runtime_fixture.py`
 - `tests/providers/semgrep/test_versioning.py`
 - `tests/providers/test_defaults.py`
 - `tests/repository/test_enumerator.py`
 - `tests/repository/test_manifest.py`
 - `tests/repository/test_snapshot.py`
 - `tests/yaml/__init__.py`
-- `tests/yaml/test_yaml_governance.py`>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
+- `tests/yaml/test_yaml_governance.py`

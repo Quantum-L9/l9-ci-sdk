@@ -146,6 +146,7 @@ layers:
       - integration
       - pipeline
       - providers
+      - repository
 public_surface:
   packages:
     - l9_ci.contracts

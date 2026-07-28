@@ -36,21 +36,6 @@ from .identities import (
 from .report import validate_semgrep_report
 from .versioning import require_supported_semgrep_version
 
-
-def _as_text(value: str | bytes | None) -> str:
-    """Coerce captured subprocess output to text.
-
-    Execution uses ``text=True`` so the runtime value is already ``str``, but
-    ``subprocess.TimeoutExpired`` types its ``stdout``/``stderr`` as
-    ``bytes | None``; normalize both shapes to a plain string.
-    """
-    if value is None:
-        return ""
-    if isinstance(value, bytes):
-        return value.decode("utf-8", "replace")
-    return value
-
-
 _SEVERITY_MAP: dict[str, Severity] = {
     "ERROR": Severity.HIGH,
     "WARNING": Severity.MEDIUM,
@@ -170,7 +155,7 @@ class SemgrepProvider:
                 # text=True guarantees str, but TimeoutExpired types these as
                 # bytes | str | None; narrow to str for the result contract.
                 stdout=exc.stdout if isinstance(exc.stdout, str) else "",
-                stderr=exc.stderr if isinstance(exc.stderr, str) else "",>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
+                stderr=exc.stderr if isinstance(exc.stderr, str) else "",
                 timed_out=True,
             )
         except OSError as exc:

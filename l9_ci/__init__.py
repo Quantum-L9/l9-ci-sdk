@@ -4,7 +4,7 @@
 # its build-manifest version from this constant (tool.setuptools.dynamic), so an
 # installed package (`importlib.metadata.version("l9-ci-sdk")`) and a source run
 # (via PYTHONPATH, l9-ci-core's provision-sdk) report the same value. This
-# constant MUST match `.l9/integration-contract.yaml` metadata.version.>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
+# constant MUST match `.l9/integration-contract.yaml` metadata.version.
 __version__ = "1.0.0"
 
 # The 11 public packages, matching .l9/architecture.yaml public_surface and

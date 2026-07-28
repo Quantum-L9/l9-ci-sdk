@@ -199,7 +199,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         limitations=normalization.limitations,
     )
     if request.generated_at is not None:
-        bundle = replace(bundle, generated_at=request.generated_at)>>>>>>> 1c74931 (build(ci): add self-validation CI, type/coverage gates, packaging, and commit-bound evidence (AUD-009, QA-007, QA-008, AUD-008, AUD-007, AUD-002))
+        bundle = replace(bundle, generated_at=request.generated_at)
     validation = validate_bundle(bundle)
     validation.require_valid()
     validate_redaction(bundle.to_dict()).require_valid()

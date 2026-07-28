@@ -155,9 +155,9 @@ def load_rule_waivers(
                 path=str(raw.get("path", "")),
                 owner=str(raw.get("owner", "") or ""),
                 issue=str(raw.get("issue", "") or ""),
-                expires=raw.get("expires", ""),  # type: ignore[arg-type]
+                expires=raw.get("expires", ""),
                 reason=str(raw.get("reason", "")),
-                removal_condition=raw.get("removal_condition", ""),  # type: ignore[arg-type]
+                removal_condition=raw.get("removal_condition", ""),
             )
         except ValueError as exc:
             message = str(exc)

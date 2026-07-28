@@ -26,7 +26,14 @@ class RepositoryManifest:
         return len(self.files)
 
     def render_markdown(self) -> str:
-        lines = ["# Consolidated Manifest", "", f"Files: {self.file_count}", "", "## Contents", ""]
+        lines = [
+            "# Consolidated Manifest",
+            "",
+            f"Files: {self.file_count}",
+            "",
+            "## Contents",
+            "",
+        ]
         lines.extend(f"- `{path}`" for path in self.files)
         return "\n".join(lines) + "\n"
 

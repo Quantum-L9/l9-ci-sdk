@@ -106,6 +106,7 @@ rules: {}
                 output_path=tmp_path / "bundle.json",
                 identity_map_path=identity_map,
                 policy_path=policy,
+                provider_version="1.120.0",
                 strict=True,
                 generated_at="2026-07-17T00:00:00Z",
             )

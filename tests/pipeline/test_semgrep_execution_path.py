@@ -70,7 +70,7 @@ def test_execute_path_rejects_unsupported_detected_version(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     write_fake_semgrep(bin_dir / "semgrep", version="2.0.0")
-    monkeypatch.setenv("PATH", str(bin_dir))
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     with pytest.raises(UnsupportedProviderVersionError):
         run_semgrep_pipeline(request(tmp_path))
     assert not (tmp_path / "bundle.json").exists()

@@ -1,3 +1,4 @@
+---
 schema: l9.public-api/v1
 metadata:
   status: authoritative
@@ -31,12 +32,16 @@ packages:
     - SourceLocation
     - normalize_repository_path
   l9_ci.repository:
+    - DEFAULT_MANIFEST_PATH
     - GitRepositoryState
+    - RepositoryManifest
     - RepositorySnapshot
+    - build_repository_manifest
     - build_repository_snapshot
     - enumerate_repository_files
     - inspect_git_repository
     - is_git_repository
+    - write_repository_manifest
   l9_ci.capabilities:
     - RepositoryCapabilities
     - detect_repository_capabilities
@@ -51,6 +56,7 @@ packages:
     - ProviderRegistry
     - ProviderState
     - SemgrepProvider
+    - build_default_registry
   l9_ci.identity:
     - IdentityResolution
     - IdentityResolutionStatus

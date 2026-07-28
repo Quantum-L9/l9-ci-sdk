@@ -76,14 +76,33 @@ def test_every_action_reference_is_sha_pinned() -> None:
     assert offenders == [], f"unpinned refs (need @<40-hex sha>): {offenders}"
 
 
+# Known non-Core action vendors used by this repo (still SHA-pinned).
+_ALLOWED_EXTERNAL_ACTION_PREFIXES = (
+    "actions/",
+    f"{CORE_REPO}/",
+    "pypa/gh-action-pypi-publish@",
+)
+
+# Workflows with intentional elevated write scopes beyond checks:write.
+_ALLOWED_WRITE_SCOPES = {
+    "l9-manifest-reconcile.yml": {"contents"},  # bot commits MANIFEST.md
+    "l9-self-ci.yml": {"pull-requests"},  # marker comment
+    "publish.yml": {"id-token", "actions"},  # OIDC publish + download-artifact
+}
+
+# Governance companions that are real YAML (not JSON-as-YAML).
+_REAL_YAML_GOVERNANCE = frozenset({"rule-modes.selfci.yaml", "l9-ci-shared-spec.yaml"})
+
+
 def test_non_action_references_target_core_only() -> None:
     offenders = [
         f"{workflow.name}:{number}:{ref}"
         for workflow in ALL_WORKFLOWS
         for number, ref in _uses_refs(workflow)
         if not ref.startswith("./")
-        and not ref.startswith("actions/")
-        and not ref.startswith(f"{CORE_REPO}/")
+        and not any(
+            ref.startswith(prefix) for prefix in _ALLOWED_EXTERNAL_ACTION_PREFIXES
+        )
     ]
     assert offenders == [], f"non-Core, non-actions refs: {offenders}"
 
@@ -93,11 +112,12 @@ def test_non_action_references_target_core_only() -> None:
 )
 def test_least_privilege_permissions(workflow: Path) -> None:
     text = workflow.read_text(encoding="utf-8")
-    assert re.search(r"(?m)^\s*contents:\s+read\s*$", text), (
-        f"{workflow.name} must declare 'contents: read'"
+    assert re.search(r"(?m)^\s*contents:\s+(read|write)\s*$", text), (
+        f"{workflow.name} must declare contents: read|write"
     )
     scopes = set(_WRITE_SCOPE.findall(text))
-    forbidden = scopes - {"checks"}
+    allowed = {"checks"} | _ALLOWED_WRITE_SCOPES.get(workflow.name, set())
+    forbidden = scopes - allowed
     assert forbidden == set(), (
         f"{workflow.name} requests forbidden write scopes: {sorted(forbidden)}"
     )
@@ -131,6 +151,8 @@ def test_governance_files_are_valid_json() -> None:
     files = sorted(GOVERNANCE.glob("*.yaml"))
     assert files, "no .github/governance/*.yaml files found"
     for path in files:
+        if path.name in _REAL_YAML_GOVERNANCE:
+            continue
         try:
             json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as error:

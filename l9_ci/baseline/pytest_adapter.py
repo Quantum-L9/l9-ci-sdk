@@ -66,7 +66,7 @@ def _iter_report_lines(path: Path) -> Iterator[Mapping[str, Any]]:
 
 def _extract_exception_type(longrepr: Any, crash: Mapping[str, Any] | None) -> str:
     if crash and isinstance(crash.get("message"), str):
-        message = crash["message"]
+        message = str(crash["message"])
         head = message.split(":", 1)[0].strip()
         if head and " " not in head and head[0].isalpha():
             return head
@@ -82,7 +82,7 @@ def _extract_exception_type(longrepr: Any, crash: Mapping[str, Any] | None) -> s
 
 def _extract_signature(longrepr: Any, crash: Mapping[str, Any] | None) -> str:
     if crash and isinstance(crash.get("message"), str):
-        return crash["message"]
+        return str(crash["message"])
     if isinstance(longrepr, str):
         error_lines = [
             line.strip()[2:].strip()

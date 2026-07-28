@@ -150,6 +150,8 @@ def test_semgrep_normalize_missing_report_json_error(
             str(tmp_path / "missing.json"),
             "--output",
             str(tmp_path / "out.json"),
+            "--provider-version",
+            "1.120.0",
             "--snapshot-id",
             "s1",
             "--format",
@@ -194,6 +196,9 @@ def test_semgrep_run_writes_failed_bundle_when_execution_fails(
     # With the semgrep binary absent (or execution failing), the runner must
     # produce a canonical bundle with FAILED coverage and a structured
     # provider failure — not crash and not silently succeed.
+    empty_bin = tmp_path / "empty-bin"
+    empty_bin.mkdir()
+    monkeypatch.setenv("PATH", str(empty_bin))
     out = tmp_path / "bundle.json"
     code = run_cli(
         [
@@ -218,7 +223,7 @@ def test_semgrep_run_writes_failed_bundle_when_execution_fails(
     payload = json.loads(out.read_text())
     assert payload["coverage"][0]["status"] == "failed"
     assert payload["provider_failures"], "expected a structured provider failure"
-    assert payload["providers"][0]["mode"] == "import"
+    assert payload["providers"][0]["mode"] == "execute"
     assert _json_stdout(capsys)["ok"] is True
 
 
