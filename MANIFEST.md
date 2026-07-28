@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 299
+Files: 301
 
 ## Contents
 
@@ -12,6 +12,7 @@ Files: 299
 - `.github/ISSUE_TEMPLATE/feature_request.yml`
 - `.github/ISSUE_TEMPLATE/gov-violation.yml`
 - `.github/PULL_REQUEST_TEMPLATE.md`
+- `.github/dependabot.yml`
 - `.github/governance/README.md`
 - `.github/governance/execution-profiles.yaml`
 - `.github/governance/l9-ci-shared-spec.yaml`
@@ -303,3 +304,4 @@ Files: 299
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`
+- `uv.lock`
