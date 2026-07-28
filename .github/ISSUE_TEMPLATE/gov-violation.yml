@@ -1,0 +1,45 @@
+# L9_META: origin=Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e; repo=l9-ci-sdk; updated=2026-07-27
+
+name: Governance Violation
+description: Report a repository contract or governance violation
+title: "[Gov Violation]: "
+labels: ["governance", "violation", "triage"]
+assignees: []
+body:
+  - type: dropdown
+    id: violation-type
+    attributes:
+      label: Violation Type
+      options:
+        - SDK/Core ownership boundary
+        - Provider policy-independence
+        - Canonical identity resolution
+        - Artifact or schema compatibility
+        - Secret or redaction handling
+        - CI rule-mode enforcement
+        - Generated evidence integrity
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-fix
+    attributes:
+      label: Proposed Fix
