@@ -1,0 +1,25 @@
+---
+# L9 YAML governance - data profile
+# Scope: fixtures, prompt/eval configs, provenance files, identity-map YAML sources.
+# Structural integrity only. No style enforcement, no line-length gate.
+extends: default
+
+rules:
+  line-length: disable
+  quoted-strings: disable
+  comments: disable
+  comments-indentation: disable
+  document-start: disable
+  indentation: disable
+  trailing-spaces: disable
+  new-line-at-end-of-file: disable
+  truthy:
+    allowed-values: ['true', 'false']
+    check-keys: false
+  key-duplicates: enable
+  empty-values:
+    forbid-in-block-mappings: true
+    forbid-in-flow-mappings: true
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
