@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "l9-ci"
+version = "1.0.0"
+description = "Canonical analysis contracts, provider adapters, normalized findings, validation, and deterministic artifact generation for Quantum-L9 CI."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+# Exact pins, mirroring requirements.txt. This is the version l9-ci-core's
+# provision-sdk action installs into its provisioning venv (via
+# requirements.txt) and the version `pip install -e .` resolves here — an
+# unpinned range would let those two diverge. Updating a version requires
+# updating both files together.
+dependencies = [
+    "jsonschema==4.26.0",
+    "referencing==0.37.0",
+    "PyYAML==6.0.3",
+]
+
+# Mirrors requirements-ci.txt (exact pins; the current, active local-gate
+# toolchain documented in AGENTS.md), not the pre-v2 ci extras group.
+# bandit/pip-audit/safety/pip-licenses/pytest-asyncio/pytest-xdist/
+# pytest-timeout are not invoked anywhere in this codebase's tests or
+# workflows, so they are not carried forward as unused placeholders.
+[project.optional-dependencies]
+ci = [
+    "ruff==0.16.0",
+    "mypy==2.3.0",
+    "types-PyYAML==6.0.12.20260724",
+    "types-jsonschema==4.26.0.20260518",
+    "pytest==9.1.1",
+]
+
+[project.scripts]
+l9-ci = "l9_ci.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/Quantum-L9/l9-ci-sdk"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["memory-bank", ".git", ".venv", "venv", "node_modules"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["l9_ci"]
+
+# Ruff and mypy are intentionally NOT configured here: ruff.toml is the single
+# lint authority (see its header comment) and takes precedence over any
+# [tool.ruff] table regardless; mypy currently runs with no dedicated config
+# section (`mypy l9_ci`, default settings) rather than reintroducing the
+# pre-v2 [tool.mypy] strictness settings as a side effect of this restore.

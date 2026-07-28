@@ -53,14 +53,20 @@ Do not:
 - use absolute source paths in canonical artifacts;
 - claim successful validation without executing tests.
 ## Runtime packaging
-The SDK ships no build manifest and is executed from source over `PYTHONPATH`
-by `l9-ci-core`'s `provision-sdk` action. Because of that:
-- runtime third-party dependencies are declared in `requirements.txt`
-  (`jsonschema`, `referencing`, `PyYAML`) and installed into the provisioning
-  venv; adding a new runtime import requires updating that file;
+`pyproject.toml` makes the package locally installable (`pip install -e .`)
+and exposes the `l9-ci` console script, but this repo is not published to
+any package index — adding one would be a hosted-service dependency and is
+blocked by the Phase 1 restrictions above. In production, `l9-ci-core`'s
+`provision-sdk` action still executes the SDK from source over `PYTHONPATH`
+rather than installing a built distribution. Because of that:
+- runtime third-party dependencies are declared in both `requirements.txt`
+  (installed into the provisioning venv) and `pyproject.toml` `[project]
+  dependencies` (installed on `pip install -e .`); adding a new runtime
+  import requires updating both;
 - the canonical version is `l9_ci.__version__`, which must match
-  `.l9/integration-contract.yaml` `metadata.version` — the source-run fallback
-  the compatibility contract negotiates against.
+  `.l9/integration-contract.yaml` `metadata.version` and `pyproject.toml`
+  `[project] version` — the source-run fallback the compatibility contract
+  negotiates against.
 ## Continuous integration & self-analysis
 This repository consumes `l9-ci-core` v2 to analyze its own changes; Core is
 pinned by immutable commit SHA in every `.github/workflows/l9-analysis*.yml`
@@ -81,3 +87,32 @@ Governance notes:
   per `.github/governance/promotion-policy.yaml`.
 - Governance files use a `.yaml` extension but are parsed as JSON — keep them
   valid JSON (no comments, no trailing commas).
+
+## Manifest auto-fix
+`.github/workflows/l9-manifest-reconcile.yml` reconciles root `MANIFEST.md`
+from Git tracked truth on PRs (`l9-ci manifest generate --tracked-only`).
+- Same-repo PRs: bot commits corrections (`contents: write` required).
+- Fork PRs: upload `manifest-reconcile.patch`; never use `pull_request_target`.
+- Downstream consumers copy that workflow and replace the dogfood
+  `PYTHONPATH=.` step with existing Core `provision-sdk` plus the provisioned
+  `l9-ci` executable. Pin an SDK revision that includes the `manifest` CLI.
+- This is repository inventory reconciliation, not analysis-artifact
+  manifests and not finding repair. See ADR 0009 and
+  `docs/architecture/repository-manifest.md`.
+
+<!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->
+
+## Formatter ownership
+
+Workspace class: `biome_default` — Default for every governed workspace: Biome owns JS/TS/JSON, Ruff owns Python.
+
+Exactly one formatter owns each language. Do not reformat a file with a tool other than its owner, and do not add config for a competing formatter: the result is a diff that churns on every save.
+
+| Languages | Owner | Note |
+|---|---|---|
+| `javascript`, `javascriptreact`, `typescript`, `typescriptreact`, `json`, `jsonc` | **biome** | bound by the governed IDE profile |
+| `python` | **ruff** | bound by the governed IDE profile |
+
+Generated from `environment/ide/policy.json` in the governance clone by `ops/scripts/adapters/agentdocs.sh`. Edit the policy, not this block.
+
+<!-- END L9 FORMATTER OWNERSHIP -->

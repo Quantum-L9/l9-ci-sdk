@@ -3,4 +3,9 @@
 .mypy_cache/
 __pycache__/
 *.py[cod]
-artifacts/
+
+# Repo-root generated output only (CI SBOM/report scratch space). Anchored
+# with a leading slash so it does not also match the source subpackage
+# l9_ci/artifacts/ — a bare `artifacts/` pattern matches at any depth and
+# previously swallowed that package, requiring a force-add to track it.
+/artifacts/

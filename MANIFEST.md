@@ -1,9 +1,31 @@
 # Consolidated Manifest
 
-Files: 158
+Files: 209
 
 ## Contents
 
+- `.github/CODEOWNERS`
+- `.github/governance/README.md`
+- `.github/governance/execution-profiles.yaml`
+- `.github/governance/l9-ci-shared-spec.yaml`
+- `.github/governance/promotion-policy.yaml`
+- `.github/governance/provider-requiredness.yaml`
+- `.github/governance/quality-thresholds.yaml`
+- `.github/governance/rule-modes.selfci.yaml`
+- `.github/governance/rule-modes.yaml`
+- `.github/governance/waivers.yaml`
+- `.github/scripts/agent_review_payload.py`
+- `.github/scripts/classify_pr.py`
+- `.github/scripts/evaluate_ci_gate.py`
+- `.github/scripts/render_ci_summary.py`
+- `.github/scripts/update_marker_comment.py`
+- `.github/workflows/l9-analysis-merge.yml`
+- `.github/workflows/l9-analysis-nightly.yml`
+- `.github/workflows/l9-analysis-release.yml`
+- `.github/workflows/l9-analysis-supply-chain.yml`
+- `.github/workflows/l9-analysis.yml`
+- `.github/workflows/l9-manifest-reconcile.yml`
+- `.github/workflows/l9-self-ci.yml`
 - `.gitignore`
 - `.l9/architecture.yaml`
 - `.l9/compatibility.yaml`
@@ -14,8 +36,15 @@ Files: 158
 - `.l9/semgrep-identity-map.yaml`
 - `.l9/semgrep-policy.example.yaml`
 - `.l9/tool-stack.yaml`
+- `.pre-commit-config.yaml`
+- `.semgrep/l9-handler-signature.yml`
+- `.semgrep/l9-logging.yml`
+- `.semgrep/l9-routing.yml`
+- `.semgrep/l9-transport.yml`
+- `.semgrepignore`
 - `AGENTS.md`
-- `MANIFEST.md`
+- `LICENSE`
+- `README.md`
 - `VALIDATION_REPORT.json`
 - `docs/adr/0001-canonical-evidence-and-findings.md`
 - `docs/adr/0002-policy-independent-normalization.md`
@@ -25,6 +54,7 @@ Files: 158
 - `docs/adr/0006-gate-evaluation.md`
 - `docs/adr/0007-repository-snapshot-identity.md`
 - `docs/adr/0008-agent-payload-is-a-projection.md`
+- `docs/adr/0009-repository-manifest-reconciliation.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
 - `docs/architecture/artifact-protocol.md`
@@ -38,6 +68,7 @@ Files: 158
 - `docs/architecture/provider-spi.md`
 - `docs/architecture/public-api.md`
 - `docs/architecture/redaction-contract.md`
+- `docs/architecture/repository-manifest.md`
 - `docs/architecture/repository-snapshots.md`
 - `docs/architecture/semgrep-provider.md`
 - `docs/architecture/validation-contract.md`
@@ -56,6 +87,14 @@ Files: 158
 - `l9_ci/artifacts/compatibility.py`
 - `l9_ci/artifacts/serializer.py`
 - `l9_ci/artifacts/validator.py`
+- `l9_ci/baseline/__init__.py`
+- `l9_ci/baseline/comparator.py`
+- `l9_ci/baseline/comparison.py`
+- `l9_ci/baseline/fingerprint.py`
+- `l9_ci/baseline/ledger.py`
+- `l9_ci/baseline/packet_envelope.py`
+- `l9_ci/baseline/pytest_adapter.py`
+- `l9_ci/baseline/schemas.py`
 - `l9_ci/capabilities/__init__.py`
 - `l9_ci/capabilities/detector.py`
 - `l9_ci/capabilities/model.py`
@@ -65,8 +104,10 @@ Files: 158
 - `l9_ci/cli/output.py`
 - `l9_ci/commands/__init__.py`
 - `l9_ci/commands/artifacts.py`
+- `l9_ci/commands/baseline.py`
 - `l9_ci/commands/gates.py`
 - `l9_ci/commands/integration.py`
+- `l9_ci/commands/manifest.py`
 - `l9_ci/commands/providers.py`
 - `l9_ci/commands/semgrep.py`
 - `l9_ci/contracts/__init__.py`
@@ -97,6 +138,7 @@ Files: 158
 - `l9_ci/policy/classifier.py`
 - `l9_ci/policy/model.py`
 - `l9_ci/providers/__init__.py`
+- `l9_ci/providers/defaults.py`
 - `l9_ci/providers/metadata.py`
 - `l9_ci/providers/registry.py`
 - `l9_ci/providers/semgrep/__init__.py`
@@ -108,6 +150,7 @@ Files: 158
 - `l9_ci/repository/__init__.py`
 - `l9_ci/repository/enumerator.py`
 - `l9_ci/repository/git.py`
+- `l9_ci/repository/manifest.py`
 - `l9_ci/repository/snapshot.py`
 - `l9_ci/schemas/v1/agent-review-payload.schema.json`
 - `l9_ci/schemas/v1/coverage.schema.json`
@@ -119,14 +162,20 @@ Files: 158
 - `l9_ci/schemas/v1/provider-failure.schema.json`
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
+- `pyproject.toml`
+- `requirements-ci.txt`
 - `requirements.txt`
+- `ruff.toml`
 - `tests/__init__.py`
 - `tests/architecture/test_dependency_boundaries.py`
 - `tests/architecture/test_public_api.py`
 - `tests/architecture/test_schema_inventory.py`
+- `tests/baseline/__init__.py`
+- `tests/baseline/test_baseline_kernel.py`
 - `tests/capabilities/test_detector.py`
 - `tests/cli/test_exit_codes.py`
 - `tests/cli/test_output.py`
+- `tests/commands/test_manifest_cli.py`
 - `tests/compatibility/fixtures/finding-bundle-v1-bad-summary.json`
 - `tests/compatibility/fixtures/finding-bundle-v1-minimal.json`
 - `tests/compatibility/fixtures/finding-bundle-v1-semgrep.json`
@@ -160,5 +209,7 @@ Files: 158
 - `tests/providers/semgrep/test_provider.py`
 - `tests/providers/semgrep/test_report_validation.py`
 - `tests/providers/semgrep/test_versioning.py`
+- `tests/providers/test_defaults.py`
 - `tests/repository/test_enumerator.py`
+- `tests/repository/test_manifest.py`
 - `tests/repository/test_snapshot.py`
