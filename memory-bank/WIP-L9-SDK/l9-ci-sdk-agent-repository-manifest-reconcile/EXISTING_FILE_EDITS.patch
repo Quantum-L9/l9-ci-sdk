@@ -1,0 +1,64 @@
+diff --git a/l9_ci/__main__.py b/l9_ci/__main__.py
+--- a/l9_ci/__main__.py
++++ b/l9_ci/__main__.py
+@@ -7,6 +7,7 @@ from l9_ci.commands import (
+     register_baseline_commands,
+     register_gate_commands,
+     register_integration_commands,
++    register_manifest_commands,
+     register_provider_commands,
+     register_semgrep_commands,
+ )
+@@ -19,6 +20,7 @@ def main() -> int:
+     register_baseline_commands(subparsers)
+     register_gate_commands(subparsers)
+     register_integration_commands(subparsers)
++    register_manifest_commands(subparsers)
+     register_provider_commands(subparsers)
+     register_semgrep_commands(subparsers)
+     args = parser.parse_args()
+diff --git a/l9_ci/commands/__init__.py b/l9_ci/commands/__init__.py
+--- a/l9_ci/commands/__init__.py
++++ b/l9_ci/commands/__init__.py
+@@ -5,6 +5,7 @@ from .artifacts import register_artifact_commands
+ from .baseline import register_baseline_commands
+ from .gates import register_gate_commands
+ from .integration import register_integration_commands
++from .manifest import register_manifest_commands
+ from .providers import register_provider_commands
+ from .semgrep import register_semgrep_commands
+@@ -14,6 +15,7 @@ __all__ = [
+     "register_baseline_commands",
+     "register_gate_commands",
+     "register_integration_commands",
++    "register_manifest_commands",
+     "register_provider_commands",
+     "register_semgrep_commands",
+ ]
+diff --git a/l9_ci/repository/__init__.py b/l9_ci/repository/__init__.py
+--- a/l9_ci/repository/__init__.py
++++ b/l9_ci/repository/__init__.py
+@@ -3,6 +3,12 @@
+ 
+ from .enumerator import enumerate_repository_files
+ from .git import GitRepositoryState, inspect_git_repository, is_git_repository
++from .manifest import (
++    DEFAULT_MANIFEST_PATH,
++    RepositoryManifest,
++    build_repository_manifest,
++    write_repository_manifest,
++)
+ from .snapshot import RepositorySnapshot, build_repository_snapshot
+ 
+ __all__ = [
++    "DEFAULT_MANIFEST_PATH",
+     "GitRepositoryState",
++    "RepositoryManifest",
+     "RepositorySnapshot",
++    "build_repository_manifest",
+     "build_repository_snapshot",
+     "enumerate_repository_files",
+     "inspect_git_repository",
+     "is_git_repository",
++    "write_repository_manifest",
+ ]

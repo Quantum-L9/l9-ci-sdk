@@ -1,0 +1,80 @@
+name: L9 Manifest Reconcile
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: l9-manifest-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reconcile:
+    name: Reconcile repository manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Generate manifest from repository truth
+        id: manifest
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$PWD"
+          python -m l9_ci manifest generate --repository-root . --output MANIFEST.md --tracked-only
+          if git diff --quiet -- MANIFEST.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff -- MANIFEST.md
+          fi
+
+      - name: Commit manifest correction to PR
+        if: >-
+          steps.manifest.outputs.changed == 'true' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git config user.name "l9-manifest-bot"
+          git config user.email "l9-manifest-bot@users.noreply.github.com"
+          git checkout -B "$HEAD_REF"
+          git add MANIFEST.md
+          git commit -m "chore(manifest): reconcile repository truth"
+          git push origin "HEAD:$HEAD_REF"
+          echo "Manifest corrected. The synchronize event starts CI again on the new head."
+
+      - name: Export fork patch
+        if: >-
+          steps.manifest.outputs.changed == 'true' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        run: git diff --binary -- MANIFEST.md > manifest-reconcile.patch
+
+      - name: Upload fork reconciliation patch
+        if: >-
+          steps.manifest.outputs.changed == 'true' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-reconcile-patch
+          path: manifest-reconcile.patch
+          if-no-files-found: error
+          retention-days: 14
