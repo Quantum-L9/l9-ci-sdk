@@ -1,0 +1,97 @@
+---
+# L9 Biome Static Checks (reusable) — owned by Quantum-L9/l9-ci-sdk
+#
+# Single gate, read-only, zero external GitHub Actions:
+#   biome ci  - format + lint (recommended rules) + import-organization check
+#               for JSON/JS/TS assets (checksum-verified biome-linux-x64
+#               binary; no npm/node/setup-node required in CI)
+#
+# Conventions:
+#   - immutable event-revision checkout (no floating action ref)
+#   - zero external GitHub Actions in this reusable workflow
+#   - permissions: contents: read only
+#   - biome.json lives at the consumer repo root (same convention as ruff.toml)
+#
+# Dogfood (this repo):
+#   uses: ./.github/workflows/l9-biome-scan.yml
+#
+# Downstream consumer:
+#   uses: Quantum-L9/l9-ci-sdk/.github/workflows/l9-biome-scan.yml@<40-char-sdk-sha>
+#   Copy biome.json from this repository into the consumer root and adjust
+#   files.includes for the consumer's JSON/JS/TS footprint.
+
+name: L9 Biome Static Checks
+
+on:
+  workflow_call:
+    inputs:
+      scan-path:
+        description: Path passed to `biome ci` (relative to repo root).
+        required: false
+        type: string
+        default: '.'
+      enforce-biome:
+        description: Fail the job on Biome findings. false = full scan, annotate, exit 0.
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  BIOME_VERSION: '2.5.5'
+  BIOME_LINUX_X64_SHA256: '12ecb833102c8bf8ab6ede7ecd5b6e6fc76e8af95b3ef356933a1f5330afc028'
+
+jobs:
+  biome:
+    name: biome ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch -q --depth=1 origin "${REVISION}"
+          git checkout -q --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+
+      - name: Install Biome (checksum-verified binary)
+        run: |
+          set -euo pipefail
+          url="https://github.com/biomejs/biome/releases/download/@biomejs/biome@${BIOME_VERSION}/biome-linux-x64"
+          curl -fsSL --retry 3 -o biome "${url}"
+          echo "${BIOME_LINUX_X64_SHA256}  biome" | sha256sum --check --status
+          chmod +x biome
+          ./biome --version
+
+      - name: Run biome ci
+        env:
+          SCAN_PATH: ${{ inputs.scan-path }}
+          ENFORCE: ${{ inputs.enforce-biome }}
+        run: |
+          set -uo pipefail
+          if [ ! -f "biome.json" ]; then
+            echo "::error::missing biome.json at repo root"
+            exit 1
+          fi
+          set +e
+          ./biome ci --colors=off "${SCAN_PATH}"
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::biome findings are advisory for this caller (exit ${code})"
+          exit 0

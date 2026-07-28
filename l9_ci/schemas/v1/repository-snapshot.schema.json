@@ -4,23 +4,14 @@
   "title": "RepositorySnapshot",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "snapshot_id",
-    "dirty",
-    "files",
-    "file_count",
-    "source"
-  ],
+  "required": ["snapshot_id", "dirty", "files", "file_count", "source"],
   "properties": {
     "snapshot_id": {
       "type": "string",
       "minLength": 1
     },
     "revision": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "dirty": {
       "type": "boolean"
@@ -39,10 +30,7 @@
       "minimum": 0
     },
     "source": {
-      "enum": [
-        "git",
-        "filesystem"
-      ]
+      "enum": ["git", "filesystem"]
     }
   }
 }

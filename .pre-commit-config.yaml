@@ -30,6 +30,14 @@ repos:
 
   - repo: local
     hooks:
+      - id: biome-check
+        name: biome check (format + lint + organize imports)
+        entry: biome check --write
+        language: node
+        additional_dependencies: ['@biomejs/biome@2.5.5']
+        files: \.(json|jsonc|js|jsx|ts|tsx)$
+        exclude: ^(tests/fixtures/|tests/compatibility/fixtures/)
+
       - id: l9-governance-json
         name: governance documents parse as strict JSON
         entry: python3 lint/check_governance_json.py

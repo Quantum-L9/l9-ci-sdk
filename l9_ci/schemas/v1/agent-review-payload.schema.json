@@ -161,14 +161,7 @@
           "minLength": 1
         },
         "severity": {
-          "enum": [
-            "critical",
-            "high",
-            "medium",
-            "low",
-            "informational",
-            "unknown"
-          ]
+          "enum": ["critical", "high", "medium", "low", "informational", "unknown"]
         },
         "category": {
           "type": "string",
