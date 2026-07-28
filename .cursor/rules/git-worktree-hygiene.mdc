@@ -1,0 +1,48 @@
+---
+description: Prevent lost work — WIP commits over stashes; no branch spaghetti
+alwaysApply: true
+---
+
+# Git & working-tree hygiene
+
+Uncommitted work is not durable. Concurrent agents + Dropbox + branch switches
+have wiped hours of valid work. Follow this every session.
+
+## Non-negotiable
+
+1. **Never switch branches, stash, reset, or checkout with a dirty tree**
+   that contains work you care about. Commit or discard first.
+2. **Prefer WIP commits over stashes.** After any non-trivial edit batch:
+   ```bash
+   git add <paths-you-touched>
+   git commit -m "wip: park <short topic>"
+   ```
+   Stashes are anonymous, reorder, and get orphaned across switches — do not
+   use them as long-term storage.
+3. **One WIP branch at a time per worktree.** Finish or park before starting
+   another topic. Use a separate git worktree for true concurrency.
+4. **Push WIP that must survive.** Remote + open PR = backup. Local-only
+   branches and unnamed stashes are where work dies.
+5. **Do not invent branches/stashes** unless the user explicitly asks.
+   Work only on the current branch.
+6. **Never `git stash pop` / `git checkout -- .` / hard reset** unless the
+   user explicitly requested that exact operation.
+
+## If you must stash (rare)
+
+```bash
+git stash push -u -m "<branch>: <why>"
+# pop or apply on the SAME branch before any further switch
+```
+
+## Before any branch switch (checklist)
+
+- [ ] `git status` is clean (or only intentional untracked noise)
+- [ ] Valuable WIP is committed (`wip:` ok)
+- [ ] No plan to “recover later from stash”
+
+## Recovery note
+
+Agent transcripts under Cursor may retain `Write` payloads after a wipe.
+That is an emergency recovery path — not a workflow. Commit so recovery
+is never needed.
