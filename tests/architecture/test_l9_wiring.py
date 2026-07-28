@@ -9,10 +9,9 @@ correctness with respect to l9-ci-core:
 * non-actions references point only at l9-ci-core (no rogue third-party org);
 * least-privilege permissions (``contents: read``; only a publishing job may
   hold ``checks: write``);
-* each caller's profile / matrix id are consistent with what it hands to
-  publish-analysis.yml (a silent mismatch breaks publication);
-* governance files parse as JSON and declare the profiles the callers use;
-* semgrep is actually configured (``--config`` present).
+* each caller is a thin reusable-workflow stub that hands its profile /
+  matrix id to the Core-owned analyze-semgrep kernel (v2 handoff shape);
+* governance files parse as JSON and declare the profiles the callers use.
 
 Originally proposed as a standalone workflow + unittest module in PR #16;
 folded into the canonical architecture suite so the invariants run under the
@@ -123,28 +122,39 @@ def test_least_privilege_permissions(workflow: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("caller", CALLERS, ids=[path.name for path in CALLERS])
-def test_profile_and_matrix_are_consistent_with_publish(caller: Path) -> None:
+def _caller_analysis_with(caller: Path) -> dict[str, Any]:
+    # v2 handoff shape: each caller is a thin stub whose single `analysis`
+    # job calls the Core-owned reusable analyze-semgrep kernel with the
+    # profile / matrix identity. All provider execution, gating, and
+    # publication live in l9-ci-core.
     data = _load(caller)
-    env = data.get("env", {})
-    profile = env.get("L9_PROFILE")
-    matrix = env.get("L9_MATRIX_ID")
-    assert profile is not None, f"{caller.name} missing env.L9_PROFILE"
-    assert matrix is not None, f"{caller.name} missing env.L9_MATRIX_ID"
-    publish_with = data["jobs"]["publish"].get("with", {})
-    assert profile == publish_with.get("profile"), (
-        f"{caller.name}: L9_PROFILE != publish 'profile' input"
+    jobs = data.get("jobs", {})
+    assert set(jobs) == {"analysis"}, (
+        f"{caller.name} must contain exactly one 'analysis' job (thin caller)"
     )
-    assert matrix == publish_with.get("matrix-id"), (
-        f"{caller.name}: L9_MATRIX_ID != publish 'matrix-id' input"
+    uses = jobs["analysis"].get("uses", "")
+    assert uses.startswith(
+        f"{CORE_REPO}/.github/workflows/analyze-semgrep.yml@"
+    ) and _SHA_PIN.search(uses), (
+        f"{caller.name}: analysis job must call the Core analyze-semgrep "
+        f"kernel pinned to a 40-hex SHA, got {uses!r}"
     )
+    with_block: dict[str, Any] = jobs["analysis"].get("with", {})
+    return with_block
 
 
 @pytest.mark.parametrize("caller", CALLERS, ids=[path.name for path in CALLERS])
-def test_semgrep_config_is_present(caller: Path) -> None:
-    assert "--config" in caller.read_text(encoding="utf-8"), (
-        f"{caller.name} runs semgrep without --config"
-    )
+def test_caller_is_thin_kernel_stub(caller: Path) -> None:
+    with_block = _caller_analysis_with(caller)
+    assert with_block.get("profile"), f"{caller.name} missing with.profile"
+    assert with_block.get("matrix-id"), f"{caller.name} missing with.matrix-id"
+    # Provider execution must not leak back into the stub: no semgrep
+    # invocation, provisioning, or publish job may reappear here.
+    text = caller.read_text(encoding="utf-8")
+    for marker in ("semgrep run", "provision-sdk", "gate evaluate"):
+        assert marker not in text.replace("'l9-ci semgrep run'", "").replace(
+            "'l9-ci gate evaluate'", ""
+        ), f"{caller.name} re-implements kernel logic ({marker!r})"
 
 
 def test_governance_files_are_valid_json() -> None:
@@ -164,7 +174,7 @@ def test_caller_profiles_are_declared_in_governance(caller: Path) -> None:
     profiles = json.loads(
         (GOVERNANCE / "execution-profiles.yaml").read_text(encoding="utf-8")
     )["profiles"]
-    profile = _load(caller).get("env", {}).get("L9_PROFILE")
+    profile = _caller_analysis_with(caller).get("profile")
     assert profile in profiles, (
         f"{caller.name} uses profile {profile!r} absent from execution-profiles.yaml"
     )

@@ -1,239 +1,32 @@
----
-# L9 analysis caller
-#
-# Dual-purpose file: this is BOTH the copy-in template for other repos AND the
-# live, triggering workflow for l9-ci-sdk's own PRs (see #12 — main had no
-# .github/ before, so Core was not active on this repo's own checks until this
-# file started running here). If you are adopting l9-ci-core in a different
-# repo, copy this file verbatim to .github/workflows/l9-analysis.yml there too.
-#
-# Works for Python AND Node.js repos: semgrep is the single, language-agnostic
-# provider the pinned SDK normalizes. The ONLY per-language difference is
-# env.L9_LANGUAGE below ("python" or "typescript") -- `l9-ci semgrep run`
-# resolves the matching community registry ruleset (p/python or p/typescript)
-# plus the SDK's own packaged L9 ruleset for that language internally.
-#
-# Topology (this is the wiring that actually works):
-#   job analyze  -> provisions the SDK, then `l9-ci semgrep run` executes
-#                   semgrep AND normalizes the report into a canonical bundle
-#                   in one step (no separate raw-scan + invoke-sdk-normalize
-#                   pair), so the SDK's own identity resolution and packaged
-#                   rulesets are always what actually ran, not a hand-copied
-#                   --config list drifting from the SDK version.
-#   job publish  -> calls Core's publish-analysis.yml, which DOWNLOADS the
-#                   uploaded artifact (no report-in-tree needed) and publishes the
-#                   GitHub check per the resolved governance mode.
-#
-# KNOWN LIMITATION (as of this writing): Core's provision-sdk action, pinned
-# below, accepts only one hard-coded SDK revision
-# (850eb0813752d3827cda47054da08791da00f3fe), which predates the `semgrep
-# run` subcommand this workflow calls. Until l9-ci-core's pin is bumped to an
-# SDK revision that has it, the "Run + normalize semgrep (SDK)" step below
-# fails on every real run against that pin -- tracked in .l9/roadmap.yaml.
-# This template is written for the SDK's post-bump public contract, not
-# today's pinned snapshot; it is the correct target state for downstream
-# adopters once l9-ci-core's pin catches up.
-#
-# Prerequisite (only when copying this file into ANOTHER repo): also copy
-# .github/governance/*.yaml from this repo (that is the CI instantiation pack
-# the resolver reads). This repo's own copy already lives at
-# .github/governance/ alongside this workflow.
-
-name: L9 Analysis (Supply Chain)
-
+# Thin caller (v2 orchestration handoff). All analysis logic lives in the
+# Core-owned reusable kernel:
+#   Quantum-L9/l9-ci-core/.github/workflows/analyze-semgrep.yml
+# Core owns governance resolution, SDK provisioning at the Core pin,
+# 'l9-ci semgrep run' (provider execution + normalization), bundle
+# validation, 'l9-ci gate evaluate' (the single gate-decision authority),
+# artifact routing/manifest/upload, and check publication. This stub owns
+# ONLY the trigger surface, the profile/matrix identity, and concurrency.
+# The @SHA below pins the exact Core commit; bump it deliberately together
+# with any Core pin review.
+name: L9 Analysis (supply chain)
 on:
   schedule:
     - cron: "30 3 * * 1"  # 03:30 UTC every Monday — edit to taste
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
   group: l9-analysis-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  # Match the event: pr_fast for pull_request, merge for push, nightly/release/
-  # supply_chain as appropriate. Must be allowed_events in execution-profiles.yaml.
-  L9_PROFILE: "supply_chain"
-  L9_MATRIX_ID: "supply-chain-semgrep"
-  # The only line an adopting Node.js repo needs to change: "python" or
-  # "typescript". Selects both the community registry ruleset and the SDK's
-  # packaged L9 ruleset `l9-ci semgrep run --language` runs.
-  L9_LANGUAGE: "python"
-  # Exact pin (not a range): a semgrep minor/patch bump can add or remove
-  # findings, which must be a reviewed, deliberate change to this repo's own
-  # baseline -- never an incidental side effect of an unrelated PR.
-  L9_SEMGREP_VERSION: "1.171.0"
-  # Core is pinned to the immutable commit f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
-  # (or replace with the v2 tag once published). `uses:` does not support
-  # expression interpolation, so this SHA is duplicated literally on every
-  # `uses: Quantum-L9/l9-ci-core/...@<sha>` line below — update all of them
-  # together when bumping the pin.
-
 jobs:
-  analyze:
-    name: Analyze (semgrep -> SDK)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    outputs:
-      mode: ${{ steps.gov.outputs.mode }}
-      enabled: ${{ steps.gov.outputs.enabled }}
-      artifact-name: ${{ steps.names.outputs['artifact-name'] }}
-      governance-digest: ${{ steps.gov.outputs['governance-digest'] }}
-    steps:
-      - name: Checkout immutable event revision
-        env:
-          REPOSITORY: ${{ github.repository }}
-          REVISION: ${{ github.sha }}
-          TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git init .
-          git remote add origin \
-            "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
-          git -c protocol.version=2 fetch --depth=1 origin "${REVISION}"
-          git checkout --detach FETCH_HEAD
-          git remote set-url origin "https://github.com/${REPOSITORY}.git"
-
-      - id: gov
-        name: Resolve governance (Core)
-        uses: Quantum-L9/l9-ci-core/.github/actions/resolve-governance@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
-        with:
-          profile: ${{ env.L9_PROFILE }}
-          provider: semgrep
-          event-name: ${{ github.event_name }}
-          repository: ${{ github.repository }}
-          ref: ${{ github.ref }}
-          governance-root: .github/governance
-
-      - id: names
-        name: Resolve artifact name
-        env:
-          MATRIX_ID: ${{ env.L9_MATRIX_ID }}
-        run: |
-          set -euo pipefail
-          echo "artifact-name=l9-semgrep-${MATRIX_ID}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
-
-      - id: sdk
-        name: Provision immutable SDK
-        if: steps.gov.outputs.enabled == 'true'
-        uses: Quantum-L9/l9-ci-core/.github/actions/provision-sdk@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
-
-      - name: Run + normalize semgrep (SDK)
-        if: steps.gov.outputs.enabled == 'true'
-        run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip "semgrep==${L9_SEMGREP_VERSION}"
-          # `l9-ci semgrep run` runs semgrep with the community registry
-          # ruleset for L9_LANGUAGE plus the SDK's packaged L9 ruleset, then
-          # normalizes the raw report into a canonical bundle through the
-          # SDK's own identity resolution -- one process, one command, no
-          # separate invoke-sdk semgrep-normalize call and no hand-copied
-          # --config list to keep in sync with the SDK version. No --error
-          # equivalent is passed: a completed scan with findings still exits
-          # 0 (gating is the SDK/governance layer's job); real execution
-          # failures (bad config, unparseable rules) still propagate through
-          # `set -euo pipefail`.
-          args=(
-            semgrep run
-            --language "${L9_LANGUAGE}"
-            --root .
-            --raw-output "artifacts/raw/semgrep/${L9_MATRIX_ID}/report.json"
-            --output ".l9/runtime/${L9_MATRIX_ID}/finding-bundle.json"
-            --snapshot-id "${GITHUB_SHA}"
-            --revision "${GITHUB_SHA}"
-          )
-          if [ "${L9_STRICT:-}" = "true" ]; then
-            args+=(--strict)
-          fi
-          if [ "${L9_REQUIRED:-}" = "true" ]; then
-            args+=(--required)
-          fi
-          if [ -n "${L9_SDK_POLICY:-}" ]; then
-            args+=(--policy "${L9_SDK_POLICY}")
-          fi
-          "${L9_EXECUTABLE}" "${args[@]}"
-        env:
-          L9_EXECUTABLE: ${{ steps.sdk.outputs.executable }}
-          L9_MATRIX_ID: ${{ env.L9_MATRIX_ID }}
-          L9_LANGUAGE: ${{ env.L9_LANGUAGE }}
-          L9_SEMGREP_VERSION: ${{ env.L9_SEMGREP_VERSION }}
-          L9_STRICT: ${{ steps.gov.outputs.strict }}
-          L9_REQUIRED: ${{ steps.gov.outputs['required-provider'] }}
-          L9_SDK_POLICY: ${{ steps.gov.outputs['sdk-policy'] }}
-
-      - name: Validate canonical bundle
-        if: steps.gov.outputs.enabled == 'true'
-        uses: Quantum-L9/l9-ci-core/.github/actions/validate-bundle@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
-        with:
-          executable: ${{ steps.sdk.outputs.executable }}
-          bundle: .l9/runtime/${{ env.L9_MATRIX_ID }}/finding-bundle.json
-
-      - name: Project agent-review payload
-        if: steps.gov.outputs.enabled == 'true'
-        uses: Quantum-L9/l9-ci-core/.github/actions/invoke-sdk@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
-        with:
-          executable: ${{ steps.sdk.outputs.executable }}
-          operation: bundle-project-agent-payload
-          input: .l9/runtime/${{ env.L9_MATRIX_ID }}/finding-bundle.json
-          output: .l9/runtime/${{ env.L9_MATRIX_ID }}/agent-review-payload.json
-          strict: ${{ steps.gov.outputs.strict }}
-
-      - id: route
-        name: Route artifacts
-        if: steps.gov.outputs.enabled == 'true'
-        uses: Quantum-L9/l9-ci-core/.github/actions/route-artifacts@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
-        with:
-          provider: semgrep
-          matrix-id: ${{ env.L9_MATRIX_ID }}
-          raw-report: artifacts/raw/semgrep/${{ env.L9_MATRIX_ID }}/report.json
-          bundle: .l9/runtime/${{ env.L9_MATRIX_ID }}/finding-bundle.json
-          agent-payload: .l9/runtime/${{ env.L9_MATRIX_ID }}/agent-review-payload.json
-          destination-root: artifacts
-
-      - name: Build artifact manifest
-        if: steps.gov.outputs.enabled == 'true'
-        uses: Quantum-L9/l9-ci-core/.github/actions/build-artifact-manifest@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
-        with:
-          provider: semgrep
-          matrix-id: ${{ env.L9_MATRIX_ID }}
-          sdk-revision: ${{ steps.sdk.outputs['sdk-revision'] }}
-          bundle: ${{ steps.route.outputs.bundle }}
-          agent-payload: ${{ steps.route.outputs['agent-payload'] }}
-          raw-directory: ${{ steps.route.outputs['raw-directory'] }}
-          output: artifacts/metadata/${{ env.L9_MATRIX_ID }}/artifact-manifest.json
-
-      - name: Upload analysis artifact set
-        if: steps.gov.outputs.enabled == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
-        with:
-          name: ${{ steps.names.outputs['artifact-name'] }}
-          path: |
-            artifacts/raw/semgrep/${{ env.L9_MATRIX_ID }}/
-            artifacts/l9/${{ env.L9_MATRIX_ID }}/
-            artifacts/metadata/${{ env.L9_MATRIX_ID }}/
-          if-no-files-found: error
-          retention-days: 14
-
-  publish:
-    name: Publish analysis (Core)
-    needs: analyze
-    if: needs.analyze.outputs.enabled == 'true'
-    uses: Quantum-L9/l9-ci-core/.github/workflows/publish-analysis.yml@f7a4ee8c1f4e4413cb3645d088cafa3e9c798235
+  analysis:
+    uses: Quantum-L9/l9-ci-core/.github/workflows/analyze-semgrep.yml@c3f04e1268364e3623fc57f963937e2a0665e0e0
     permissions:
       actions: read
       checks: write
       contents: read
     with:
-      artifact-name: ${{ needs.analyze.outputs['artifact-name'] }}
       profile: supply_chain
-      mode: ${{ needs.analyze.outputs.mode }}
-      provider: semgrep
       matrix-id: supply-chain-semgrep
-      governance-digest: ${{ needs.analyze.outputs['governance-digest'] }}
-      repository-revision: ${{ github.sha }}
-      workflow-result: ${{ needs.analyze.result }}
+      language: python
+      semgrep-version: "1.171.0"

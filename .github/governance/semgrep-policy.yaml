@@ -1,0 +1,12 @@
+{
+  "schema": "l9.finding-policy/v1",
+  "metadata": {
+    "version": "1.0.0",
+    "status": "authoritative"
+  },
+  "defaults": {
+    "mode": "advisory"
+  },
+  "rules": {},
+  "note": "Baseline finding policy consumed by the pinned SDK via `l9-ci semgrep run --policy`. Every finding is classified (default advisory) so the SDK gate can evaluate the bundle; promote individual rules to blocking by adding explicit entries keyed by native Semgrep check_id with policy_key and mode."
+}
