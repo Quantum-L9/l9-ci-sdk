@@ -1,0 +1,63 @@
+---
+# L9 YAML governance - infra profile
+# Scope: human-authored YAML (.github/workflows, .github/actions, .l9)
+# NOT for .github/governance/*.yaml - JSON documents validated by
+# lint/check_governance_json.py (except real-YAML self-CI companions, which
+# are skipped by that checker and also ignored here).
+extends: default
+
+yaml-files:
+  - '*.yaml'
+  - '*.yml'
+
+ignore: |
+  .github/governance/
+  presets/*/.github/governance/
+  docs/templates/governance/
+  .venv/
+  node_modules/
+  .l9-runtime/
+  artifacts/
+  memory-bank/
+
+rules:
+  # GitHub Actions `on:` is a YAML 1.1 truthy key. Exempt keys, keep value checking.
+  truthy:
+    allowed-values: ['true', 'false']
+    check-keys: false
+  # Long `uses: owner/repo/path@<40-char-sha>` and ${{ }} expressions are unavoidable.
+  line-length:
+    max: 200
+    level: error
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+  # ${{ inputs.x }} requires one space inside braces.
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+  document-start:
+    present: true
+  comments:
+    min-spaces-from-content: 1
+  # Structural guards - these are the ones that protect permissions blocks.
+  key-duplicates: enable
+  # forbid-in-block-mappings is OFF by necessity: bare `pull_request:` and
+  # `workflow_dispatch:` under `on:` are valid, idiomatic GitHub Actions syntax
+  # and yamllint cannot exempt them. The risk this rule was meant to catch --
+  # an empty `permissions:` block parsing as null -- is enforced instead by
+  # lint/check_action_pins.py, which understands workflow semantics.
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: true
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+  # Disabled: purely cosmetic and noisy under --strict.
+  quoted-strings: disable
+  comments-indentation: disable
