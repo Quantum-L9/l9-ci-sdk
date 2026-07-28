@@ -1,9 +1,11 @@
 # Consolidated Manifest
 
-Files: 252
+Files: 254
 
 ## Contents
 
+- `.cursor/rules/git-worktree-hygiene.mdc`
+- `.cursor/rules/readme-and-agents-docs.mdc`
 - `.github/CODEOWNERS`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
 - `.github/ISSUE_TEMPLATE/ci-failure.yml`
