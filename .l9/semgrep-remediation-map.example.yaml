@@ -1,3 +1,4 @@
+---
 schema: l9.remediation-map/v1
 # Trusted canonical-rule-id -> remediation-class mapping (DWA-007).
 #
