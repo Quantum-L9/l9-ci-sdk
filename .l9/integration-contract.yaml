@@ -1,3 +1,4 @@
+---
 schema: l9.integration-contract/v1
 metadata:
   producer: Quantum-L9/l9-ci-sdk

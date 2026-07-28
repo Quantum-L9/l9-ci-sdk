@@ -1,0 +1,32 @@
+---
+# Dogfood caller for L9 YAML Governance in this repository.
+# Invokes the local reusable workflow (avoids chicken/egg SDK SHA pin).
+name: L9 YAML Governance Dogfood
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l9-yaml-governance-dogfood-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  yaml-governance:
+    uses: ./.github/workflows/l9-yaml-governance.yml
+    permissions:
+      contents: read
+    with:
+      infra-paths: '.github/ .l9/ .semgrep/'
+      data-paths: 'tests/fixtures/'
+      config-root: 'lint'
+      tools-root: 'lint'
+      enforce-actionlint: true
+      # Start advisory on first activation; promote per promotion-policy.yaml.
+      enforce-zizmor: false

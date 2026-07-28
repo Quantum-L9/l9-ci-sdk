@@ -1,3 +1,4 @@
+---
 # --- L9_META ---
 # l9_schema: 1
 # origin: l9-ci-kernel (harvested from l9-ci-core / l9-ci-sdk)
@@ -80,10 +81,10 @@ jobs:
       sbom_relevant: ${{ steps.c.outputs.sbom_relevant }}
       security_sensitive_changed: ${{ steps.c.outputs.security_sensitive_changed }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install classifier deps
@@ -173,7 +174,7 @@ jobs:
     outputs:
       findings: ${{ steps.scan.outputs.findings }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -217,7 +218,7 @@ jobs:
           exit 0
       - name: Upload gitleaks report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: gitleaks-report
           path: gitleaks.json
@@ -233,8 +234,8 @@ jobs:
     timeout-minutes: 10
     needs: classify
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install validation tools
@@ -294,8 +295,8 @@ jobs:
     needs: classify
     if: needs.classify.outputs.python_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install ruff (pinned via requirements-ci.txt)
@@ -322,8 +323,8 @@ jobs:
     needs: classify
     if: needs.classify.outputs.python_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install type-check toolchain
@@ -353,8 +354,8 @@ jobs:
     needs: classify
     if: needs.classify.outputs.semgrep_relevant == 'true'
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Run semgrep (advisory; L9 AST rules are shadow-mode)
@@ -368,7 +369,7 @@ jobs:
           semgrep --config .semgrep/ --quiet || echo "::warning::semgrep findings (advisory / shadow telemetry)"
       - name: Upload semgrep telemetry
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: semgrep-telemetry
           path: semgrep.json
@@ -384,8 +385,8 @@ jobs:
     timeout-minutes: 10
     needs: classify
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Run audit engine (advisory)
@@ -408,8 +409,8 @@ jobs:
     needs: classify
     if: needs.classify.outputs.sbom_relevant == 'true'
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Generate SBOM (advisory)
@@ -431,7 +432,7 @@ jobs:
           fi
       - name: Upload SBOM
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: sbom
           path: artifacts/sbom.json
@@ -456,8 +457,8 @@ jobs:
       - audit
       - supply_chain
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Assemble CI context
@@ -532,7 +533,7 @@ jobs:
         run: python3 .github/scripts/agent_review_payload.py
       - name: Upload CI state artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: l9-ci-state
           path: |

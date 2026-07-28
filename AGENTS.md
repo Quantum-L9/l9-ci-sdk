@@ -80,4 +80,17 @@ Governance notes:
   (which embed `metadata.l9.canonical_rule_id`) or an explicit identity map,
   per `.github/governance/promotion-policy.yaml`.
 - Governance files use a `.yaml` extension but are parsed as JSON — keep them
-  valid JSON (no comments, no trailing commas).
+  valid JSON (no comments, no trailing commas). Self-CI companions
+  `rule-modes.selfci.yaml` and `l9-ci-shared-spec.yaml` are real YAML and are
+  skipped by `lint/check_governance_json.py`.
+
+## YAML governance (static checks)
+`l9-ci-sdk` owns the reusable YAML/workflow static-check workflow
+(`.github/workflows/l9-yaml-governance.yml`) and root `lint/` configs/checkers.
+Dogfood runs via `.github/workflows/l9-yaml-governance-dogfood.yml`.
+- Consumers pin `Quantum-L9/l9-ci-sdk/.github/workflows/l9-yaml-governance.yml@<40-char-sha>`
+  and copy `lint/` into their repo root (see `docs/templates/l9-yaml-governance-caller.yml`).
+- Do **not** host or pin this capability on `Quantum-L9/.github` or `l9-ci-core`.
+- Tool configs live under root `lint/` (like `ruff.toml`), not under `.github/lint/`.
+- Independent gate — not a Semgrep `providers` entry. Details:
+  `docs/architecture/yaml-governance.md`, ADR 0010.
