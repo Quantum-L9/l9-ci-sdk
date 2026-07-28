@@ -152,9 +152,9 @@ when adding layers or edges.
 | [0006](docs/adr/0006-gate-evaluation.md) | Gate statuses pass/fail/incomplete/invalid; missing required evidence ≠ pass |
 | [0007](docs/adr/0007-repository-snapshot-identity.md) | SDK derives snapshot identity |
 | [0008](docs/adr/0008-agent-payload-is-a-projection.md) | Agent payload is a regenerable projection |
+| [0009](docs/adr/0009-repository-manifest-reconciliation.md) | Root `MANIFEST.md` reconciled from Git tracked truth |
 | [0010](docs/adr/0010-yaml-governance-static-checks.md) | SDK owns YAML/workflow static checks + `lint/` |
-
-(ADR 0009 is intentionally absent in this tree.)
+| [0011](docs/adr/0011-biome-static-checks.md) | SDK owns Biome static checks + root `biome.json` |
 
 Architecture prose: [`docs/architecture/`](docs/architecture/README.md).
 
@@ -255,16 +255,24 @@ Required deliverables before merge:
 
 ## 7. Public CLI & packaging
 
-### Runtime packaging
-No build manifest / no `pyproject.toml` for runtime install. Core’s
-`provision-sdk` runs the tree from source on `PYTHONPATH` and installs
-`requirements.txt` into the provisioning venv.
+### Runtime packaging (two install paths — keep them aligned)
 
-- Runtime deps: `requirements.txt` → `jsonschema`, `referencing`, `PyYAML`
-- Adding a runtime import **requires** updating `requirements.txt`
+| Path | Who uses it | How |
+|---|---|---|
+| **Core provision** | `l9-ci-core` `provision-sdk` | Tree on `PYTHONPATH`; installs [`requirements.txt`](requirements.txt) into the provisioning venv |
+| **Local / publish** | Developers + wheel publish | [`pyproject.toml`](pyproject.toml) → `pip install -e .` / hatchling wheel; console script `l9-ci = l9_ci.__main__:main` |
+
+Laws:
+
+- Runtime deps in `pyproject.toml` **must mirror** `requirements.txt` (exact pins).
+- Adding a runtime import **requires** updating **both** files together.
 - Canonical version: `l9_ci.__version__` **must equal**
-  `.l9/integration-contract.yaml` `metadata.version` (source-run fallback
-  for compatibility negotiation)
+  `.l9/integration-contract.yaml` `metadata.version` and `project.version`
+  in `pyproject.toml`.
+- CI toolchain pins live in `requirements-ci.txt` /
+  `[project.optional-dependencies] ci` — not unused placeholder extras.
+- Core’s provision path remains source + `requirements.txt`; do not claim
+  `pyproject.toml` is absent (publish / local editable install use it).
 
 ### CLI (`python -m l9_ci` / `l9-ci`)
 | Group | Commands |
@@ -275,6 +283,7 @@ No build manifest / no `pyproject.toml` for runtime install. Core’s
 | `gate` | `evaluate` |
 | `providers` | `list`, `detect` |
 | `baseline` | `compare-tests`, `scan-packet-envelope`, `compare-scan`, `validate-ledger` |
+| `manifest` | `generate`, `check` |
 
 Exit codes (SSOT: `l9_ci/cli/exit_codes.py` + integration-contract):
 
@@ -473,25 +482,96 @@ Do not:
 - let contracts import providers or artifact infrastructure
 - bypass `make check` / pre-commit with `--no-verify`
 - float Core pins on branch/tag names
+- switch branches / stash / reset / checkout over uncommitted valuable work
+- invent extra local branches or long-lived stashes without an explicit user ask
+- casually rewrite `README.md` from a feature PR (see §13)
 
 ---
 
-## 12. Agent working method
+## 12. Git & working-tree hygiene (do not lose work)
+
+Uncommitted edits are not durable. Concurrent agents, Dropbox sync, and
+branch switches have wiped valid work that never reached git history.
+
+### Laws
+1. **WIP commit > stash.** After any non-trivial edit batch, commit:
+   `git commit -m "wip: park <topic>"`. Squash or reword later if needed.
+2. **Clean tree before switch.** Never `git switch` / `checkout` / `stash` /
+   `reset` while the working tree holds work you care about.
+3. **One WIP branch per worktree.** For parallel topics, use a second
+   `git worktree` — do not interleave stashes across branches.
+4. **Push anything that must survive.** Remote tracking + open PR is the
+   backup. Local-only branches and unnamed stashes are where work dies.
+5. **Do not invent branches/stashes** unless the user explicitly asks.
+   Stay on the current branch; do not “park” work by creating spaghetti
+   restore branches that point at unrelated tips.
+6. **Named stash only as a last resort**, then apply/pop on the **same**
+   branch before any further switch:
+   `git stash push -u -m "<branch>: <why>"`.
+
+Org-wide agent git hygiene may also be published in
+[`Quantum-L9/Cursor-Governance`](https://github.com/Quantum-L9/Cursor-Governance);
+when that exists, keep this section aligned and do not weaken it locally.
+
+---
+
+## 13. Documentation ownership (README vs AGENTS)
+
+| File | Audience | Role |
+|---|---|---|
+| [`README.md`](README.md) | Humans / install consumers | Short product entrypoint: what / install / CLI map / local gate / links |
+| [`AGENTS.md`](AGENTS.md) (this file) | Coding agents | Operating law, constellation boundaries, phase status, checklists |
+| `docs/architecture/*`, `docs/adr/*`, `.l9/*` | Both | Deep SSOT — wins when prose diverges |
+
+Do **not** paste full architecture essays into `README.md`. Link out.
+
+### README collision rule
+Concurrent feature agents historically all rewrote `README.md`, causing
+merge fights; a temporary “do not touch README” ban left it stale.
+
+Lasting rule:
+
+1. **Do not edit `README.md` unless this task explicitly owns a README
+   realignment** (user asked, or the PR’s acceptance criteria require it).
+2. **Never append a feature-marketing section** from an unrelated PR
+   (“also see my new workflow…”). That is how collisions restart.
+3. Feature PRs update deep docs (`docs/architecture/`, ADRs, `.l9/`) and
+   this file when agent-facing law changes — **not** a parallel README rewrite.
+4. When install path, CLI groups, local gate, or primary workflows change,
+   the landing PR **or** a dedicated docs PR updates `README.md` once and
+   keeps it short (link out; do not duplicate this file).
+5. If unsure: update `AGENTS.md` / architecture docs only, and leave a
+   one-line note for the human — do not speculative-edit README.
+
+### When to update this file (`AGENTS.md`)
+- Update when phase status, ownership, packaging, CLI groups, CI surfaces,
+  or agent working method change.
+- Keep it an **index of laws** already owned by `.l9/*` and ADRs — do not
+  invent a second protocol here.
+- When contracts/ADRs and this file disagree, contracts/ADRs win; fix this file.
+
+---
+
+## 14. Agent working method
 
 1. Read the relevant ADR + architecture doc + `.l9` contract before editing.
-2. Make the smallest coherent change that preserves layer edges.
-3. Update tests in the same pass (model invariants, schema conformance,
+2. Confirm `git status` / current branch; do not start work on the wrong tip.
+3. Make the smallest coherent change that preserves layer edges.
+4. **WIP-commit** after each coherent batch so a branch switch cannot wipe it.
+5. Update tests in the same pass (model invariants, schema conformance,
    provider/malformed/determinism, architecture boundaries as applicable).
-4. Run `make check` (or at least the touched slice: `make hooks`,
+6. Update `AGENTS.md` / architecture / ADRs when law or surface changes;
+   touch `README.md` only under §13.
+7. Run `make check` (or at least the touched slice: `make hooks`,
    `make test PYTEST_ARGS='…'`, `make typecheck`).
-5. Ship with `make push`.
+8. Ship with `make push`.
 
 Prefer stabilization (invariants, fail-closed behavior, fixture honesty)
 over speculative abstractions or second providers.
 
 ---
 
-## 13. Key paths
+## 15. Key paths
 
 | Path | Why |
 |---|---|
@@ -520,10 +600,13 @@ over speculative abstractions or second providers.
 | `.github/workflows/l9-self-ci.yml` | Core-free self CI |
 | `.github/workflows/l9-yaml-governance*.yml` | YAML governance product |
 | `.github/workflows/l9-biome-scan*.yml` | Biome static-check product |
+| `.github/workflows/l9-manifest-reconcile.yml` | Repository manifest auto-fix |
 | `biome.json` | Biome config (JSON/JS/TS ownership) |
 | `lint/` | Yamllint profiles + pin/governance checkers |
 | `Makefile`, `.pre-commit-config.yaml` | Local fail-closed gate |
 | `requirements.txt`, `requirements-ci.txt` | Runtime vs CI toolchain |
+| `pyproject.toml` | Local editable install / hatchling wheel / `l9-ci` script |
+| `README.md` | Human entrypoint (edit only under §13) |
 | `tests/architecture/`, `tests/compatibility/` | Boundary + protocol fixtures |
 
 ---
