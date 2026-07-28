@@ -17,6 +17,7 @@ from .evidence import Confidence, EvidenceRecord, Severity
 from .failure import ProviderFailure, ProviderFailureType
 from .finding import Finding
 from .source import SourceLocation, normalize_repository_path
+from .version import SemanticVersion
 
 __all__ = [
     "Confidence",
@@ -33,6 +34,7 @@ __all__ = [
     "ProviderRun",
     "ResolutionStatus",
     "RuleMode",
+    "SemanticVersion",
     "Severity",
     "SnapshotDescriptor",
     "SourceLocation",

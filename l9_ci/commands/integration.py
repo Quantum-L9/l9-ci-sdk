@@ -5,7 +5,8 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from l9_ci.cli import ExitCode
+from l9_ci.cli import Diagnostic, ExitCode, OutputFormat, render_success
+from l9_ci.commands.errors import emit_error
 from l9_ci.integration import negotiate_versions
 
 
@@ -20,10 +21,12 @@ def register_integration_commands(
     check = compatibility_subparsers.add_parser("check")
     check.add_argument("--bundle", required=True, type=Path)
     check.add_argument("--minimum-SDK-version")
+    check.add_argument("--format", choices=("text", "json"), default="text")
     check.set_defaults(handler=handle_compatibility_check)
 
 
 def handle_compatibility_check(args: argparse.Namespace) -> int:
+    output_format = OutputFormat(args.format)
     try:
         payload = json.loads(args.bundle.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
@@ -32,17 +35,24 @@ def handle_compatibility_check(args: argparse.Namespace) -> int:
             payload,
             minimum_SDK_version=args.minimum_SDK_version,
         )
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return int(ExitCode.ARTIFACT_VALIDATION_FAILURE)
     except Exception as exc:
-        print(f"internal error: {exc}", file=sys.stderr)
-        return int(ExitCode.INTERNAL_ERROR)
+        return emit_error(exc, output_format=output_format)
     if not result.compatible:
-        for error in result.errors:
-            print(f"error: {error}", file=sys.stderr)
+        diagnostic = Diagnostic(
+            code="incompatible_version",
+            message="; ".join(result.errors),
+            details={"errors": list(result.errors)},
+        )
+        print(diagnostic.render(output_format), file=sys.stderr)
         return int(ExitCode.INCOMPATIBLE_VERSION)
-    print(f"SDK_version={result.SDK_version}")
-    print(f"schema_version={result.artifact_schema_version}")
-    print("compatible=true")
+    print(
+        render_success(
+            {
+                "SDK_version": result.SDK_version,
+                "schema_version": result.artifact_schema_version,
+                "compatible": True,
+            },
+            output_format=output_format,
+        )
+    )
     return int(ExitCode.SUCCESS)

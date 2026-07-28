@@ -1,0 +1,12 @@
+{
+  "version": "representative-fixture",
+  "results": [],
+  "errors": [],
+  "paths": {
+    "scanned": [],
+    "skipped": [
+      {"path": "vendor/large.py", "reason": "excluded_by_size"},
+      "generated/pb2.py"
+    ]
+  }
+}

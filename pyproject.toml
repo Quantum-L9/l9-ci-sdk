@@ -32,6 +32,7 @@ ci = [
     "types-PyYAML==6.0.12.20260724",
     "types-jsonschema==4.26.0.20260518",
     "pytest==9.1.1",
+    "pytest-cov==7.0.0",
 ]
 
 [project.scripts]
@@ -60,3 +61,14 @@ packages = ["l9_ci"]
 # [tool.ruff] table regardless; mypy currently runs with no dedicated config
 # section (`mypy l9_ci`, default settings) rather than reintroducing the
 # pre-v2 [tool.mypy] strictness settings as a side effect of this restore.
+
+[tool.coverage.run]
+branch = true
+source = ["l9_ci"]
+
+[tool.coverage.report]
+show_missing = true
+# Ratcheting repository baseline. Raise this as coverage improves; CI fails on
+# regression below it. Critical decision modules are asserted at 100% branch
+# coverage by dedicated tests (gates/evaluator.py, artifacts/validator.py).
+fail_under = 80

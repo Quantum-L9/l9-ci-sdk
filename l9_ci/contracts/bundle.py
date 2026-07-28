@@ -1,6 +1,8 @@
 """Canonical finding-bundle contracts."""
 
 from __future__ import annotations
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Mapping
@@ -12,6 +14,26 @@ from .finding import Finding
 
 FINDING_BUNDLE_PROTOCOL = "l9.finding-bundle/v1"
 FINDING_BUNDLE_SCHEMA_VERSION = "1.0.0"
+
+
+def _canonicalize(value: Any) -> Any:
+    """Recursively order-normalize a JSON-like value for content hashing.
+
+    Object keys are sorted by ``json.dumps(sort_keys=True)`` at encode time;
+    here we additionally sort list elements by their canonical encoding so that
+    equivalent record lists in any order hash identically.
+    """
+    if isinstance(value, dict):
+        return {key: _canonicalize(item) for key, item in value.items()}
+    if isinstance(value, list):
+        canonical_items = [_canonicalize(item) for item in value]
+        return sorted(
+            canonical_items,
+            key=lambda item: json.dumps(
+                item, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+            ),
+        )
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,6 +176,25 @@ class FindingBundle:
             "limitations": list(self.limitations),
             "summary": self.summary(),
         }
+
+    def canonical_digest(self) -> str:
+        """Order-independent content identity of the bundle, excluding
+        ``generated_at``.
+
+        ``generated_at`` is invocation provenance, not content. Two bundles that
+        differ only by generation timestamp (or by the order of equivalent
+        record lists) share a canonical digest, so reproducibility can be
+        asserted on content rather than wall-clock time.
+        """
+        payload = self.to_dict()
+        payload.pop("generated_at", None)
+        encoded = json.dumps(
+            _canonicalize(payload),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "FindingBundle":

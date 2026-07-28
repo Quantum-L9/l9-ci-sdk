@@ -1,8 +1,6 @@
 import pytest
-from l9_ci.integration import (
-    SemanticVersion,
-    negotiate_versions,
-)
+from l9_ci.contracts import SemanticVersion
+from l9_ci.integration import negotiate_versions
 
 
 def test_semantic_version_parses_prerelease_suffix() -> None:

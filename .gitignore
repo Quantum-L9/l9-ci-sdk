@@ -19,6 +19,19 @@ build/
 # Agent/session scratchpad only — never part of the SDK codebase inventory.
 /memory-bank/
 
+# Commit-bound CI evidence (scripts/generate_validation_report.py), uploaded
+# as a workflow artifact each run (ci.yml) — regenerated per-commit, never
+# tracked, to avoid perpetual diff churn.
+/VALIDATION_REPORT.json
+
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/
+
 # Explicit override: memory-bank/ may be excluded by this machine's global
 # gitignore (~/.gitignore_global) but must be tracked in THIS repo so a
 # fresh clone gets T0 session-resume context. Negation must come after any

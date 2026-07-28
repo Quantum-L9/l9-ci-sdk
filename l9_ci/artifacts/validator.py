@@ -30,7 +30,8 @@ def load_bundle_schema() -> dict[str, Any]:
         .joinpath("v1")
         .joinpath("finding-bundle.schema.json")
     )
-    return json.loads(schema_path.read_text(encoding="utf-8"))
+    schema: dict[str, Any] = json.loads(schema_path.read_text(encoding="utf-8"))
+    return schema
 
 
 def _schema_registry() -> Registry:

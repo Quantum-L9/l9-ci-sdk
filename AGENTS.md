@@ -464,8 +464,14 @@ Dogfood runs via `.github/workflows/l9-biome-scan-dogfood.yml`.
 
 ---
 
-## 11. Prohibited shortcuts
 
+## Audit findings ledger
+Authoritative remediation ledger: `.l9/audit-findings.md`. Route audit closure
+work through that ledger before claiming a finding resolved.
+
+---
+
+## 11. Prohibited shortcuts
 Do not:
 
 - fabricate provider fixtures

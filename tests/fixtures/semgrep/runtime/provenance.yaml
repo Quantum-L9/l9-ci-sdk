@@ -1,0 +1,53 @@
+schema: l9.fixture-provenance/v1
+# Runtime-captured, provenance-bound Semgrep report (QA-010). Captured from
+# this repository's own live L9 Analysis workflow (pr_fast caller) on PR #17,
+# executed by GitHub Actions with the pinned supported Semgrep line.
+verification_status: runtime_captured
+provider: semgrep
+semgrep_version: 1.170.0
+capture_timestamp: "2026-07-21T00:00:00Z"  # workflow run date (UTC), see run id
+command: >-
+  semgrep scan --config p/python
+  --json-output artifacts/raw/semgrep/pr-semgrep/report.json
+ruleset: p/python
+capture_environment:
+  source_repository: Quantum-L9/l9-ci-sdk
+  source_pr: 17
+  source_head_sha: d3c74087fe7c46abcbd0633fdaf27f580cdfd989
+  tested_merge_sha: aa3adf1dfe47ded5b93c50823267e1b78656ae95
+  workflow_run_id: 29835939127
+  workflow_artifact_id: 8497285790
+  workflow_artifact_digest: sha256:37a6a6aafd5a7bc81fd3b270e9fc8267d514aab355d6c543cf121cc740eafc99
+# sha256 of the raw (unredacted) report as captured from the workflow artifact.
+input_checksum: 69f970c28a7e8eee9893cc5974aa4de34c3bda99480731efa4573652c07da1dd
+# sha256 of the committed redacted fixture (results.json).
+output_checksum: 89d6eb6255a2133d5377b7b2fe82a6df2c28042714ed95e2bc742453ee8f2377
+redaction:
+  removed:
+    - "results[].extra.lines (raw source snippet; forbidden by the redaction validator)"
+    - "time (volatile per-run timing measurements)"
+    - "profiling_results (volatile per-run profiling data)"
+  retained:
+    - version
+    - results (check_id, path, start/end, extra.message/severity/metadata/fingerprint/engine_kind/validation_state)
+    - errors
+    - paths.scanned (relative repository paths only)
+    - engine_requested
+    - skipped_rules
+redaction_reviewed_by: >-
+  Manus remediation agent (structural review: verified no extra.lines source
+  snippets, no absolute paths, no secret-like keys; redacted bundle passes
+  l9_ci.integration.validate_redaction on the full pipeline output)
+report_characteristics:
+  scanned_file_count: 65
+  result_count: 1
+  error_count: 0
+  finding_rule: python.django.security.injection.command.subprocess-injection.subprocess-injection
+# Strict full-path expectation (asserted by test_runtime_fixture.py): with the
+# fixture identity map and policy below, the strict pipeline resolves the
+# finding to canonical rule L9-PY-SUBPROCESS-INJECTION, classifies it advisory,
+# and the canonical gate evaluates PASS with COMPLETE coverage (65/65).
+expected_gate_status: pass
+fixture_companions:
+  identity_map: tests/fixtures/semgrep/runtime/identity-map.yaml
+  policy: tests/fixtures/semgrep/runtime/policy.yaml

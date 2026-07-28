@@ -4,7 +4,7 @@ from l9_ci.providers.semgrep.versioning import (
     parse_semgrep_version,
     require_supported_semgrep_version,
 )
-from l9_ci.integration import SemanticVersion
+from l9_ci.contracts import SemanticVersion
 
 
 def test_parse_semgrep_version() -> None:

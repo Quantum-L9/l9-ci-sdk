@@ -1,0 +1,11 @@
+{
+  "version": "representative-fixture",
+  "results": [],
+  "errors": [
+    {"message": "Semgrep timed out scanning src/large.py"}
+  ],
+  "paths": {
+    "scanned": ["src/example.py"],
+    "skipped": []
+  }
+}
