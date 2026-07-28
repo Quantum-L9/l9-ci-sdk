@@ -14,7 +14,8 @@
 #          uses: Quantum-L9/l9-ci-core/.github/actions/provision-sdk@<pinned-core-sha>
 #   3. Generate with the provisioned executable (do NOT use PYTHONPATH=.):
 #        "${{ steps.sdk.outputs.executable }}" manifest generate \
-#          --repository-root . --output MANIFEST.md --tracked-only
+#          --repository-root . --output MANIFEST.md --tracked-only \
+#          --exclude-dir memory-bank
 #   4. Pin an SDK revision that includes the manifest CLI (via whatever pin
 #      mechanism provision-sdk already uses for analysis callers).
 #
@@ -58,7 +59,12 @@ jobs:
         run: |
           set -euo pipefail
           export PYTHONPATH="$PWD"
-          python -m l9_ci manifest generate --repository-root . --output MANIFEST.md --tracked-only
+          # memory-bank/ is a local agent scratchpad (incl. WIP); never inventory it.
+          python -m l9_ci manifest generate \
+            --repository-root . \
+            --output MANIFEST.md \
+            --tracked-only \
+            --exclude-dir memory-bank
           if git diff --quiet -- MANIFEST.md; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else

@@ -47,9 +47,12 @@ l9-ci --help
 Deterministic inventory generation for root `MANIFEST.md`:
 
 ```bash
-PYTHONPATH=. python -m l9_ci manifest generate --repository-root . --output MANIFEST.md --tracked-only
-PYTHONPATH=. python -m l9_ci manifest check --repository-root . --output MANIFEST.md --tracked-only
+PYTHONPATH=. python -m l9_ci manifest generate --repository-root . --output MANIFEST.md --tracked-only --exclude-dir memory-bank
+PYTHONPATH=. python -m l9_ci manifest check --repository-root . --output MANIFEST.md --tracked-only --exclude-dir memory-bank
 ```
+
+`memory-bank/` (including WIP packs) is a local scratchpad — gitignored and
+excluded from the inventory; it is not part of the SDK codebase.
 
 `generate` always exits successfully after reconciliation. `check` writes a
 correction when drift is found and exits with the gate-failure code.

@@ -13,14 +13,16 @@ that file as the consumer copy-in template.
 - Truth source: Git tracked-file inventory by default in CI (`--tracked-only`).
 - Ordering: ascending repository-relative POSIX paths.
 - Self-reference: `MANIFEST.md` is excluded from its own inventory.
+- Scratchpad: `memory-bank/` (including WIP packs) is user/agent scratch only —
+  gitignored in this repo and excluded via `--exclude-dir memory-bank` in CI.
 - Write behavior: atomic and idempotent.
 - Drift behavior: drift is repaired, not treated as a merge failure.
 
 ## CLI
 
 ```bash
-PYTHONPATH=. python -m l9_ci manifest generate --repository-root . --output MANIFEST.md --tracked-only
-PYTHONPATH=. python -m l9_ci manifest check --repository-root . --output MANIFEST.md --tracked-only
+PYTHONPATH=. python -m l9_ci manifest generate --repository-root . --output MANIFEST.md --tracked-only --exclude-dir memory-bank
+PYTHONPATH=. python -m l9_ci manifest check --repository-root . --output MANIFEST.md --tracked-only --exclude-dir memory-bank
 ```
 
 `generate` always exits successfully after a valid reconciliation. `check`

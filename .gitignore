@@ -9,3 +9,6 @@ __pycache__/
 # l9_ci/artifacts/ — a bare `artifacts/` pattern matches at any depth and
 # previously swallowed that package, requiring a force-add to track it.
 /artifacts/
+
+# Agent/session scratchpad only — never part of the SDK codebase inventory.
+/memory-bank/
