@@ -58,7 +58,12 @@ repos:
         language: python
         additional_dependencies: ['zizmor==1.28.0']
         pass_filenames: false
-        args: ['.']
+        # Scoped to .github/ only, matching the `files:` trigger below -- `args:
+        # ['.']` previously scanned the whole tree, so tracked scratch content
+        # under memory-bank/ (e.g. archived workflow copies with intentionally
+        # unpinned `uses:` refs) failed this gate even though it is not real CI
+        # configuration and is out of zizmor's intended audit surface.
+        args: ['.github/']
         files: ^\.github/(workflows|actions)/.*\.ya?ml$
 
       # Fail-closed push gate: raw `git push` cannot skip .pre-commit-config.yaml.
