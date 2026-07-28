@@ -1,0 +1,45 @@
+# L9_META: origin=Quantum-L9/.github@54306f8a9a03fd16d323d0287d7c8109211d250e; repo=l9-ci-sdk; updated=2026-07-27
+
+name: CI Pipeline Failure
+description: Report an l9-ci-sdk workflow failure
+title: "[CI Failure]: "
+labels: ["ci-failure", "triage"]
+assignees: []
+body:
+  - type: input
+    id: workflow-run-url
+    attributes:
+      label: Workflow Run URL
+    validations:
+      required: true
+  - type: input
+    id: failed-job
+    attributes:
+      label: Failed Job Name
+    validations:
+      required: true
+  - type: dropdown
+    id: trigger
+    attributes:
+      label: Triggered By
+      options:
+        - Pull Request
+        - Push to main
+        - Scheduled
+        - Workflow Dispatch
+        - Tag push
+    validations:
+      required: true
+  - type: textarea
+    id: error-output
+    attributes:
+      label: Redacted Error Output
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Commit SHA and Core Pin
+    validations:
+      required: true
