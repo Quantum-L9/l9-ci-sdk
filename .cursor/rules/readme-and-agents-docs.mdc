@@ -1,0 +1,43 @@
+---
+description: README / AGENTS ownership — avoid multi-agent doc collisions
+alwaysApply: true
+---
+
+# Documentation ownership (README + AGENTS)
+
+## Split of responsibility
+
+| File | Audience | Role |
+|---|---|---|
+| `README.md` | Humans (and install consumers) | Short product entrypoint: what / install / CLI map / local gate / links |
+| `AGENTS.md` | Coding agents | Operating law, constellation boundaries, phase status, checklists |
+| `docs/architecture/*`, `docs/adr/*`, `.l9/*` | Both | Deep SSOT — wins when prose diverges |
+
+Do **not** paste full architecture essays into `README.md`. Link out.
+
+## Collision rule (why README went stale)
+
+Many concurrent feature agents each tried to rewrite `README.md`, causing
+merge fights. Temporary instruction was “do not touch README.” That left it
+outdated. The lasting rule:
+
+1. **Do not touch `README.md` unless this task explicitly owns a README
+   realignment** (user said so, or the PR’s acceptance criteria require it).
+2. **Never append a feature-marketing section** from an unrelated PR
+   (“also see my new workflow…”). That is how collisions restart.
+3. **Feature PRs update deep docs** (`docs/architecture/`, ADRs, `.l9/`) and
+   `AGENTS.md` when agent-facing law changes — not a parallel README rewrite.
+4. **When product surface changes** (install path, CLI groups, local gate
+   commands, primary workflows), the PR that lands the surface change **or**
+   a dedicated docs PR updates `README.md` once, keeping it short.
+5. **If unsure whether README needs a change:** update `AGENTS.md` / architecture
+   docs only, and leave a one-line note for the human — do not speculative-edit
+   README.
+
+## AGENTS.md updates
+
+- Update when phase status, ownership, packaging, CLI groups, CI surfaces,
+  or agent working method change.
+- Keep it an **index of laws** already owned by `.l9/*` and ADRs — do not
+  invent a second protocol here.
+- When contracts and `AGENTS.md` disagree, contracts/ADRs win; fix `AGENTS.md`.

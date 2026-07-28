@@ -147,6 +147,21 @@ layers:
       - pipeline
       - providers
       - repository
+      - rulesets
+  rulesets:
+    package: l9_ci.rulesets
+    responsibility:
+      - versioned, SDK-packaged provider rule files shipped as package data
+      - packaged provider identity maps
+      - importlib.resources-based path resolution (source tree or wheel)
+    may_depend_on:
+      - Python standard library
+    must_not_depend_on:
+      - providers
+      - policy
+      - gates
+      - pipeline
+      - integration
 public_surface:
   packages:
     - l9_ci.contracts
@@ -160,6 +175,8 @@ public_surface:
     - l9_ci.gates
     - l9_ci.integration
     - l9_ci.cli
+    - l9_ci.rulesets
+    - l9_ci.rulesets
 forbidden_dependency_edges:
   - contracts_to_providers
   - contracts_to_artifacts

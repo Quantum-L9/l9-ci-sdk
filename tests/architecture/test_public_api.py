@@ -84,3 +84,22 @@ def test_deprecated_semantic_version_alias_is_the_same_object() -> None:
     import l9_ci.integration as integration
 
     assert integration.SemanticVersion is contracts.SemanticVersion
+
+
+def test_rulesets_public_surface() -> None:
+    """Downstream consumers resolve packaged rule/identity-map paths through
+    this surface (see ``l9_ci/commands/semgrep.py``); it must stay stable
+    since it is what every consumer, not just this SDK's own CLI, imports.
+
+    ``l9_ci.rulesets.semgrep`` is a submodule of the ``l9_ci.rulesets``
+    public package (itself exact-equality checked above via the manifest),
+    not a package listed independently in .l9/public-api.yaml, so it keeps
+    its own explicit subset check here.
+    """
+    from l9_ci.rulesets import semgrep as rulesets_semgrep
+
+    assert {
+        "SUPPORTED_LANGUAGES",
+        "ruleset_dir",
+        "default_identity_map_path",
+    }.issubset(set(rulesets_semgrep.__all__))

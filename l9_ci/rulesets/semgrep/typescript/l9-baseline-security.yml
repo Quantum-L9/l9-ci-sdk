@@ -1,0 +1,120 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-ci-sdk-global-ruleset
+# layer: [ci, semgrep, baseline, typescript]
+# tags: [L9_TEMPLATE, baseline-security, shadow-mode, global-ruleset]
+# owner: platform
+# status: active
+# --- /L9_META ---
+#
+# Global TypeScript/JavaScript baseline security/quality ruleset shipped with
+# l9-ci-sdk. Every downstream consumer inherits this file via `l9-ci semgrep
+# run --language typescript` -- no per-repository authoring required. All
+# rules ship with trusted `metadata.l9.canonical_rule_id` from creation
+# (never guessed from severity/message text) and start in `mode: shadow` per
+# `.github/governance/promotion-policy.yaml`'s staged
+# disabled -> shadow -> advisory -> blocking rollout.
+rules:
+  - id: l9.baseline.typescript.child-process-exec
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: child_process.exec/execSync with untrusted input can execute arbitrary shell commands; use execFile/spawn with an argument array instead.
+    metadata:
+      l9:
+        canonical_rule_id: L9-TS-CHILD-PROCESS-EXEC
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: child_process.exec(...)
+      - pattern: child_process.execSync(...)
+      - pattern: exec(...)
+      - pattern: execSync(...)
+
+  - id: l9.baseline.typescript.eval-function-constructor
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: eval()/new Function() executes arbitrary code and is forbidden on untrusted input paths.
+    metadata:
+      l9:
+        canonical_rule_id: L9-TS-EVAL-FUNCTION-CONSTRUCTOR
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+
+  - id: l9.baseline.typescript.prototype-pollution
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: Unguarded Object.assign/deep-merge with attacker-controlled keys can pollute the prototype chain. Validate keys before merging.
+    metadata:
+      l9:
+        canonical_rule_id: L9-TS-PROTOTYPE-POLLUTION
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: Object.assign($TARGET, $SOURCE)
+      - pattern: _.merge($TARGET, $SOURCE)
+      - pattern: $LODASH.merge($TARGET, $SOURCE)
+      - pattern: deepmerge($TARGET, $SOURCE)
+
+  - id: l9.baseline.typescript.jwt-insecure
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: JWT signed/verified with alg none or a hardcoded secret is forbidden. Use an externally managed signing key and an explicit allowed-algorithm list.
+    metadata:
+      l9:
+        canonical_rule_id: L9-TS-JWT-INSECURE
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: 'jwt.sign($PAYLOAD, ..., { algorithm: "none" })'
+      - pattern: 'jwt.verify($TOKEN, ..., { algorithms: ["none"] })'
+      - pattern-regex: 'jwt\.(sign|verify)\([^)]*,\s*["'']([A-Za-z0-9+/=_-]{6,})["'']'
+
+  - id: l9.baseline.typescript.cors-wildcard-credentials
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: CORS wildcard origin combined with credentials is forbidden; the wildcard origin must not be paired with Access-Control-Allow-Credentials.
+    metadata:
+      l9:
+        canonical_rule_id: L9-TS-CORS-WILDCARD-CREDENTIALS
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: 'cors({ origin: "*", credentials: true, ... })'
+      - pattern: 'cors({ origin: "*", credentials: true })'
+
+  - id: l9.baseline.typescript.sql-string-concat
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: SQL built via string concatenation/template literal is forbidden; use a parameterized query.
+    metadata:
+      l9:
+        canonical_rule_id: L9-TS-SQL-STRING-CONCAT
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: $DB.query(`...${$VAR}...`)
+      - pattern: $DB.query("..." + $VAR + "...")
+
+  - id: l9.baseline.typescript.path-traversal
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: path.join with unsanitized request-controlled input can traverse outside the intended directory. Validate/normalize the segment before joining.
+    metadata:
+      l9:
+        canonical_rule_id: L9-TS-PATH-TRAVERSAL
+      mode: shadow
+      category: security
+      autofix_safe: false
+    pattern-either:
+      - pattern: path.join($BASE, $REQ.params.$FIELD)
+      - pattern: path.join($BASE, $REQ.query.$FIELD)
+      - pattern: path.join($BASE, $REQ.body.$FIELD)

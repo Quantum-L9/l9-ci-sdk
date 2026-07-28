@@ -114,6 +114,11 @@ class SemgrepProvider:
         self,
         request: ProviderExecutionRequest,
     ) -> Sequence[str]:
+        # ``execute()`` runs this command with cwd=repository_root, so the
+        # scan target must stay relative ("."). Passing the resolved
+        # absolute repository_root here makes semgrep echo absolute paths
+        # in its JSON output, which then fails downstream repository-
+        # relative path normalization (l9_ci.contracts.source).
         executable = shutil.which("semgrep") or "semgrep"
         return (
             executable,
@@ -121,7 +126,7 @@ class SemgrepProvider:
             "--json-output",
             str(request.output_path),
             *request.arguments,
-            str(request.repository_root),
+            ".",
         )
 
     def execute(

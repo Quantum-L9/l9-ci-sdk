@@ -204,7 +204,9 @@ def test_semgrep_run_writes_failed_bundle_when_execution_fails(
         [
             "semgrep",
             "run",
-            "--report",
+            "--language",
+            "python",
+            "--raw-output",
             str(tmp_path / "raw-report.json"),
             "--output",
             str(out),
@@ -227,7 +229,7 @@ def test_semgrep_run_writes_failed_bundle_when_execution_fails(
     assert _json_stdout(capsys)["ok"] is True
 
 
-def test_semgrep_run_requires_report_and_output(monkeypatch, capsys) -> None:
+def test_semgrep_run_requires_language_and_output(monkeypatch, capsys) -> None:
     with pytest.raises(SystemExit) as excinfo:
         run_cli(["semgrep", "run"], monkeypatch)
     assert excinfo.value.code == 2

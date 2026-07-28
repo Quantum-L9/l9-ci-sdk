@@ -1,9 +1,11 @@
 # Consolidated Manifest
 
-Files: 284
+Files: 298
 
 ## Contents
 
+- `.cursor/rules/git-worktree-hygiene.mdc`
+- `.cursor/rules/readme-and-agents-docs.mdc`
 - `.github/CODEOWNERS`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
 - `.github/ISSUE_TEMPLATE/ci-failure.yml`
@@ -51,10 +53,6 @@ Files: 284
 - `.l9/semgrep-remediation-map.example.yaml`
 - `.l9/tool-stack.yaml`
 - `.pre-commit-config.yaml`
-- `.semgrep/l9-handler-signature.yml`
-- `.semgrep/l9-logging.yml`
-- `.semgrep/l9-routing.yml`
-- `.semgrep/l9-transport.yml`
 - `.semgrepignore`
 - `AGENTS.md`
 - `ALIGNMENT.md`
@@ -88,6 +86,7 @@ Files: 284
 - `docs/adr/0006-gate-evaluation.md`
 - `docs/adr/0007-repository-snapshot-identity.md`
 - `docs/adr/0008-agent-payload-is-a-projection.md`
+- `docs/adr/0009-packaged-global-semgrep-ruleset.md`
 - `docs/adr/0009-repository-manifest-reconciliation.md`
 - `docs/adr/0010-yaml-governance-static-checks.md`
 - `docs/adr/0011-biome-static-checks.md`
@@ -199,6 +198,15 @@ Files: 284
 - `l9_ci/repository/git.py`
 - `l9_ci/repository/manifest.py`
 - `l9_ci/repository/snapshot.py`
+- `l9_ci/rulesets/__init__.py`
+- `l9_ci/rulesets/semgrep/__init__.py`
+- `l9_ci/rulesets/semgrep/identity-map.yaml`
+- `l9_ci/rulesets/semgrep/python/l9-baseline-security.yml`
+- `l9_ci/rulesets/semgrep/python/l9-handler-signature.yml`
+- `l9_ci/rulesets/semgrep/python/l9-logging.yml`
+- `l9_ci/rulesets/semgrep/python/l9-routing.yml`
+- `l9_ci/rulesets/semgrep/python/l9-transport.yml`
+- `l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml`
 - `l9_ci/schemas/v1/agent-review-payload.schema.json`
 - `l9_ci/schemas/v1/coverage.schema.json`
 - `l9_ci/schemas/v1/evidence-record.schema.json`
@@ -233,6 +241,7 @@ Files: 284
 - `tests/commands/test_cli.py`
 - `tests/commands/test_errors.py`
 - `tests/commands/test_manifest_cli.py`
+- `tests/commands/test_semgrep_command.py`
 - `tests/commands/test_semgrep_run_contract.py`
 - `tests/compatibility/fixtures/finding-bundle-v1-bad-summary.json`
 - `tests/compatibility/fixtures/finding-bundle-v1-minimal.json`
@@ -249,11 +258,13 @@ Files: 284
 - `tests/fixtures/semgrep/provenance.yaml`
 - `tests/fixtures/semgrep/report-errors.json`
 - `tests/fixtures/semgrep/results.json`
+- `tests/fixtures/semgrep/rules.yaml`
 - `tests/fixtures/semgrep/runtime/identity-map.yaml`
 - `tests/fixtures/semgrep/runtime/policy.yaml`
 - `tests/fixtures/semgrep/runtime/provenance.yaml`
 - `tests/fixtures/semgrep/runtime/results.json`
 - `tests/fixtures/semgrep/skipped-only.json`
+- `tests/fixtures/semgrep/source/src/example.py`
 - `tests/fixtures/semgrep/zero-findings-empty-scanned.json`
 - `tests/fixtures/semgrep/zero-findings-no-paths.json`
 - `tests/gates/test_evaluator.py`
@@ -286,5 +297,8 @@ Files: 284
 - `tests/repository/test_enumerator.py`
 - `tests/repository/test_manifest.py`
 - `tests/repository/test_snapshot.py`
+- `tests/rulesets/test_packaged_rule_metadata_shape.py`
+- `tests/rulesets/test_packaging.py`
+- `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`

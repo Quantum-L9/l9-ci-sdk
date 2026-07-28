@@ -10,12 +10,29 @@ from l9_ci.cli import ExitCode, OutputFormat, render_success
 from l9_ci.commands.errors import emit_error
 from l9_ci.pipeline import SemgrepPipelineRequest, run_semgrep_pipeline
 from l9_ci.providers.semgrep import SemgrepProvider
+from l9_ci.rulesets.semgrep import (
+    SUPPORTED_LANGUAGES,
+    default_identity_map_path,
+    ruleset_dir,
+)
+
+# One global registry ruleset per language, inherited by every downstream
+# consumer by default. A caller may opt out with --no-registry-config
+# (e.g. a repository that only wants the packaged L9 rules) or extend it
+# with --extra-config.
+_REGISTRY_CONFIG_BY_LANGUAGE: dict[str, str] = {
+    "python": "p/python",
+    "typescript": "p/typescript",
+}
 
 
 def SDK_version() -> str:
     try:
         return importlib.metadata.version("l9-ci-sdk")
     except importlib.metadata.PackageNotFoundError:
+        # Running from source (no build metadata): fall back to the canonical
+        # in-source version. Must be a valid major.minor.patch so downstream
+        # `compatibility check` version negotiation succeeds.
         from l9_ci import __version__
 
         return __version__
@@ -71,13 +88,19 @@ def register_semgrep_commands(
 
     run = semgrep_subparsers.add_parser(
         "run",
-        help="Execute Semgrep through bounded SDK controls and normalize",
+        help=(
+            "Execute Semgrep with the packaged global ruleset for one "
+            "language and normalize the report in a single step"
+        ),
     )
+    run.add_argument("--language", choices=SUPPORTED_LANGUAGES, required=True)
     run.add_argument(
-        "--report",
-        required=True,
+        "--raw-output",
         type=Path,
-        help="Path where the raw Semgrep JSON report is written",
+        help=(
+            "Path where the raw Semgrep JSON report is written "
+            "(default: <output stem>.raw.json)"
+        ),
     )
     run.add_argument("--output", required=True, type=Path)
     run.add_argument("--timeout-seconds", type=int, default=300)
@@ -87,11 +110,20 @@ def register_semgrep_commands(
         default=50_000_000,
     )
     run.add_argument(
-        "--execution-arg",
+        "--extra-config",
         action="append",
         default=[],
-        dest="execution_args",
-        help="One provider argv item; repeat for multiple items",
+        metavar="CONFIG",
+        help="Additional --config value (path or registry ref) to pass to semgrep",
+    )
+    run.add_argument(
+        "--no-registry-config",
+        action="store_true",
+        help=(
+            "Do not add the default community registry ruleset "
+            "(p/python or p/typescript); scan with the packaged L9 "
+            "ruleset (and any --extra-config) only"
+        ),
     )
     _add_common_arguments(run)
     run.set_defaults(handler=handle_run)
@@ -114,12 +146,30 @@ def handle_detect(args: argparse.Namespace) -> int:
     return int(ExitCode.SUCCESS if available else ExitCode.PROVIDER_EXECUTION_FAILURE)
 
 
+def _build_run_config_arguments(args: argparse.Namespace) -> tuple[str, ...]:
+    """Compose the --config arguments for one global-ruleset execution.
+
+    Order: community registry ruleset (unless disabled) -> packaged L9
+    ruleset for the requested language -> caller-supplied --extra-config
+    values, in the order given.
+    """
+    arguments: list[str] = []
+    if not args.no_registry_config:
+        arguments.extend(("--config", _REGISTRY_CONFIG_BY_LANGUAGE[args.language]))
+    arguments.extend(("--config", str(ruleset_dir(args.language))))
+    for extra_config in args.extra_config:
+        arguments.extend(("--config", extra_config))
+    return tuple(arguments)
+
+
 def _request(
     args: argparse.Namespace,
     *,
     report_path: Path,
     execute: bool,
     provider_version: str | None,
+    identity_map_path: Path | None,
+    execution_arguments: tuple[str, ...] = (),
 ) -> SemgrepPipelineRequest:
     return SemgrepPipelineRequest(
         report_path=report_path,
@@ -128,7 +178,7 @@ def _request(
         SDK_version=SDK_version(),
         output_path=args.output,
         provider_version=provider_version,
-        identity_map_path=args.identity_map,
+        identity_map_path=identity_map_path,
         policy_path=args.policy,
         strict=args.strict,
         required=args.required,
@@ -143,7 +193,7 @@ def _request(
             "output_size_limit_bytes",
             50_000_000,
         ),
-        execution_arguments=tuple(getattr(args, "execution_args", [])),
+        execution_arguments=execution_arguments,
     )
 
 
@@ -181,19 +231,25 @@ def handle_normalize(args: argparse.Namespace) -> int:
             report_path=args.input,
             execute=False,
             provider_version=args.provider_version,
+            identity_map_path=args.identity_map,
         ),
         default=ExitCode.PROVIDER_REPORT_FAILURE,
     )
 
 
 def handle_run(args: argparse.Namespace) -> int:
+    raw_output = args.raw_output or args.output.with_name(
+        f"{args.output.stem}.raw.json"
+    )
     return _execute_request(
         args,
         _request(
             args,
-            report_path=args.report,
+            report_path=raw_output,
             execute=True,
             provider_version=None,
+            identity_map_path=args.identity_map or default_identity_map_path(),
+            execution_arguments=_build_run_config_arguments(args),
         ),
         default=ExitCode.PROVIDER_EXECUTION_FAILURE,
     )

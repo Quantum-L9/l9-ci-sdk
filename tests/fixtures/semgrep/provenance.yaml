@@ -1,16 +1,46 @@
 schema: l9.fixture-provenance/v1
 fixture: results.json
 provider_id: semgrep
-verification_status: representative_not_runtime_captured
-capture_required_before_supported_state: true
-expected_capture_command:
+verification_status: runtime_captured
+capture_required_before_supported_state: false
+# Exact command executed to produce the pre-redaction raw report (run from
+# tests/fixtures/semgrep/ so Semgrep reports check_id as the rule's bare
+# `id:` value, with no config-file-path prefix -- pointing --config at the
+# same file from the repo root prefixes check_id with the config file's
+# relative path, e.g. "tests.fixtures.semgrep.python.lang...", which would
+# make the fixture's identity brittle to its own location on disk).
+command:
   - semgrep
   - scan
   - --config
-  - tests/fixtures/semgrep/rules.yaml
+  - rules.yaml
+  - --x-ignore-semgrepignore-files
   - --json-output
-  - tests/fixtures/semgrep/results.captured.json
-  - tests/fixtures/semgrep/source
+  - results.captured.json
+  - source
+# --x-ignore-semgrepignore-files was required because Semgrep's built-in
+# default .semgrepignore excludes common test/fixture directory names; this
+# repo has no local .semgrepignore file, so the exclusion is Semgrep's own
+# default, not a project override. Without it Semgrep scans and reports 0
+# files under any path containing "tests/fixtures".
+Semgrep_version: "1.171.0"
+capture_timestamp: "2026-07-28T04:21:43Z"
+# sha256 of `cat rules.yaml source/src/example.py` (the exact scan inputs,
+# concatenated in that order) -- proves which rule definitions and which
+# synthetic source produced the captured findings.
+input_checksum: "sha256:93a870c41cabee64007b8edb8a85cca1699d811e4c65f2e3070194fbf258d3c6"
+# sha256 of the raw `results.captured.json` Semgrep produced, BEFORE the
+# redaction step below, WITH the top-level "time" object removed and the
+# remaining JSON re-serialized as `json.dumps(data, sort_keys=True,
+# separators=(",", ":"))`. The "time" object (rules_parse_time, core_time,
+# max_memory_bytes, etc.) is Semgrep's own wall-clock/memory profiling data
+# -- it varies run to run on the same inputs by construction, so it is
+# excluded rather than falsely implying the full raw JSON is byte-stable.
+# Re-running `command` above and applying the same "time"-removal +
+# canonicalization must reproduce this checksum exactly; it was verified
+# reproducible across two independent re-runs during authoring.
+output_checksum: "sha256:9920314a1906ca8d65cde64d95fb79e6cf23c16d5f3fb80bfa2931e2f56da117"
+redaction_reviewed_by: l9-ci-sdk-agent (Semgrep identity resolution + global ruleset GMP)
 redaction_rules:
   - replace repository-specific paths with fixture-relative paths
   - remove source code except minimal non-sensitive examples
@@ -19,10 +49,12 @@ redaction_rules:
   - preserve provider rule IDs
   - preserve location shape
   - preserve severity values
-required_provenance_fields_after_capture:
-  - Semgrep_version
-  - capture_timestamp
-  - command
-  - input_checksum
-  - output_checksum
-  - redaction_reviewed_by
+redaction_changes_applied:
+  - "path: rewrote the real scan-relative path (source/src/example.py) to the fixture-relative src/example.py"
+  - "extra.fingerprint: replaced Semgrep OSS's unauthenticated 'requires login' placeholder with a stable redacted-semgrep-fingerprint-NNN value (real fingerprints require a logged-in Semgrep account this fixture must not depend on)"
+  - "extra.lines: replaced Semgrep OSS's unauthenticated 'requires login' placeholder with the actual matched source line -- safe to keep verbatim because source/src/example.py is this repo's own synthetic, non-sensitive fixture code, not real production code"
+  - "version, start/end line+col+offset, extra.message, extra.severity, extra.metadata, extra.validation_state, extra.engine_kind, errors, paths.scanned: kept byte-identical to the real captured output"
+notes:
+  - "source/src/example.py and rules.yaml are checked in so this capture is independently reproducible: re-running `command` (from this directory) against an installed semgrep==1.171.0, then removing the top-level \"time\" object and canonicalizing as described under output_checksum, must reproduce output_checksum exactly."
+  - "Two findings by design, matching this repo's own test suite's structural expectations (tests/pipeline/test_semgrep_pipeline.py, tests/providers/semgrep/test_provider.py): one ERROR-severity finding (exec-used) and one WARNING-severity finding (useless-comparison), on a single scanned file, zero errors."
+  - "Semgrep OSS unauthenticated reports extra.fingerprint and extra.lines as the literal string \"requires login\" instead of real values; both fields required manual substitution (see redaction_changes_applied) rather than being redactions of real sensitive data Semgrep produced."

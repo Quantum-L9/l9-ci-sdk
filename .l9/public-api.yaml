@@ -114,6 +114,11 @@ packages:
     - ExitCode
     - OutputFormat
     - render_success
+  # l9_ci.rulesets is a pure package-data namespace (see .l9/architecture.yaml);
+  # its __all__ is intentionally empty. Downstream consumers resolve packaged
+  # ruleset paths through l9_ci.rulesets.semgrep, a submodule covered by its
+  # own explicit check (test_rulesets_public_surface), not by this manifest.
+  l9_ci.rulesets: []
 # Intentional deviations from the exact set, if any, recorded for compatibility
 # review. Empty = every package's __all__ must equal its list above exactly.
 compatibility_allowlist:

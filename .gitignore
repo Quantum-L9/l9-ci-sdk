@@ -11,8 +11,18 @@ __pycache__/
 # previously swallowed that package, requiring a force-add to track it.
 /artifacts/
 
+# Build artifacts from `python -m build` / `hatchling` (pyproject.toml).
+dist/
+build/
+*.egg-info/
+
 # Agent/session scratchpad only — never part of the SDK codebase inventory.
 /memory-bank/
+
+# Commit-bound CI evidence (scripts/generate_validation_report.py), uploaded
+# as a workflow artifact each run (ci.yml) — regenerated per-commit, never
+# tracked, to avoid perpetual diff churn.
+/VALIDATION_REPORT.json
 
 .coverage
 .coverage.*

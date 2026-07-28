@@ -7,6 +7,7 @@ import pytest
 
 import l9_ci.__main__ as main_module
 import l9_ci.commands.semgrep as semgrep_commands
+from l9_ci.rulesets.semgrep import ruleset_dir
 
 
 def test_run_cli_preserves_public_command_and_builds_execute_request(
@@ -26,7 +27,9 @@ def test_run_cli_preserves_public_command_and_builds_execute_request(
             "l9-ci",
             "semgrep",
             "run",
-            "--report",
+            "--language",
+            "python",
+            "--raw-output",
             str(tmp_path / "report.json"),
             "--output",
             str(tmp_path / "bundle.json"),
@@ -34,8 +37,6 @@ def test_run_cli_preserves_public_command_and_builds_execute_request(
             str(tmp_path),
             "--snapshot-id",
             "snapshot-1",
-            "--execution-arg=--config",
-            "--execution-arg=p/python",
             "--timeout-seconds",
             "30",
         ],
@@ -43,7 +44,12 @@ def test_run_cli_preserves_public_command_and_builds_execute_request(
     assert main_module.main() == 0
     request = captured[0]
     assert request.execute is True
-    assert request.execution_arguments == ("--config", "p/python")
+    assert request.execution_arguments == (
+        "--config",
+        "p/python",
+        "--config",
+        str(ruleset_dir("python")),
+    )
     assert request.timeout_seconds == 30
 
 

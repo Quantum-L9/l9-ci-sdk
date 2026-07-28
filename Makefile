@@ -8,26 +8,31 @@ SHELL := /bin/bash
 VENV        := $(CURDIR)/.venv
 VENV_PYTHON := $(VENV)/bin/python
 # Prefer repo venv when present; override with PYTHON=/path/to/python.
+# Use recursive `=` (not `:=`) so ensure-toolchain can create .venv mid-run and
+# later typecheck/test/hooks recipes still pick it up in the same make invocation.
 ifeq ($(origin PYTHON),command line)
-  PYTHON_RESOLVED := $(PYTHON)
-else ifneq ($(wildcard $(VENV_PYTHON)),)
-  PYTHON_RESOLVED := $(VENV_PYTHON)
+  PYTHON_OVERRIDE := $(PYTHON)
+  PYTHON = $(PYTHON_OVERRIDE)
 else
-  PYTHON_RESOLVED := python3
+  PYTHON = $(if $(wildcard $(VENV_PYTHON)),$(VENV_PYTHON),python3)
 endif
-PYTHON      := $(PYTHON_RESOLVED)
 # Do not name this PRE_COMMIT — that env var is reserved/collides under hook runs.
-PRE_COMMIT_BIN ?= $(if $(wildcard $(VENV)/bin/pre-commit),$(VENV)/bin/pre-commit,pre-commit)
+ifeq ($(origin PRE_COMMIT_BIN),command line)
+  PRE_COMMIT_BIN_OVERRIDE := $(PRE_COMMIT_BIN)
+  PRE_COMMIT_BIN = $(PRE_COMMIT_BIN_OVERRIDE)
+else
+  PRE_COMMIT_BIN = $(if $(wildcard $(VENV)/bin/pre-commit),$(VENV)/bin/pre-commit,pre-commit)
+endif
 PYTEST_ARGS ?=
 PUSH_ARGS   ?=
 
 export PYTHONPATH := $(CURDIR)$(if $(PYTHONPATH),:$(PYTHONPATH),)
 
-PC_RUN := $(PRE_COMMIT_BIN) run --all-files
+PC_RUN = $(PRE_COMMIT_BIN) run --all-files
 
 .DEFAULT_GOAL := help
 
-.PHONY: help deps install-hooks doctor bootstrap \
+.PHONY: help deps install-hooks doctor bootstrap ensure-toolchain \
 	fmt hooks ensure-clean typecheck test yaml-test compile \
 	check ci push \
 	pre-commit lint gate
@@ -80,14 +85,34 @@ doctor: ## Verify gate tooling is present
 
 bootstrap: deps install-hooks doctor ## One-shot onboarding
 
+# Auto-run by check/push (and raw git push → pre-push → make check).
+# If .venv/toolchain/hooks are missing, provision them; otherwise no-op.
+ensure-toolchain: ## deps + hooks when missing (idempotent)
+ifeq ($(origin PYTHON),command line)
+	@if ! "$(PYTHON)" -c 'import mypy, pytest' >/dev/null 2>&1; then \
+	  echo "PYTHON=$(PYTHON) missing mypy/pytest — install CI toolchain or omit PYTHON= to use .venv via make deps"; \
+	  exit 1; \
+	fi
+else
+	@if [ ! -x "$(VENV_PYTHON)" ] || ! "$(VENV_PYTHON)" -c 'import mypy, pytest' >/dev/null 2>&1; then \
+	  echo "ensure-toolchain: provisioning .venv (make deps)"; \
+	  $(MAKE) deps; \
+	fi
+endif
+	@hook_dir="$$(git rev-parse --git-path hooks 2>/dev/null || true)"; \
+	if [ -n "$$hook_dir" ] && { [ ! -x "$$hook_dir/pre-commit" ] || [ ! -x "$$hook_dir/pre-push" ]; }; then \
+	  echo "ensure-toolchain: installing git hooks (make install-hooks)"; \
+	  $(MAKE) install-hooks; \
+	fi
+
 # --- Mutate (intentional) ---------------------------------------------------
 
-fmt: ## Run pre-commit suite (may autofix; commit results)
+fmt: ensure-toolchain ## Run pre-commit suite (may autofix; commit results)
 	$(PC_RUN)
 
 # --- Verify -----------------------------------------------------------------
 
-hooks: ## Run .pre-commit-config.yaml over all files
+hooks: ensure-toolchain ## Run .pre-commit-config.yaml over all files
 	$(PC_RUN)
 
 ensure-clean: ## Fail if the working tree is dirty
@@ -111,7 +136,7 @@ compile: ## Byte-compile Python surfaces
 
 # --- Compose / ship ---------------------------------------------------------
 
-check: hooks ensure-clean typecheck test ## Full local gate (hooks + mypy + pytest)
+check: ensure-toolchain hooks ensure-clean typecheck test ## Full local gate (hooks + mypy + pytest)
 
 ci: check compile ## Local CI-shaped gate
 
