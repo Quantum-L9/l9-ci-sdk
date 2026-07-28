@@ -22,31 +22,100 @@ jobs:
           python-version: "3.11"
       - name: Install pinned validation toolchain
         run: pip install -e ".[dev]" -c constraints.txt
+      # ----------------------------------------------------------------------
+      # Gate steps below are fail-OPEN individually (continue-on-error): every
+      # gate runs exactly once per CI invocation so a single push/PR surfaces
+      # every failure at once, instead of stopping at the first red step and
+      # hiding what's downstream. The job as a whole still fails CLOSED — see
+      # "Evaluate all gates" below, which inspects every step's outcome and
+      # exits non-zero (blocking merge) if any gate failed.
+      # ----------------------------------------------------------------------
       - name: compileall
+        id: compileall
+        continue-on-error: true
         run: python -m compileall l9_ci
       - name: ruff check
+        id: ruff_check
+        continue-on-error: true
         run: python -m ruff check l9_ci tests scripts
       - name: ruff format check
+        id: ruff_format
+        continue-on-error: true
         run: python -m ruff format --check l9_ci tests scripts
       - name: mypy
+        id: mypy
+        continue-on-error: true
         run: python -m mypy
       - name: pytest + branch coverage
+        id: pytest_cov
+        continue-on-error: true
         run: python -m pytest --cov=l9_ci --cov-branch
       - name: critical gate evaluator 100% branch coverage
+        id: gate_evaluator_cov
+        continue-on-error: true
         run: |
           python -m pytest \
             --cov=l9_ci.gates.evaluator --cov-branch \
             --cov-fail-under=100 tests/gates
       - name: Generate commit-bound validation evidence
+        id: gen_evidence
+        continue-on-error: true
         run: python scripts/generate_validation_report.py
       - name: Tracked manifest must be current
+        id: manifest_check
+        continue-on-error: true
         run: git diff --exit-code MANIFEST.md
       - name: Upload validation evidence
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: validation-evidence
           path: |
             artifacts/metadata/validation-report.json
             MANIFEST.md
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
+      - name: Evaluate all gates (fail closed only after every gate has run)
+        if: always()
+        env:
+          R_COMPILEALL: ${{ steps.compileall.outcome }}
+          R_RUFF_CHECK: ${{ steps.ruff_check.outcome }}
+          R_RUFF_FORMAT: ${{ steps.ruff_format.outcome }}
+          R_MYPY: ${{ steps.mypy.outcome }}
+          R_PYTEST_COV: ${{ steps.pytest_cov.outcome }}
+          R_GATE_EVAL_COV: ${{ steps.gate_evaluator_cov.outcome }}
+          R_GEN_EVIDENCE: ${{ steps.gen_evidence.outcome }}
+          R_MANIFEST: ${{ steps.manifest_check.outcome }}
+        run: |
+          set +e
+          failed=0
+          {
+            echo "## Validation gate summary"
+            echo
+            echo "| Gate | Outcome |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          check() {
+            name="$1"
+            outcome="$2"
+            if [ "$outcome" = "failure" ]; then
+              echo "| $name | ❌ failure |" >> "$GITHUB_STEP_SUMMARY"
+              echo "::error::Gate failed: $name"
+              failed=1
+            else
+              echo "| $name | ✅ $outcome |" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          }
+          check "compileall" "$R_COMPILEALL"
+          check "ruff check" "$R_RUFF_CHECK"
+          check "ruff format check" "$R_RUFF_FORMAT"
+          check "mypy" "$R_MYPY"
+          check "pytest + branch coverage" "$R_PYTEST_COV"
+          check "critical gate evaluator 100% branch coverage" "$R_GATE_EVAL_COV"
+          check "generate commit-bound validation evidence" "$R_GEN_EVIDENCE"
+          check "tracked manifest must be current" "$R_MANIFEST"
+          if [ "$failed" -eq 1 ]; then
+            echo "One or more gates failed (see summary above). Every gate ran this invocation; nothing was skipped."
+            exit 1
+          fi
+          echo "All gates passed."
