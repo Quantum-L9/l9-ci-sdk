@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Python deps: Dependabot's `uv` ecosystem understands pyproject.toml (PEP 621)
+  # + uv.lock together and keeps them in sync in a single PR. Note: this repo's
+  # requirements.txt / requirements-ci.txt pins (used for pip-based install paths
+  # in l9-ci-core's provisioning venv and CI) are a separate, deliberate mirror
+  # of these same versions and are not tracked by this ecosystem entry.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      python-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    labels: ["dependencies", "python"]
+    commit-message:
+      prefix: "deps(uv)"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: "ci"
+
