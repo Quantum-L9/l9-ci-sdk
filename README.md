@@ -6,6 +6,27 @@ validation, and deterministic artifact generation for the L9 CI constellation.
 
 See [`AGENTS.md`](AGENTS.md) for architectural rules and agent operating notes.
 
+## Local gate
+
+Mechanical checks are owned by [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
+The root [`Makefile`](Makefile) orchestrates that suite plus `mypy` / `pytest`.
+Push is fail-closed: use `make push`, and a git `pre-push` hook runs `make check`
+even for raw `git push` (unless `make push` already cleared the gate).
+
+```bash
+make bootstrap   # .venv + deps + install pre-commit/pre-push hooks + doctor
+make fmt         # intentional autofix via pre-commit (commit results)
+make check       # hooks + clean tree + mypy + pytest
+make push        # check, then git push
+```
+
+`make deps` creates `.venv/` when missing (PEP 668–safe). Override with
+`make check PYTHON=/path/to/python` if you manage your own environment.
+
+Do not bypass with `git push --no-verify`. Prefer `make push` / `make check`.
+Known CI-only gap: `actionlint` (yaml-governance workflow); local zizmor is stricter
+than the dogfood caller’s advisory setting.
+
 ## YAML governance
 
 This repository owns a reusable GitHub Actions workflow for YAML/workflow

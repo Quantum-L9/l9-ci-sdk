@@ -35,6 +35,16 @@ because GitHub Actions requires that discovery path.
 
 ## Local validation
 
+Preferred (SSOT via `.pre-commit-config.yaml` + Makefile):
+
+```bash
+make hooks       # full pre-commit suite (yamllint, governance JSON, pins, zizmor, ruff)
+make yaml-test   # pytest tests/yaml
+make check       # hooks + mypy + full pytest (required before make push)
+```
+
+Raw expansion (debugging only — do not diverge flags from the hook config):
+
 ```bash
 python3 lint/check_governance_json.py .
 python3 lint/check_action_pins.py .

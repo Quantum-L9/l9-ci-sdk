@@ -13,6 +13,7 @@ skipped — they are not part of the JSON governance pack.
 
 Exit 0 = valid. Exit 1 = at least one violation. Stdlib only.
 """
+
 from __future__ import annotations
 
 import json
@@ -65,11 +66,19 @@ def check_execution_profiles(doc: dict, errors: list[str], path: Path) -> None:
         if not isinstance(profile, dict):
             errors.append(f"{path}: profile {name} must be an object")
             continue
-        for key in ("sdk_profile", "strict", "default_mode", "providers", "allowed_events"):
+        for key in (
+            "sdk_profile",
+            "strict",
+            "default_mode",
+            "providers",
+            "allowed_events",
+        ):
             if key not in profile:
                 errors.append(f"{path}: profile {name} missing {key}")
         if profile.get("sdk_profile") not in {"ci_fast", "ci_deep"}:
-            errors.append(f"{path}: profile {name} sdk_profile must be ci_fast or ci_deep")
+            errors.append(
+                f"{path}: profile {name} sdk_profile must be ci_fast or ci_deep"
+            )
         if not isinstance(profile.get("strict"), bool):
             errors.append(f"{path}: profile {name} strict must be boolean")
         if profile.get("default_mode") not in VALID_MODES:
@@ -79,7 +88,9 @@ def check_execution_profiles(doc: dict, errors: list[str], path: Path) -> None:
             errors.append(f"{path}: profile {name} providers must be a non-empty array")
         events = profile.get("allowed_events")
         if not isinstance(events, list) or not events:
-            errors.append(f"{path}: profile {name} allowed_events must be a non-empty array")
+            errors.append(
+                f"{path}: profile {name} allowed_events must be a non-empty array"
+            )
 
 
 def check_requiredness(doc: dict, errors: list[str], path: Path) -> None:
@@ -93,7 +104,9 @@ def check_requiredness(doc: dict, errors: list[str], path: Path) -> None:
             continue
         for provider, required in mapping.items():
             if not isinstance(required, bool):
-                errors.append(f"{path}: {name}.{provider} must be boolean, got {required!r}")
+                errors.append(
+                    f"{path}: {name}.{provider} must be boolean, got {required!r}"
+                )
 
 
 def check_rule_modes(doc: dict, errors: list[str], path: Path) -> None:

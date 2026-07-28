@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 211
+Files: 212
 
 ## Contents
 
@@ -44,6 +44,7 @@ Files: 211
 - `AGENTS.md`
 - `LICENSE`
 - `MANIFEST.md`
+- `Makefile`
 - `README.md`
 - `VALIDATION_REPORT.json`
 - `docs/adr/0001-canonical-evidence-and-findings.md`

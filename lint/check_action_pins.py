@@ -20,6 +20,7 @@ Two invariants, both already asserted informally in l9-ci-core prose:
 
 Exit 0 = valid. Exit 1 = violation. Stdlib only.
 """
+
 from __future__ import annotations
 
 import re

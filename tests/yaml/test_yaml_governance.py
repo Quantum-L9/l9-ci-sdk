@@ -2,6 +2,7 @@
 
 Run: pytest tests/yaml -q
 """
+
 from __future__ import annotations
 
 import json
@@ -89,7 +90,10 @@ def test_non_boolean_requiredness_is_rejected(tmp_path: Path) -> None:
     write_governance(
         tmp_path,
         "provider-requiredness.yaml",
-        {"schema": "l9.provider-requiredness/v1", "profiles": {"pr_fast": {"semgrep": "yes"}}},
+        {
+            "schema": "l9.provider-requiredness/v1",
+            "profiles": {"pr_fast": {"semgrep": "yes"}},
+        },
     )
     result = run(GOV, tmp_path)
     assert result.returncode == 1
@@ -106,7 +110,9 @@ def test_duplicate_waiver_id_is_rejected(tmp_path: Path) -> None:
         "scope": {},
     }
     write_governance(
-        tmp_path, "waivers.yaml", {"schema": "l9.waivers/v1", "waivers": [entry, dict(entry)]}
+        tmp_path,
+        "waivers.yaml",
+        {"schema": "l9.waivers/v1", "waivers": [entry, dict(entry)]},
     )
     result = run(GOV, tmp_path)
     assert result.returncode == 1

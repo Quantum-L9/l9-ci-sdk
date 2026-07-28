@@ -1,6 +1,10 @@
-# Pre-commit hooks — mechanical enforcement before commit
-# Install: pre-commit install
-# Run manually: pre-commit run --all-files
+# Pre-commit hooks — mechanical enforcement before commit and push.
+# Install both hook types (also: make install-hooks / make bootstrap):
+#   pre-commit install --hook-type pre-commit --hook-type pre-push
+# Run manually: pre-commit run --all-files   (or: make hooks / make check)
+# Ship path: make push  (raw git push still hits the pre-push make-check gate)
+
+default_install_hook_types: [pre-commit, pre-push]
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -48,3 +52,13 @@ repos:
         pass_filenames: false
         args: ['.']
         files: ^\.github/(workflows|actions)/.*\.ya?ml$
+
+      # Fail-closed push gate: raw `git push` cannot skip .pre-commit-config.yaml.
+      # `make push` sets L9_MAKE_PUSH=1 after `make check` to avoid a double run.
+      - id: l9-make-check
+        name: make check (push gate)
+        entry: bash -c 'if [ "${L9_MAKE_PUSH:-}" = "1" ]; then exit 0; fi; make check'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

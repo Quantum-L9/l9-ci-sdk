@@ -84,6 +84,17 @@ Governance notes:
   `rule-modes.selfci.yaml` and `l9-ci-shared-spec.yaml` are real YAML and are
   skipped by `lint/check_governance_json.py`.
 
+## Local gate & push
+Root `Makefile` orchestrates `.pre-commit-config.yaml` (SSOT for ruff/yamllint/
+governance JSON/action pins/zizmor) plus `mypy` and `pytest` from
+`requirements-ci.txt`. Agents and humans must ship via `make push` after
+`make bootstrap` once per clone.
+- `make check` / `make push` are fail-closed; do not use `git push --no-verify`.
+- Git `pre-push` runs `make check` for raw `git push` as well (`make push`
+  sets `L9_MAKE_PUSH=1` to avoid a double run after it already gated).
+- Do not restate hook CLI flags in scripts or ad-hoc commands; change
+  `.pre-commit-config.yaml` or `lint/` instead.
+
 ## YAML governance (static checks)
 `l9-ci-sdk` owns the reusable YAML/workflow static-check workflow
 (`.github/workflows/l9-yaml-governance.yml`) and root `lint/` configs/checkers.
@@ -94,3 +105,21 @@ Dogfood runs via `.github/workflows/l9-yaml-governance-dogfood.yml`.
 - Tool configs live under root `lint/` (like `ruff.toml`), not under `.github/lint/`.
 - Independent gate — not a Semgrep `providers` entry. Details:
   `docs/architecture/yaml-governance.md`, ADR 0010.
+- Local preferred entry: `make hooks` / `make check` (see Local gate & push).
+
+<!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->
+
+## Formatter ownership
+
+Workspace class: `biome_default` — Default for every governed workspace: Biome owns JS/TS/JSON, Ruff owns Python.
+
+Exactly one formatter owns each language. Do not reformat a file with a tool other than its owner, and do not add config for a competing formatter: the result is a diff that churns on every save.
+
+| Languages | Owner | Note |
+|---|---|---|
+| `javascript`, `javascriptreact`, `typescript`, `typescriptreact`, `json`, `jsonc` | **biome** | bound by the governed IDE profile |
+| `python` | **ruff** | bound by the governed IDE profile |
+
+Generated from `environment/ide/policy.json` in the governance clone by `ops/scripts/adapters/agentdocs.sh`. Edit the policy, not this block.
+
+<!-- END L9 FORMATTER OWNERSHIP -->
