@@ -5,10 +5,15 @@ Drop-in governance for a repository adopting l9-ci-core **v2**. Copy the six
 that is the path `resolve-governance` and `validate-governance` read.
 
 This pack is **language-agnostic**: it works unchanged for **Python and
-Node.js** repos. `semgrep` is the single provider the pinned SDK normalizes,
-and semgrep scans Python, JavaScript, and TypeScript alike. The only
-per-language difference lives in the caller workflow's semgrep `--config`
-rulesets (see [`../l9-analysis.yml`](../l9-analysis.yml)), never in this pack.
+Node.js/TypeScript** repos. `semgrep` is the single provider the pinned SDK
+normalizes, and semgrep scans Python, JavaScript, and TypeScript alike. The
+only per-language difference lives in the caller workflow's single
+`env.L9_LANGUAGE` value (`"python"` or `"typescript"` — see
+[`../l9-analysis.yml`](../l9-analysis.yml)), never in this pack. The SDK's
+`l9-ci semgrep run --language "$L9_LANGUAGE"` command resolves both the
+matching community registry ruleset (`p/python` or `p/typescript`) and the
+SDK's own packaged L9 ruleset for that language internally — there is no
+`--config` list to author or keep in sync by hand.
 
 > **Format gotcha — these are JSON.** The resolver parses each file with
 > `json.loads`, so the `.yaml` files must be **valid JSON**: double-quoted
@@ -30,16 +35,25 @@ rulesets (see [`../l9-analysis.yml`](../l9-analysis.yml)), never in this pack.
 | Profile | Event | sdk_profile | Default mode | semgrep required |
 |---|---|---|---|---|
 | `pr_fast` | `pull_request` | ci_fast | advisory | yes |
-| `merge` | `push` | ci_fast | blocking | yes |
+| `merge` | `push` | ci_fast | advisory | yes |
 | `nightly` | `schedule` | ci_deep | advisory | no |
-| `release` | `push` | ci_deep | blocking | yes |
-| `supply_chain` | `schedule` | ci_deep | blocking | yes |
+| `release` | `push` | ci_deep | advisory | yes |
+| `supply_chain` | `schedule` | ci_deep | advisory | yes |
 
-`pr_fast` defaults to advisory (not blocking) in this pack: community `p/python`
-Semgrep rules carry no L9 canonical rule ID, so strict identity resolution
-would reject every finding at normalize. Advisory-first surfaces findings
-without blocking; tighten later per `promotion-policy.yaml` once an
-identity map or stricter policy is in place.
+Every profile in this pack defaults to **advisory**, not blocking — this is
+the actual, current content of `execution-profiles.yaml` and
+`rule-modes.yaml` in this directory; there is no blocking profile shipped
+by default. This is deliberate: most community Semgrep registry findings
+(e.g. `p/python`, `p/typescript`) still carry no L9 canonical rule ID, so
+strict identity resolution would reject them at normalize. A packaged
+identity map (`l9_ci/rulesets/semgrep/identity-map.yaml`, mirrored at
+`.l9/semgrep-identity-map.yaml` in the SDK repo) now resolves a growing set
+of registry `check_id`s to canonical rule IDs, and the SDK's own
+L9-authored rules already carry trusted `metadata.l9.canonical_rule_id` —
+but registry coverage is still partial, so advisory-first remains correct
+here. Promote a profile to `blocking` per `promotion-policy.yaml` only
+once you have verified the specific rules you depend on actually resolve
+(via the identity map or trusted metadata) for your repo's languages.
 
 Validated with Core's own `validate-governance` (`status: valid`).
 
@@ -102,15 +116,15 @@ never reads or evaluates its contents.
 
 ## Python vs Node.js — what changes, what doesn't
 
-| Concern | Python repo | Node.js repo |
+| Concern | Python repo | Node.js/TypeScript repo |
 |---|---|---|
 | This governance pack | identical | identical |
 | Provider | semgrep | semgrep |
-| semgrep rulesets (in the caller) | `--config p/python` | `--config p/javascript --config p/typescript` |
+| Caller workflow's `env.L9_LANGUAGE` | `"python"` | `"typescript"` |
 | Generic lint/test (separate) | ruff / mypy / pytest — see [`../l9-lint-test.yml`](../l9-lint-test.yml) | eslint / `tsc --noEmit` / `vitest run` — see [`../l9-lint-test-node.yml`](../l9-lint-test-node.yml) |
 
 The analysis pipeline (this pack + semgrep + the SDK) is identical across
-languages. Only the semgrep ruleset and your out-of-band lint/test suite differ.
+languages. Only `env.L9_LANGUAGE` and your out-of-band lint/test suite differ.
 
 ### TypeScript / Node preset (strict TS repo)
 
@@ -121,8 +135,10 @@ For a strict-TypeScript service (e.g. eslint + `tsc --noEmit` + `vitest run`):
    `eslint .`, `tsc --noEmit` (type soundness, honors `strict: true`, emits no
    JS), and `vitest run` (one-shot — never bare `vitest`, which is watch mode).
    Package manager is auto-detected from the lockfile.
-3. Copy `l9-analysis.yml` and drop the Python ruleset — keep only:
-   `semgrep scan --config p/javascript --config p/typescript`.
+3. Copy `l9-analysis.yml` and set `env.L9_LANGUAGE: "typescript"` — this
+   selects both the `p/typescript` community registry ruleset and the SDK's
+   packaged TypeScript L9 ruleset via `l9-ci semgrep run --language
+   typescript`; there is no separate `--config` list to edit.
 4. Keep your existing `tsconfig.json`, `.eslintrc*`, and `vitest.config.ts` as
    the source of truth — the templates invoke your tools, they do not replace
    your configs.
@@ -133,8 +149,8 @@ For a strict-TypeScript service (e.g. eslint + `tsc --noEmit` + `vitest run`):
 
 1. Copy this directory's six files to `.github/governance/`.
 2. Copy [`../l9-analysis.yml`](../l9-analysis.yml) to
-   `.github/workflows/l9-analysis.yml` and set the semgrep `--config` line for
-   your language.
+   `.github/workflows/l9-analysis.yml` and set `env.L9_LANGUAGE` to `"python"`
+   or `"typescript"` — the single per-language line (see table above).
 3. (Optional) copy the matching lint/test template for your language:
    [`../l9-lint-test.yml`](../l9-lint-test.yml) (Python) or
    [`../l9-lint-test-node.yml`](../l9-lint-test-node.yml) (Node/TypeScript).
@@ -144,3 +160,10 @@ Pin Core to the same immutable commit referenced throughout
 `f7a4ee8c1f4e4413cb3645d088cafa3e9c798235`, or the `v2` tag once published) —
 do not let this doc's pin drift from the workflow's; the workflow is the
 source of truth.
+
+**Known limitation:** the commit Core is currently pinned to predates the
+SDK's `l9-ci semgrep run` command that `l9-analysis*.yml` now invokes, so
+the semgrep step will fail on any repo (including this one) until Core's
+`provision-sdk`/`invoke-sdk` actions are updated to a newer SDK revision
+that supports it. The workflow template is written for that target state;
+it is not yet runnable end-to-end against the current Core pin.

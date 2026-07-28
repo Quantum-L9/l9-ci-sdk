@@ -16,7 +16,7 @@ phases:
   - architecture boundaries are tested
 - id: P1
   title: Semgrep vertical slice
-  status: complete_with_fixture_limitation
+  status: complete
   acceptance:
   - Semgrep JSON import exists
   - native check_id is preserved
@@ -25,8 +25,9 @@ phases:
   - policy classification is explicit
   - provider failures are structured
   - deterministic bundle generation exists
-  remaining:
-  - replace representative fixture with runtime capture
+  - representative fixture replaced with runtime capture (tests/fixtures/semgrep/results.json,
+    provenance documented in tests/fixtures/semgrep/provenance.yaml, reproducible via
+    tests/fixtures/semgrep/rules.yaml + tests/fixtures/semgrep/source/)
 - id: P5
   title: Second provider selection
   status: deferred
@@ -76,7 +77,6 @@ phases:
   title: Semgrep shadow rollout
   status: blocked
   blockers:
-  - runtime-captured fixture required
   - live Core integration required
 GA:
   criteria:

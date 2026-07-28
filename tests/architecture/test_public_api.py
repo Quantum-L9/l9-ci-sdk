@@ -61,3 +61,16 @@ def test_phase4_public_surfaces() -> None:
     )
     assert {"GateResult", "GateStatus", "evaluate_gate"}.issubset(gates.__all__)
     assert {"Diagnostic", "ExitCode", "OutputFormat"}.issubset(cli.__all__)
+
+
+def test_rulesets_public_surface() -> None:
+    """Downstream consumers resolve packaged rule/identity-map paths through
+    this surface (see ``l9_ci/commands/semgrep.py``); it must stay stable
+    since it is what every consumer, not just this SDK's own CLI, imports."""
+    from l9_ci.rulesets import semgrep as rulesets_semgrep
+
+    assert {
+        "SUPPORTED_LANGUAGES",
+        "ruleset_dir",
+        "default_identity_map_path",
+    }.issubset(set(rulesets_semgrep.__all__))

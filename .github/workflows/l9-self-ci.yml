@@ -23,7 +23,7 @@
 #                                   + .github/governance/l9-ci-shared-spec.yaml
 #   * rule-mode governance       -> .github/governance/rule-modes.yaml
 #   * canonical governance set   -> audit-policy / audit-baseline / thresholds
-#   * L9 AST rules (advisory)    -> .semgrep/l9-*.yml
+#   * L9 AST rules (shadow)      -> l9_ci/rulesets/semgrep/python/l9-*.yml
 #
 # Philosophy: "CI is a routing system, not a nightclub bouncer."
 #   1. Classify the PR from changed files (policy-driven, 7 canonical classes).
@@ -352,12 +352,28 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   # SEMGREP — advisory L9 AST rules, only when Python present
   # ────────────────────────────────────────────────────────────────────────
+  # Runs `l9-ci semgrep run` FROM THIS REPO'S OWN SOURCE (PYTHONPATH=., no
+  # build/install step -- the same source-execution pattern the "audit
+  # engine" step below uses) so self-CI dogfoods the real pipeline: the
+  # community registry ruleset (p/python) plus the packaged L9 ruleset,
+  # normalized through the SDK's own identity resolution into a canonical
+  # finding-bundle.json -- not a raw, unprocessed semgrep.json. This is NOT
+  # the forbidden external l9-ci-core/l9-ci-sdk dependency the header
+  # comment above rules out: it is this repo executing its own in-tree code
+  # against itself, which is exactly what dogfooding means, and it is the
+  # only way to catch a real regression in the SDK's own normalization path
+  # before it reaches downstream consumers.
   semgrep:
     name: Semgrep (L9 AST, advisory)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: classify
     if: needs.classify.outputs.semgrep_relevant == 'true'
+    env:
+      # Exact pin (not a range), mirroring the l9-analysis*.yml workflows: a
+      # semgrep minor/patch bump can add or remove findings, which must be a
+      # reviewed, deliberate change -- never an incidental side effect.
+      L9_SEMGREP_VERSION: '1.171.0'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
         with:
@@ -365,21 +381,39 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Run semgrep (advisory)
+      - name: Run + normalize semgrep through the SDK (advisory; L9 AST rules are shadow-mode)
         run: |
-          if [ ! -d .semgrep ]; then
-            echo "[SKIP] no .semgrep rules directory"
+          set +e
+          if [ ! -d l9_ci/rulesets/semgrep/python ]; then
+            echo "[SKIP] no l9_ci/rulesets/semgrep/python rules directory"
             exit 0
           fi
-          pip install --quiet semgrep
-          semgrep --config .semgrep/ --quiet --json --output semgrep.json || true
-          semgrep --config .semgrep/ --quiet || echo "::warning::semgrep findings (advisory)"
-      - name: Upload semgrep telemetry
+          if [ ! -f requirements-ci.txt ]; then
+            echo "[SKIP] requirements-ci.txt not present (SDK runtime deps undeclared)"
+            exit 0
+          fi
+          pip install --quiet -r requirements-ci.txt "semgrep==${L9_SEMGREP_VERSION}"
+          mkdir -p artifacts/raw/semgrep/self-ci .l9/runtime/self-ci
+          PYTHONPATH=. python3 -m l9_ci semgrep run \
+            --language python \
+            --root . \
+            --raw-output artifacts/raw/semgrep/self-ci/report.json \
+            --output .l9/runtime/self-ci/finding-bundle.json \
+            --snapshot-id "${GITHUB_SHA}" \
+            --revision "${GITHUB_SHA}"
+          RUN_EXIT=$?
+          if [ "$RUN_EXIT" -ne 0 ]; then
+            echo "::warning::l9-ci semgrep run exited $RUN_EXIT (advisory / shadow telemetry)"
+          fi
+          exit 0
+      - name: Upload semgrep telemetry (raw report + normalized bundle)
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: semgrep-telemetry
-          path: semgrep.json
+          path: |
+            artifacts/raw/semgrep/self-ci/report.json
+            .l9/runtime/self-ci/finding-bundle.json
           if-no-files-found: ignore
           retention-days: 30
 
