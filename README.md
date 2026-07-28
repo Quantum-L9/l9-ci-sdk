@@ -1,45 +1,43 @@
----
 # l9-ci-sdk
 
 Canonical analysis contracts, provider adapters, normalized findings,
-validation, and deterministic artifact generation for the L9 CI constellation.
+validation, gate evaluation, and deterministic artifact generation for the L9
+CI constellation.
 
-> **CI Core orchestrates. CI SDK observes.** Downstream products diagnose,
-> mutate, learn, prevent, and decide — they are not implemented here.
+> **CI Core orchestrates. CI SDK observes and decides analysis contracts.**
+> Downstream products diagnose, mutate, learn, prevent, and assure; they are
+> not implemented here.
 
-Agent operating law (architecture, phases, layer edges, git hygiene):
-[`AGENTS.md`](AGENTS.md). Deep SSOT: [`docs/architecture/`](docs/architecture/),
-[`docs/adr/`](docs/adr/), [`.l9/`](.l9/).
+Agent operating law: [`AGENTS.md`](AGENTS.md). Architecture and contract SSOT:
+[`docs/architecture/`](docs/architecture/), [`docs/adr/`](docs/adr/), and
+[`.l9/`](.l9/).
 
 ## Install
 
-Python **≥ 3.11**. Two supported paths (keep deps aligned):
+Python **≥ 3.11**.
 
 ```bash
-# Local editable install (console script `l9-ci`)
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -e ".[ci]"
-
-# Or: runtime deps only (matches Core provision-sdk)
-pip install -r requirements.txt
-export PYTHONPATH=.
-python -m l9_ci --help
+l9-ci --help
 ```
 
-- Runtime pins: [`requirements.txt`](requirements.txt) **and**
-  [`pyproject.toml`](pyproject.toml) (must stay in sync).
-- CI toolchain pins: [`requirements-ci.txt`](requirements-ci.txt).
-- Core’s `provision-sdk` still runs this tree from source on `PYTHONPATH`
-  and installs `requirements.txt` into its venv.
-- Publishing notes: [`docs/PUBLISHING.md`](docs/PUBLISHING.md).
+Runtime dependencies are pinned in both
+[`requirements.txt`](requirements.txt) and [`pyproject.toml`](pyproject.toml).
+CI dependencies are pinned in [`requirements-ci.txt`](requirements-ci.txt).
+
+Core provisions an immutable SDK revision and runs it from its own reusable
+analysis workflows. Consumer repositories do not install or invoke the SDK
+directly.
 
 ## CLI map
 
-Entry points: `l9-ci` (after editable/wheel install) or `python -m l9_ci`.
+Entry points: `l9-ci` or `python -m l9_ci`.
 
 | Group | Commands |
 |---|---|
-| `semgrep` | `detect`, `normalize` |
+| `semgrep` | `detect`, `run`, `normalize` |
 | `bundle` | `validate`, `project-agent-payload` |
 | `compatibility` | `check` |
 | `gate` | `evaluate` |
@@ -47,68 +45,120 @@ Entry points: `l9-ci` (after editable/wheel install) or `python -m l9_ci`.
 | `baseline` | `compare-tests`, `scan-packet-envelope`, `compare-scan`, `validate-ledger` |
 | `manifest` | `generate`, `check` |
 
-Core happy path:
+Contract details:
+
+- [`.l9/integration-contract.yaml`](.l9/integration-contract.yaml)
+- [`docs/architecture/cli-contract.md`](docs/architecture/cli-contract.md)
+- [`docs/architecture/core-integration.md`](docs/architecture/core-integration.md)
+- [`docs/architecture/artifact-protocol.md`](docs/architecture/artifact-protocol.md)
+
+## Core-orchestrated analysis
+
+Consumer workflows are thin callers of Core:
 
 ```text
-semgrep JSON → l9-ci semgrep normalize → l9-ci bundle validate
-  → l9-ci bundle project-agent-payload → Core upload / publish
+repository event
+  → l9-ci-core reusable analysis workflow
+  → resolve governance
+  → provision Semgrep
+  → provision immutable l9-ci-sdk
+  → l9-ci semgrep run
+  → l9-ci bundle validate
+  → l9-ci gate evaluate
+  → l9-ci bundle project-agent-payload
+  → Core route / manifest / upload / publish
 ```
 
-Exit codes and contract details: [`docs/architecture/cli-contract.md`](docs/architecture/cli-contract.md),
-[`.l9/integration-contract.yaml`](.l9/integration-contract.yaml).
+Core owns:
 
-## Local gate (fail-closed)
+- workflow orchestration;
+- SDK revision selection;
+- provider runtime provisioning;
+- governance resolution;
+- artifact routing and upload;
+- publication of the SDK-produced gate result.
 
-Mechanical checks SSOT: [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
-Orchestration: [`Makefile`](Makefile).
+SDK owns:
+
+- provider adapters;
+- provider-report normalization;
+- canonical artifacts;
+- validation;
+- policy classification;
+- gate evaluation;
+- downstream projections.
+
+Core must publish the SDK-produced gate result. It must not reconstruct a
+verdict from finding counts, provider exit codes, or projected payloads.
+
+## SDK repository analysis callers
+
+The five `l9-analysis*.yml` workflows in this repository contain only:
+
+- event triggers;
+- concurrency;
+- minimum permissions;
+- execution profile;
+- matrix identifier;
+- language and provider-version inputs;
+- an immutable call to Core's reusable analysis workflow.
+
+They do not install Semgrep, provision the SDK, execute SDK commands, route
+artifacts, upload artifacts, or publish checks.
+
+| Workflow | Profile | Matrix ID |
+|---|---|---|
+| `l9-analysis.yml` | `pr_fast` | `pr-semgrep` |
+| `l9-analysis-merge.yml` | `merge` | `merge-semgrep` |
+| `l9-analysis-nightly.yml` | `nightly` | `nightly-semgrep` |
+| `l9-analysis-release.yml` | `release` | `release-semgrep` |
+| `l9-analysis-supply-chain.yml` | `supply_chain` | `supply-chain-semgrep` |
+
+All five callers must pin the same immutable Core commit containing
+`.github/workflows/analyze-semgrep.yml`.
+
+## Local gate
+
+Mechanical checks are defined in
+[`.pre-commit-config.yaml`](.pre-commit-config.yaml) and orchestrated through
+the [`Makefile`](Makefile).
 
 ```bash
-make bootstrap   # .venv + deps + install pre-commit/pre-push hooks + doctor
-make fmt         # intentional autofix (commit results)
-make check       # hooks → clean tree → mypy → pytest
-make push        # check, then git push
+make bootstrap
+make fmt
+make check
+make push
 ```
 
-Do not bypass with `git push --no-verify`. Prefer `make push`.
-Local zizmor is fail-closed even when dogfood CI is advisory.
-`actionlint` remains CI-only until a pre-commit hook is added.
+Do not bypass repository checks with `git push --no-verify`.
 
-**Dropbox / mypy:** a `.venv` inside Dropbox often breaks mypy’s native
-extensions. Prefer a clone outside Dropbox, or point Make at an off-Dropbox
-interpreter (see `AGENTS.md` §10).
-
-## CI surfaces in this repo
+## CI surfaces
 
 | Surface | Workflows | Role |
 |---|---|---|
-| Core-driven self-analysis | `l9-analysis*.yml` | Pins `l9-ci-core` by immutable SHA; advisory dogfood today |
-| Self-CI (no Core) | `l9-self-ci.yml` | Classifier / rule-modes gate (`engine: ci-debt`) |
-| YAML governance | `l9-yaml-governance.yml` + dogfood | Reusable yamllint / governance JSON / Action pins / actionlint / zizmor |
-| Biome static checks | `l9-biome-scan.yml` + dogfood | JSON/JS/TS formatter+linter ownership (`biome.json`) |
-| Manifest reconcile | `l9-manifest-reconcile.yml` | Keeps root `MANIFEST.md` aligned with tracked truth |
-
-YAML governance configs: root [`lint/`](lint/). Biome config: root
-[`biome.json`](biome.json). Downstream callers pin immutable SDK SHAs.
-Details: [`docs/architecture/yaml-governance.md`](docs/architecture/yaml-governance.md),
-[`docs/architecture/biome.md`](docs/architecture/biome.md),
-[`docs/architecture/repository-manifest.md`](docs/architecture/repository-manifest.md).
+| Core-driven self-analysis | `l9-analysis*.yml` | Thin callers of Core's reusable Semgrep analysis workflow |
+| Self-CI | `l9-self-ci.yml` | SDK repository classifier and rule-mode checks |
+| YAML governance | `l9-yaml-governance.yml` and dogfood workflow | YAML, governance JSON, Action pin, actionlint, and zizmor checks |
+| Biome static checks | `l9-biome-scan.yml` and dogfood workflow | JSON, JavaScript, and TypeScript formatting and linting |
+| Manifest reconciliation | `l9-manifest-reconcile.yml` | Keeps `MANIFEST.md` aligned with tracked repository state |
 
 ## Constellation
 
 | Product | Role |
 |---|---|
 | [`l9-ci-core`](https://github.com/Quantum-L9/l9-ci-core) | Orchestrates |
-| **l9-ci-sdk** (this repo) | Observes / contracts |
+| **l9-ci-sdk** (this repo) | Observes, normalizes, validates, and evaluates |
 | [`l9-ci-debt-resolver`](https://github.com/Quantum-L9/l9-ci-debt-resolver) | Diagnoses |
 | [`PR_Repair`](https://github.com/Quantum-L9/PR_Repair) | Mutates |
 | [`l9-ci-debt-intelligence`](https://github.com/Quantum-L9/l9-ci-debt-intelligence) | Learns |
 | [`l9-ci-debt-lsp`](https://github.com/Quantum-L9/l9-ci-debt-lsp) | Prevents |
-| [`l9-assurance`](https://github.com/Quantum-L9/l9-assurance) | Decides |
+| [`l9-assurance`](https://github.com/Quantum-L9/l9-assurance) | Assures |
 
-## Docs for agents (collision policy)
+## Agent documentation policy
 
-- **`README.md`** — short human entrypoint. Agents must **not** rewrite it
-  from unrelated feature PRs (see `AGENTS.md` §13).
-- **`AGENTS.md`** — agent operating law; update when law/surface changes.
-- **Git hygiene** — WIP commits over stashes; never switch branches over
-  uncommitted work (see `AGENTS.md` §12).
+- `README.md` is the concise human entry point.
+- `AGENTS.md` is the agent operating law.
+- Architecture and protocol changes belong in `docs/architecture/`,
+  `docs/adr/`, and `.l9/`.
+- Use WIP commits instead of stashes and do not switch branches over
+  uncommitted work.

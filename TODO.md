@@ -1,40 +1,71 @@
 # TODO
 
-Follow-ups tracked outside the current change set.
+Follow-ups outside the SDK-to-Core workflow handoff implementation.
 
 ## generated_at provenance
 
 `FindingBundle.generated_at` is a required ISO-8601 timestamp in the artifact
-protocol, but it is **write-only** inside the SDK: nothing in `l9_ci/` branches
-on its value (gate evaluation, coverage, projection, version negotiation, and
-redaction all ignore it), and it is excluded from content identity via
-`FindingBundle.canonical_digest()`.
+protocol, but it is write-only inside the SDK. Gate evaluation, coverage,
+projection, version negotiation, and redaction do not branch on its value. It
+is excluded from content identity through `FindingBundle.canonical_digest()`.
 
-- [ ] Confirm whether `l9-ci-core` (or any downstream consumer) actually reads
-      `generated_at` — e.g. for freshness, artifact retention/expiry, or CI-run
-      correlation. It is not consumed anywhere in this repo.
-- [ ] If a consumer exists: document that contract and have Core pass an
-      explicit `--generated-at` so canonical bundles are byte-reproducible
-      (content is already reproducible regardless, via `canonical_digest()`).
-- [ ] If no consumer exists: decide whether `generated_at` should remain a
-      required field in `l9_ci/schemas/v1/finding-bundle.schema.json` or become
-      optional / provenance-only, and record the decision in an ADR.
+- [ ] Confirm whether `l9-ci-core` or another downstream consumer reads
+      `generated_at` for freshness, retention, expiry, or run correlation.
+- [ ] If a consumer exists, document the contract and have Core pass an
+      explicit `--generated-at`.
+- [ ] If no consumer exists, decide whether the field remains required or
+      becomes optional/provenance-only.
+- [ ] Record the decision in an ADR.
 
-## AUD-006: cross-repo workflow-ownership follow-up (blocked on l9-ci-core)
+## AUD-006: Core workflow handoff
 
-The SDK's `.github/workflows/l9-analysis*.yml` still run `semgrep scan` and the
-Core composite actions within one job. They cannot shrink to a pure `uses:` thin
-caller of Core's reusable workflow because Core's
-`normalize-semgrep-report.yml` re-checks-out `github.sha` and reads the report
-from the tree — it cannot receive a freshly-generated (uncommitted) report.
+Implementation state:
 
-- [ ] **l9-ci-core**: add a reusable analysis workflow that accepts the raw
-      Semgrep report as an uploaded **artifact** (not an in-tree `report-path`),
-      so consumer repos can reduce their caller to: `scan → upload-artifact →
-      uses: Core/analysis.yml`.
-- [ ] **l9-ci-sdk (after Core lands the above)**: convert `l9-analysis*.yml` to
-      thin `uses:` callers and delete the inline orchestration. Requires GitHub
-      Actions verification (cannot be validated locally).
-- The SDK-side portion done now: removed the "copy-in template / template
-      authority" framing and recorded Core ownership in `.l9/ownership.yaml`
-      (`workflow_ownership`).
+- SDK workflow ownership is limited to triggers, permissions, concurrency,
+  profile selection, and the immutable Core workflow call.
+- Inline Semgrep installation and execution were removed from
+  `.github/workflows/l9-analysis*.yml`.
+- Inline SDK provisioning and SDK command invocation were removed.
+- Inline artifact routing, manifest construction, upload, and publication
+  were removed.
+- The SDK/Core boundary and reusable-workflow interface are recorded in
+  `.l9/integration-contract.yaml`.
+
+Integration verification:
+
+- [ ] Confirm the pinned Core commit contains
+      `.github/workflows/analyze-semgrep.yml`.
+- [ ] Confirm Core uses one SDK revision for provider execution,
+      normalization, validation, gate evaluation, and projection.
+- [ ] Run `l9-analysis.yml` through a pull-request event.
+- [ ] Run `l9-analysis-merge.yml` through a push to `main`.
+- [ ] Run `l9-analysis-nightly.yml` through `workflow_dispatch`.
+- [ ] Run `l9-analysis-release.yml` through `workflow_dispatch`.
+- [ ] Run `l9-analysis-supply-chain.yml` through `workflow_dispatch`.
+- [ ] Confirm every run uploads the raw report, finding bundle, gate result,
+      agent-review payload, and artifact manifest.
+- [ ] Confirm Core publishes the SDK-produced gate result without
+      reconstructing the verdict.
+- [ ] Record successful Core workflow-run URLs and close AUD-006.
+
+Known integration gap (recorded at handoff time):
+
+- The only Core commit currently containing
+  `.github/workflows/analyze-semgrep.yml` is
+  `c5924473f4a765e0fbfc8164afff0ae6e57a9ba9`
+  (branch `claude/core-guardrails-self-analysis`); it is not on Core `main`.
+- That revision's `workflow_call` interface differs from
+  `.l9/integration-contract.yaml` v1.1.0 (it requires `sdk-revision` and does
+  not accept `language`, `semgrep-version`, `repository-revision`,
+  `retention-days`, or `publish`), and it contains an unresolved
+  `{{CORE_PUBLISH_SHA}}` placeholder.
+- [ ] Land the contract-conformant `analyze-semgrep.yml` on Core `main`,
+      then re-pin all five callers to that immutable commit.
+
+## Handoff maintenance
+
+- Keep all five SDK callers pinned to the same immutable Core commit.
+- Update the Core pin only when the reusable workflow contract or an
+  orchestrated dependency changes.
+- Re-run the five-profile integration verification after any Core workflow
+  interface change.

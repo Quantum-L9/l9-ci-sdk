@@ -3,12 +3,12 @@ schema: l9.integration-contract/v1
 metadata:
   producer: Quantum-L9/l9-ci-sdk
   consumer: Quantum-L9/l9-ci-core
-  version: 1.0.0
+  version: 1.1.0
   status: authoritative
 boundary:
   SDK_owns:
-    - provider execution contract
-    - provider-native report import
+    - provider execution contracts and provider adapters
+    - provider-native report import and normalization
     - canonical evidence
     - canonical findings
     - policy classification library
@@ -17,29 +17,180 @@ boundary:
     - canonical bundle construction
     - schema validation
     - semantic validation
+    - canonical gate evaluation
     - deterministic serialization
     - agent-review payload projection
     - deterministic repository manifest generation
   Core_owns:
     - GitHub Actions orchestration
+    - reusable analysis workflows
     - workflow permissions
+    - immutable SDK revision resolution
+    - provider runtime provisioning
+    - provider execution invocation
     - provider enablement selection
     - required versus optional provider selection
     - policy file selection
+    - artifact naming
+    - artifact routing
+    - artifact manifest construction
     - artifact upload
     - artifact retention
-    - gate publication
+    - gate-result publication
     - pull-request summaries
     - organization rollout policy
   prohibited:
     - Core parsing provider-native scanner reports
     - Core reconstructing canonical findings
+    - Core reconstructing an SDK gate decision
+    - Core publishing a verdict that differs from the SDK gate result
     - SDK uploading workflow artifacts
     - SDK reading GitHub workflow context directly
     - SDK deciding organization-wide provider promotion
+    - SDK repository workflows provisioning provider runtimes
+    - SDK repository workflows provisioning the SDK
+    - SDK repository workflows invoking SDK commands directly
+    - SDK repository workflows routing or publishing analysis artifacts
+    - >-
+      consumer workflows composing Core composite actions directly when the
+      reusable analysis workflow supports the operation
+workflow_handoff:
+  reusable_workflow:
+    repository: Quantum-L9/l9-ci-core
+    path: .github/workflows/analyze-semgrep.yml
+    reference_policy: immutable_commit
+    description: >-
+      Core-owned end-to-end Semgrep orchestration. Consumer repositories
+      provide triggers and profile selection; Core owns checkout, governance
+      resolution, provider execution, SDK invocation, artifact handling, and
+      publication.
+  caller_owns:
+    - event triggers
+    - concurrency policy
+    - minimum required permissions
+    - immutable Core commit pin
+    - execution profile selection
+    - matrix identifier
+    - repository language selection
+    - Semgrep version selection
+    - governance root selection
+    - artifact retention input
+  caller_must_not:
+    - checkout the repository for analysis
+    - install Semgrep
+    - provision the SDK
+    - execute l9-ci
+    - interpret provider output
+    - construct canonical artifacts
+    - evaluate the gate
+    - route artifacts
+    - upload artifacts
+    - publish checks or summaries
+  inputs:
+    profile:
+      type: string
+      required: true
+      values:
+        - pr_fast
+        - merge
+        - nightly
+        - release
+        - supply_chain
+    matrix-id:
+      type: string
+      required: true
+    language:
+      type: string
+      required: true
+      values:
+        - python
+        - typescript
+    semgrep-version:
+      type: string
+      required: true
+      policy: exact_version
+    governance-root:
+      type: string
+      required: false
+      default: .github/governance
+    repository-revision:
+      type: string
+      required: true
+      description: Immutable revision analyzed and recorded in SDK artifacts.
+    retention-days:
+      type: number
+      required: false
+      default: 14
+    publish:
+      type: boolean
+      required: false
+      default: true
+  outputs:
+    artifact-name:
+      type: string
+      description: Uploaded analysis artifact-set name.
+    bundle-path:
+      type: string
+      description: Routed canonical finding-bundle path.
+    gate-result-path:
+      type: string
+      description: Routed canonical gate-result path.
+    agent-payload-path:
+      type: string
+      description: Routed SDK-owned agent-review projection path.
+    workflow-conclusion:
+      type: string
+      values:
+        - success
+        - failure
+  orchestration:
+    ordered_steps:
+      - checkout immutable caller repository revision
+      - resolve Core governance for the requested profile and provider
+      - provision the exact provider runtime
+      - provision the Core-authorized immutable SDK revision
+      - invoke SDK semgrep run
+      - validate the canonical finding bundle through the SDK
+      - evaluate the canonical gate result through the SDK
+      - project the agent-review payload through the SDK
+      - route raw and canonical artifacts
+      - build the artifact manifest
+      - upload the complete artifact set
+      - publish the SDK-produced gate result and projection
+    invariants:
+      - >-
+        the same SDK revision is used for normalization, validation, gate
+        evaluation, and projection
+      - the analyzed revision equals repository-revision
+      - >-
+        provider findings do not independently determine the workflow
+        conclusion
+      - only the SDK gate result determines the analysis verdict
+      - >-
+        a failing gate result is uploaded and published before the reusable
+        workflow fails
+      - >-
+        provider execution failure is represented through the SDK
+        provider-failure contract
+      - Core never edits SDK-produced canonical artifacts
+      - every uploaded canonical artifact is validated before upload
+      - every published canonical artifact is revalidated before publication
 CLI:
   executable: l9-ci
   commands:
+    semgrep_run:
+      syntax: >-
+        l9-ci semgrep run
+        --language LANGUAGE
+        --root ROOT
+        --raw-output REPORT
+        --output BUNDLE
+        --snapshot-id SNAPSHOT
+        [--policy PATH]
+        [--strict]
+        [--required]
+        [--generated-at TIMESTAMP]
+        [--revision REVISION]
     semgrep_normalize:
       syntax: >-
         l9-ci semgrep normalize
@@ -88,11 +239,11 @@ CLI:
       syntax: >-
         l9-ci gate evaluate
         --bundle BUNDLE
-        [--output GATE_RESULT]
+        --output GATE_RESULT
         [--strict-unresolved | --no-strict-unresolved]
       description: >-
         Evaluate a validated canonical bundle and emit the canonical
-        gate-result artifact. This is the SDK's single gate-decision authority;
+        gate-result artifact. The SDK is the single gate-decision authority.
         Core publishes the emitted result rather than reconstructing a verdict.
 exit_codes:
   success: 0
@@ -108,23 +259,36 @@ exit_codes:
 artifact_layout:
   raw:
     root: artifacts/raw
-    pattern: artifacts/raw/<provider>/<report>
+    report: artifacts/raw/<provider>/<matrix-id>/report.json
   canonical:
     root: artifacts/l9
-    bundle: artifacts/l9/finding-bundle.json
-    agent_payload: artifacts/l9/agent-review-payload.json
-    gate_result: artifacts/l9/gate-result.json
+    bundle: artifacts/l9/<matrix-id>/finding-bundle.json
+    agent_payload: artifacts/l9/<matrix-id>/agent-review-payload.json
+    gate_result: artifacts/l9/<matrix-id>/gate-result.json
+  metadata:
+    root: artifacts/metadata
+    manifest: artifacts/metadata/<matrix-id>/artifact-manifest.json
   publication:
     owner: Core
     SDK_behavior: local_filesystem_only
+  required_artifact_set:
+    - artifacts/raw/<provider>/<matrix-id>/report.json
+    - artifacts/l9/<matrix-id>/finding-bundle.json
+    - artifacts/l9/<matrix-id>/agent-review-payload.json
+    - artifacts/l9/<matrix-id>/gate-result.json
+    - artifacts/metadata/<matrix-id>/artifact-manifest.json
 requiredness:
-  source: Core invocation
+  source: Core governance resolution
   values:
     required:
-      failure_behavior: provider failure prevents successful strict gate evaluation
+      failure_behavior: >-
+        Provider failure prevents a successful strict gate evaluation.
     optional:
-      failure_behavior: failure remains visible but does not independently fail the gate
+      failure_behavior: >-
+        Provider failure remains visible but does not independently fail the
+        gate.
 version_negotiation:
+  authority: Core SDK compatibility registry
   required_fields:
     - schema
     - schema_version
@@ -132,5 +296,6 @@ version_negotiation:
   rules:
     - unsupported artifact major versions are rejected
     - minimum SDK requirements are explicit
-    - exact SDK pinning is recommended for CI
+    - Core provisions one immutable SDK revision for the complete analysis run
+    - consumer callers pin Core by immutable commit
     - consumers must not infer compatibility from artifact shape alone
