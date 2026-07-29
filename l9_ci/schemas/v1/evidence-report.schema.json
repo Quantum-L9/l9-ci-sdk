@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9/evidence-report/v1",
+  "title": "L9 Governed Evidence Report",
+  "type": "object",
+  "required": ["schema", "report_id", "producer", "subject", "operation", "outcome", "evidence_refs", "diagnostics", "limitations", "provenance"],
+  "properties": {
+    "schema": {"const": "l9.evidence-report/v1"},
+    "report_id": {"type": "string", "minLength": 1},
+    "producer": {"type": "object", "required": ["id"], "properties": {"id": {"type": "string", "minLength": 1}}, "additionalProperties": true},
+    "subject": {"type": "object"},
+    "operation": {"type": "object"},
+    "outcome": {"type": "object", "required": ["status"], "properties": {"status": {"enum": ["pass", "fail", "incomplete", "invalid"]}}, "additionalProperties": true},
+    "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "diagnostics": {"type": "array"},
+    "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "provenance": {"type": "object"}
+  },
+  "additionalProperties": false
+}
