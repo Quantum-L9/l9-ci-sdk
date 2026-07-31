@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 323
+Files: 324
 
 ## Contents
 
@@ -41,6 +41,7 @@ Files: 323
 - `.github/workflows/l9-yaml-governance-dogfood.yml`
 - `.github/workflows/l9-yaml-governance.yml`
 - `.github/workflows/publish.yml`
+- `.github/zizmor.yml`
 - `.gitignore`
 - `.l9/architecture.yaml`
 - `.l9/audit-findings.md`
