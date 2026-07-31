@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 320
+Files: 321
 
 ## Contents
 
@@ -249,6 +249,7 @@ Files: 320
 - `tests/architecture/test_l9_wiring.py`
 - `tests/architecture/test_public_api.py`
 - `tests/architecture/test_schema_inventory.py`
+- `tests/aud008/test_aud008_negative_proof.py`
 - `tests/baseline/__init__.py`
 - `tests/baseline/test_baseline_kernel.py`
 - `tests/biome/test_biome_scan.py`
