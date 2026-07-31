@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 316
+Files: 317
 
 ## Contents
 
@@ -312,6 +312,7 @@ Files: 316
 - `tests/providers/semgrep/test_versioning.py`
 - `tests/providers/test_defaults.py`
 - `tests/repository/test_enumerator.py`
+- `tests/repository/test_git_env_isolation.py`
 - `tests/repository/test_manifest.py`
 - `tests/repository/test_snapshot.py`
 - `tests/rulesets/test_packaged_rule_metadata_shape.py`

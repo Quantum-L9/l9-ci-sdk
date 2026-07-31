@@ -1,3 +1,4 @@
+---
 # Thin caller (v2 orchestration handoff). All analysis logic lives in the
 # Core-owned reusable kernel:
 #   Quantum-L9/l9-ci-core/.github/workflows/analyze-semgrep.yml
