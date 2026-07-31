@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 319
+Files: 320
 
 ## Contents
 
@@ -123,6 +123,7 @@ Files: 319
 - `docs/release/checklist.md`
 - `docs/release/evidence-map.yaml`
 - `docs/release/known-limitations.md`
+- `docs/release/v1.0.0-notes.md`
 - `docs/release/v1.0.0-unblocking-plan.md`
 - `docs/source/phase-4.md`
 - `docs/source/sdk-spec.md`
