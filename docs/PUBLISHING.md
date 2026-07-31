@@ -19,8 +19,15 @@ how it is installed today and how it will be installed once published.
 - **Import package:** `l9_ci`
 - **Console entry point:** `l9-ci` → `l9_ci.cli:main`
 - **Build backend:** hatchling
-- **Requires:** Python `>=3.11`; runtime dependency `pyyaml`
-- **Current version (`pyproject.toml`):** `1.0.0`
+- **Requires:** Python `>=3.11`
+- **Runtime deps (exact pins; mirror `requirements.txt`):**
+  `jsonschema==4.26.0`, `referencing==0.37.0`, `PyYAML==6.0.3`
+- **Current version (`pyproject.toml` / `l9_ci.__version__` /
+  `.l9/integration-contract.yaml`):** `1.0.0`
+- **Trusted Publishing prerequisite:** configure a PyPI trusted publisher for
+  project `l9-ci` bound to this repository, workflow `publish.yml`, and the
+  `pypi` environment **before** pushing a `v*` tag. Until configured, the
+  publish job fails closed (it never fakes success).
 
 ## Install paths
 

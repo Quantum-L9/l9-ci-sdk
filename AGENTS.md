@@ -83,10 +83,10 @@ Source of truth: `.l9/roadmap.yaml`.
 | Phase | Status | Meaning for agents |
 |---|---|---|
 | P0 Architecture & contracts | **complete** | Models, schemas, SPI, serializer, validator, arch tests |
-| P1 Semgrep vertical slice | **complete_with_fixture_limitation** | Semgrep JSON import + normalize path exists; replace representative fixture with runtime capture remains |
+| P1 Semgrep vertical slice | **complete** | Semgrep JSON import + normalize; runtime-captured fixture + provenance under `tests/fixtures/semgrep/runtime/` |
 | P2 Integration & release readiness | **complete** | CLI, version negotiation, validation, agent projection, limits |
-| P3 Spec closure | **current** | Gates, snapshots, capabilities, profiles, CLI SSOT, Semgrep version policy, limits, layer enforcement |
-| P4 Semgrep shadow rollout | **blocked** | Needs runtime-captured fixture + verified live Core path |
+| P3 Spec closure | **complete** | Gates, snapshots, capabilities, profiles, CLI SSOT, Semgrep version policy, limits, layer enforcement |
+| P4 Semgrep shadow rollout | **ready_for_promotion** | Fixture + thin Core path exist; shadow observation / supported promotion not claimed (Path B) |
 | P5 Second provider | **deferred** | Gitleaks / SARIF only after Semgrep is `supported` and bundle has no known breaking defects |
 
 **Stale guidance to ignore:** older docs that say “Phase 1: do not add
@@ -94,8 +94,8 @@ Semgrep-specific code / scanner providers.” Semgrep is present and
 `experimental` (see `.l9/release-policy.yaml`). Do **not** start a second
 provider in P3/P4.
 
-Semgrep lifecycle target today: `experimental` → eventual `shadow` (P4) →
-`supported` (GA criteria in roadmap). Do not claim GA or `supported` early.
+Semgrep lifecycle today: `experimental` (Path A). P4 is `ready_for_promotion`
+but shadow observation is not started — do not claim GA or `supported` early.
 
 ---
 

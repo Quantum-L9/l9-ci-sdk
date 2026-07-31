@@ -6,7 +6,7 @@ layer: control_plane
 owner: platform
 status: active
 version: 1.0.0
-updated: 2026-07-27
+updated: 2026-07-31
 /L9_META -->
 # Alignment
 
@@ -34,12 +34,17 @@ updated: 2026-07-27
 
 ## Known alignment gaps
 
-1. `MANIFEST.md` and `VALIDATION_REPORT.json` describe the earlier 158-file
-   bundle and omit later CI/governance scaffolding. No tracked reseal generator
-   exists, so generated evidence cannot be truthfully refreshed in this pass.
-2. Open issue #9 tracks packaging/scaffolding. The live branch intentionally has
-   no `pyproject.toml`; runtime execution is source-based over `PYTHONPATH`.
-3. Open issue #5 tracks immutable SHA pinning for remaining first-party actions.
+1. Path A release evidence is sealed via `docs/release/evidence-map.yaml`.
+   `MANIFEST.md` is the live inventory (reconciled by `l9-ci manifest` /
+   `.github/workflows/l9-manifest-reconcile.yml`). There is no committed
+   `VALIDATION_REPORT.json` at tip — treat historical mentions as absent, not
+   current seal. Remaining reseal gap is Path B admin AUD-008 ruleset proofs
+   (Path A waived; see evidence-map).
+2. Packaging is dual-path and aligned: `pyproject.toml` (local/publish /
+   hatchling wheel + `l9-ci` script) mirrors exact runtime pins in
+   `requirements.txt` (Core `provision-sdk`). Issue #9 is **closed**.
+3. First-party Actions are SHA-pinned; `lint/check_action_pins.py` enforces
+   consistency. Issue #5 is **closed**.
 4. The organization contributing template prefers `@v1` for thin callers, while
    this repository's deployed profile callers deliberately pin Core by commit
    SHA. The repository-specific immutable pin is the live authority.

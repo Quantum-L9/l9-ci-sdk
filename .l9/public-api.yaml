@@ -9,7 +9,9 @@ metadata:
     package's __all__ must equal exactly the symbols listed here plus any entry
     in compatibility_allowlist. Adding or removing a public symbol is a
     versioned compatibility decision (see .l9/compatibility.yaml).
-# The 11 public packages (must match .l9/architecture.yaml public_surface).
+# Public packages must match .l9/architecture.yaml public_surface.
+# l9_ci.rulesets is listed with an empty symbol set below (package-data
+# namespace); see test_rulesets_public_surface for submodule checks.
 packages:
   l9_ci.contracts:
     - Confidence

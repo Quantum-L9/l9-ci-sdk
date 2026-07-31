@@ -1,0 +1,147 @@
+# l9-ci-sdk Path A evidence map (W1)
+# Authority: docs/release/v1.0.0-unblocking-plan.md §3
+# Tip audited: 64bd142c6728b7180f3ff20bbc0f12728636b9af (origin/main 2026-07-31)
+# Do not invent URLs. Waivers are explicit dated Path A allow-lists.
+schema: l9.release-evidence-map/v1
+audit_base_sha: 64bd142c6728b7180f3ff20bbc0f12728636b9af
+created_at: "2026-07-31"
+updated_at: "2026-07-31"
+notes:
+  - "Path A contract freeze — Semgrep remains experimental."
+  - "AUD_008_* admin proofs unavailable via API; Path A dated waivers applied (never fabricated URLs)."
+  - "Provenance.yaml capture SHAs named inside the fixture are not git objects here; fixture commit is 0c48774… (#17)."
+
+entries:
+  SDK_S1_SHA:
+    value: "0c487747b0fcd172edaefe9e843dac818de8fc12"
+    status: resolved
+    reason: >-
+      PR #17 merge on main — lands public API manifest tests, CLI/version policy,
+      Semgrep 1.170.0 enforcement, gate matrix, architecture enforcement (S1 contract).
+    resolved_at: "2026-07-31"
+    owner: agent
+
+  SDK_CODE_SHA:
+    value: "0c487747b0fcd172edaefe9e843dac818de8fc12"
+    status: resolved
+    reason: >-
+      Same #17 commit introduces tests/fixtures/semgrep/runtime/* and
+      tests/providers/semgrep/test_runtime_fixture.py (QA-010).
+    resolved_at: "2026-07-31"
+    owner: agent
+
+  SDK_WORKFLOW_SHA:
+    value: "4c7fbb785dac5b65cc74263c4b28afa6fa95959b"
+    status: resolved
+    reason: >-
+      Merge PR #33 (feat/thin-analysis-callers). Thin Core analyze-semgrep callers
+      coexist with self-validation CI (.github/workflows/ci.yml from #17).
+    resolved_at: "2026-07-31"
+    owner: agent
+
+  CORE_ANALYZE_SHA:
+    value: "c3f04e1268364e3623fc57f963937e2a0665e0e0"
+    status: resolved
+    reason: >-
+      Live identical pin on all five analysis callers at audit tip
+      (l9-analysis.yml, -merge, -nightly, -supply-chain, -release).
+    resolved_at: "2026-07-31"
+    owner: agent
+
+  CORE_ACTIONS_SHA:
+    value: null
+    status: waived
+    reason: >-
+      Composite Core action pins superseded by thin reusable
+      analyze-semgrep.yml caller (AUD-006 / PR #33). No separate CORE_ACTIONS
+      pin remains in SDK callers at tip.
+    resolved_at: "2026-07-31"
+    owner: path-a-operator
+    approver: path-a-operator
+
+  CORE_PUBLISH_SHA:
+    value: null
+    status: waived
+    reason: >-
+      Gate/publish path is invoked inside Core reusable analyze/publish jobs
+      from the thin caller. No distinct Core publish SHA is pinned in SDK
+      workflow files at tip.
+    resolved_at: "2026-07-31"
+    owner: path-a-operator
+    approver: path-a-operator
+
+  CORE_GATE_PUBLICATION_RUN_URL:
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783"
+    status: resolved
+    reason: >-
+      Successful L9 Analysis (merge) on audit tip 64bd142… including
+      job "Publish analysis (Core) / publish".
+    resolved_at: "2026-07-31"
+    owner: agent
+
+  CORE_GATE_CHECK_URL:
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783/job/91188145152"
+    status: resolved
+    reason: >-
+      Publish analysis (Core) / publish job on tip merge analysis run 30640182783.
+    resolved_at: "2026-07-31"
+    owner: agent
+
+  AUD_008_ISSUE_URL:
+    value: null
+    status: waived
+    reason: >-
+      Path A waiver: gh issue search returned no AUD-008 tracking issue.
+      Required-check administrator evidence deferred to Path B / org admin.
+      Do not invent an issue URL.
+    resolved_at: "2026-07-31"
+    owner: path-a-operator
+    approver: path-a-operator
+
+  AUD_008_RULESET_URL:
+    value: null
+    status: waived
+    reason: >-
+      Path A waiver: no org/repo ruleset found that names SDK self-validation
+      as a required check on main (branch protection unprotected; observed
+      rulesets are Copilot review or advisory). Admin must attach ruleset for
+      Path B; Path A proceeds without fabricated URL.
+    resolved_at: "2026-07-31"
+    owner: path-a-operator
+    approver: path-a-operator
+
+  AUD_008_NEGATIVE_PROOF_URL:
+    value: null
+    status: waived
+    reason: >-
+      Path A waiver: no intentionally-failing blocked-merge PR identified via API.
+      Negative ruleset proof deferred to admin / Path B.
+    resolved_at: "2026-07-31"
+    owner: path-a-operator
+    approver: path-a-operator
+
+  AUD_008_POSITIVE_PROOF_URL:
+    value: null
+    status: waived
+    reason: >-
+      Path A waiver: tip merges exist but are not AUD-008 positive proof without
+      a required-check ruleset. Positive proof deferred to admin / Path B.
+    resolved_at: "2026-07-31"
+    owner: path-a-operator
+    approver: path-a-operator
+
+  SDK_VALIDATION_ARTIFACT_URL:
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061"
+    status: resolved
+    reason: >-
+      Tip SDK self-validation run 30640182197 (headSha 64bd142…) uploaded
+      artifact validation-evidence id 8797085061.
+    resolved_at: "2026-07-31"
+    owner: agent
+    related_run_url: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197"
+
+summary:
+  resolved: 7
+  waived: 6
+  blocked_admin: 0
+  ready_to_render_seal_files: true
