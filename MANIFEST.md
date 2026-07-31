@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 317
+Files: 319
 
 ## Contents
 
@@ -121,7 +121,9 @@ Files: 317
 - `docs/migration/legacy-normalizer-to-sdk.md`
 - `docs/release/blocker-closure.md`
 - `docs/release/checklist.md`
+- `docs/release/evidence-map.yaml`
 - `docs/release/known-limitations.md`
+- `docs/release/v1.0.0-unblocking-plan.md`
 - `docs/source/phase-4.md`
 - `docs/source/sdk-spec.md`
 - `docs/templates/l9-biome-scan-caller.yml`

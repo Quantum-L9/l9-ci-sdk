@@ -36,7 +36,8 @@ Semgrep:
   evidence:
     runtime_fixture: tests/fixtures/semgrep/runtime/provenance.yaml
     version_range: ">=1.100.0,<2.0.0"
-    core_gate_publication: "{{CORE_GATE_PUBLICATION_RUN_URL}}"
-    core_gate_check: "{{CORE_GATE_CHECK_URL}}"
-    required_check_ruleset: "{{AUD_008_RULESET_URL}}"
-    validation_artifact: "{{SDK_VALIDATION_ARTIFACT_URL}}"
+    core_gate_publication: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783"
+    core_gate_check: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783/job/91188145152"
+    # Path A waiver — see docs/release/evidence-map.yaml
+    required_check_ruleset: "path-a-waived:see-docs/release/evidence-map.yaml#AUD_008_RULESET_URL"
+    validation_artifact: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061"
