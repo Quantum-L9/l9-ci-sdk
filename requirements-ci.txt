@@ -33,3 +33,10 @@ types-jsonschema==4.26.0.20260518
 
 # Test runner.
 pytest==9.1.1
+
+# jsonschema date-time format validation: jsonschema treats "format" as an
+# annotation unless a FormatChecker is supplied AND the checker for the format
+# is registered. The Draft 2020-12 "date-time" checker is only registered when
+# rfc3339-validator is importable; without it the governance schema tests that
+# assert malformed timestamps are rejected would silently pass on any string.
+rfc3339-validator==0.1.4

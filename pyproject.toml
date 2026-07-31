@@ -33,6 +33,10 @@ ci = [
     "types-jsonschema==4.26.0.20260518",
     "pytest==9.1.1",
     "pytest-cov==7.0.0",
+    # Registers the Draft 2020-12 "date-time" format checker for jsonschema's
+    # FormatChecker; without it the governance schema tests cannot assert that
+    # malformed timestamps are rejected (format is annotation-only otherwise).
+    "rfc3339-validator==0.1.4",
 ]
 
 [project.scripts]
