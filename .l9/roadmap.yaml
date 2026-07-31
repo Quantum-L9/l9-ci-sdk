@@ -84,8 +84,7 @@ phases:
   evidence:
     core_gate_publication: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783"
     core_gate_check: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783/job/91188145152"
-    # Path A waiver — no org required-check ruleset URL found; see docs/release/evidence-map.yaml
-    required_check_ruleset: "path-a-waived:see-docs/release/evidence-map.yaml#AUD_008_RULESET_URL"
+    required_check_ruleset: "https://github.com/Quantum-L9/l9-ci-sdk/rules/20147356"
 GA:
   criteria:
   - one supported provider
