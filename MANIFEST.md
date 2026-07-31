@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 320
+Files: 323
 
 ## Contents
 
@@ -119,6 +119,8 @@ Files: 320
 - `docs/examples/core-semgrep-integration.sh`
 - `docs/examples/core-semgrep-workflow-fragment.yml`
 - `docs/migration/legacy-normalizer-to-sdk.md`
+- `docs/release/aud008-receipt.json`
+- `docs/release/aud008-ruleset.json`
 - `docs/release/blocker-closure.md`
 - `docs/release/checklist.md`
 - `docs/release/evidence-map.yaml`
@@ -243,6 +245,7 @@ Files: 320
 - `requirements-ci.txt`
 - `requirements.txt`
 - `ruff.toml`
+- `scripts/aud008_install_required_check.sh`
 - `scripts/generate_validation_report.py`
 - `tests/__init__.py`
 - `tests/architecture/test_dependency_boundaries.py`
