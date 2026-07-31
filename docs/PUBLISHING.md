@@ -11,7 +11,7 @@ status: active
 
 `l9-ci` is consumed by `l9-ci-core`'s reusable workflows as a **runtime CLI**
 (installed by a command), not as a checked-in dependency. This document describes
-how it is installed today and how it will be installed once published.
+how it is installed and how releases are published.
 
 ## Package facts
 
@@ -24,17 +24,21 @@ how it is installed today and how it will be installed once published.
   `jsonschema==4.26.0`, `referencing==0.37.0`, `PyYAML==6.0.3`
 - **Current version (`pyproject.toml` / `l9_ci.__version__` /
   `.l9/integration-contract.yaml`):** `1.0.0`
-- **Trusted Publishing prerequisite:** configure a PyPI trusted publisher for
-  project `l9-ci` bound to this repository, workflow `publish.yml`, and the
-  `pypi` environment **before** pushing a `v*` tag. Until configured, the
-  publish job fails closed (it never fakes success).
+- **PyPI:** https://pypi.org/project/l9-ci/ (`1.0.0` published 2026-07-31)
 
 ## Install paths
 
-### Short-term (today): install from the SDK repo by pinned ref
+### Index install (preferred for humans / local smoke)
 
-Until the package is published to an index, install directly from GitHub, pinned
-to an immutable commit (never a floating branch):
+```bash
+python -m pip install "l9-ci==1.0.0"
+l9-ci providers list
+```
+
+### Pinned Git ref (Core / CI default today)
+
+Core still commonly installs from a pinned immutable SHA (never a floating
+branch). That remains valid alongside the index:
 
 **Public repo (no token):**
 ```bash
@@ -54,15 +58,14 @@ git config --global --unset-all url."https://x-access-token:${SDK_TOKEN}@github.
 ```
 
 `l9-ci-core`'s reusable workflows default `l9-ci-install-command` to the public
-form above and support the private form automatically when `SDK_TOKEN` is
-provided. See `l9-ci-core` docs for caller examples.
+Git form and support the private form when `SDK_TOKEN` is provided.
 
-### Long-term (target): `pip install l9-ci`
+### Editable / developer install
 
-Once the package is published (below), callers drop the ref pin and use the
-plain default:
 ```bash
-python -m pip install l9-ci
+pip install -e ".[ci]"
+# or Core-style:
+pip install -r requirements.txt
 ```
 
 ## Releasing (publish workflow)
@@ -73,25 +76,43 @@ python -m pip install l9-ci
   No publish. Safe to run anytime to validate packaging.
 - **Push a `v*` tag** — builds, checks, verifies the tag matches the
   `pyproject.toml` version, then publishes to PyPI via **Trusted Publishing**
-  (OIDC; no API token stored). The publish job runs in the `pypi` environment
-  so the org can require an approval before release.
+  (OIDC; no API token in the workflow). The publish job runs in the `pypi`
+  environment so the org can require an approval before release.
 
-### One-time prerequisites (must be configured before a real release)
+### One-time prerequisites
 
-| Item | Status | Action |
+| Item | Status | Notes |
 |------|--------|--------|
-| PyPI project `l9-ci` provisioned | **Unknown** | Confirm the project exists / who owns it |
-| PyPI Trusted Publisher for this repo + `publish.yml` + `pypi` environment | **Unknown / not configured** | Configure at pypi.org before tagging a release |
-| GitHub `pypi` environment (optional approval gate) | not created here | Create in repo settings if approval is desired |
+| PyPI project `l9-ci` | **Done** | https://pypi.org/project/l9-ci/ |
+| `v1.0.0` on PyPI | **Done** | Uploaded 2026-07-31 via API token (`twine`) after OIDC failed closed |
+| GitHub `pypi` environment | **Present** | Used by `publish.yml` |
+| PyPI Trusted Publisher (OIDC) | **Still broken** | Tag publish job returns `invalid-publisher` — fix before relying on tag→PyPI automation |
 
-Until Trusted Publishing is configured, the publish job **fails closed** on a
-tag push — it never fakes a successful publish. `workflow_dispatch` remains safe
-(build + check only).
+### Trusted Publisher claims (must match exactly)
+
+Failed job claims from `v1.0.0` (configure these on the PyPI project owned by
+the account that holds `l9-ci`):
+
+| Field | Value |
+|-------|--------|
+| Owner | `Quantum-L9` |
+| Repository | `l9-ci-sdk` |
+| Workflow filename | `publish.yml` |
+| Environment name | `pypi` |
+
+OIDC `sub` claim: `repo:Quantum-L9/l9-ci-sdk:environment:pypi`
+
+Until that publisher matches, `.github/workflows/publish.yml` **fails closed**
+on tag push (correct). Emergency / bootstrap uploads may use a PyPI API token
+out-of-band (operator-held; not stored in this repo). Do not add a long-lived
+PyPI token to GitHub Actions secrets while Trusted Publishing is the intended
+path.
 
 ### Version / tag note
 
-The only existing tag, `v0.1.0`, points to a commit that predates the merged
-review remediations, so it is **not** a usable install ref for current `main`.
-`pyproject.toml` is at `1.0.0`. The first real release should be tagged
-**`v1.0.0`** (matching the pyproject version); the publish workflow enforces that
-tag↔version match.
+- Annotated tag **`v1.0.0`** released; GitHub Release:
+  https://github.com/Quantum-L9/l9-ci-sdk/releases/tag/v1.0.0
+- Older tag `v0.1.0` predates current remediations — do not use as an install
+  pin for current `main`.
+- Future releases: bump version triad → tag `vX.Y.Z` matching
+  `pyproject.toml` → fix Trusted Publisher → let `publish.yml` upload.

@@ -13,9 +13,12 @@ Agent operating law (architecture, phases, layer edges, git hygiene):
 
 ## Install
 
-Python **≥ 3.11**. Two supported paths (keep deps aligned):
+Python **≥ 3.11**.
 
 ```bash
+# From PyPI (released package)
+pip install "l9-ci==1.0.0"
+
 # Local editable install (console script `l9-ci`)
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[ci]"
@@ -26,6 +29,7 @@ export PYTHONPATH=.
 python -m l9_ci --help
 ```
 
+- PyPI: https://pypi.org/project/l9-ci/
 - Runtime pins: [`requirements.txt`](requirements.txt) **and**
   [`pyproject.toml`](pyproject.toml) (must stay in sync).
 - CI toolchain pins: [`requirements-ci.txt`](requirements-ci.txt).
