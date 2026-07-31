@@ -1,7 +1,7 @@
 {
   "AUD_008_ISSUE_URL": "https://github.com/Quantum-L9/l9-ci-sdk/issues/44",
   "AUD_008_NEGATIVE_PROOF_URL": "https://github.com/Quantum-L9/l9-ci-sdk/pull/45",
-  "AUD_008_POSITIVE_PROOF_URL": null,
+  "AUD_008_POSITIVE_PROOF_URL": "https://github.com/Quantum-L9/l9-ci-sdk/pull/46",
   "AUD_008_RULESET_URL": "https://github.com/Quantum-L9/l9-ci-sdk/rules/20147356",
   "created_at": "2026-07-31T19:47:35Z",
   "issue_number": 44,
@@ -12,5 +12,5 @@
   "ruleset_id": 20147356,
   "ruleset_name": "SDK self-validation required on main",
   "schema": "l9.aud008-receipt/v1",
-  "updated_at": "2026-07-31T20:00:56Z"
+  "updated_at": "2026-07-31T20:01:54Z"
 }
