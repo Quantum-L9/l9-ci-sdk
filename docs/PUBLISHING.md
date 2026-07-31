@@ -75,38 +75,43 @@ pip install -r requirements.txt
 - **`workflow_dispatch`** — builds the sdist/wheel and runs `twine check` only.
   No publish. Safe to run anytime to validate packaging.
 - **Push a `v*` tag** — builds, checks, verifies the tag matches the
-  `pyproject.toml` version, then publishes to PyPI via **Trusted Publishing**
-  (OIDC; no API token in the workflow). The publish job runs in the `pypi`
-  environment so the org can require an approval before release.
+  `pyproject.toml` version, then publishes to PyPI with username `__token__`
+  and environment secret `PYPI_API_TOKEN` on the GitHub **`pypi`**
+  environment.
 
-### One-time prerequisites
+### Auth model (current)
 
-| Item | Status | Notes |
-|------|--------|--------|
-| PyPI project `l9-ci` | **Done** | https://pypi.org/project/l9-ci/ |
-| `v1.0.0` on PyPI | **Done** | Uploaded 2026-07-31 via API token (`twine`) after OIDC failed closed |
-| GitHub `pypi` environment | **Present** | Used by `publish.yml` |
-| PyPI Trusted Publisher (OIDC) | **Still broken** | Tag publish job returns `invalid-publisher` — fix before relying on tag→PyPI automation |
+| Item | Value |
+|------|--------|
+| Owner / repo | `Quantum-L9` / `l9-ci-sdk` |
+| Workflow | `publish.yml` |
+| GitHub environment | `pypi` |
+| Auth | PyPI API token (`user=__token__`) |
+| GitHub secret | environment secret `pypi` / `PYPI_API_TOKEN` |
+| Operator SSOT | AWS Secrets Manager `openclaw-igorbot/pypi` (`us-east-1`, JSON `token`) |
 
-### Trusted Publisher claims (must match exactly)
+`v1.0.0` was first uploaded out-of-band with that AWS token after Trusted
+Publisher OIDC returned `invalid-publisher`. The workflow now uses the same
+token path via the GitHub environment secret so future `v*` tags publish
+without OIDC.
 
-Failed job claims from `v1.0.0` (configure these on the PyPI project owned by
-the account that holds `l9-ci`):
+### Rotate / re-sync the token
 
-| Field | Value |
-|-------|--------|
-| Owner | `Quantum-L9` |
-| Repository | `l9-ci-sdk` |
-| Workflow filename | `publish.yml` |
-| Environment name | `pypi` |
+```bash
+# After rotating on pypi.org, update AWS then mirror into GitHub:
+aws secretsmanager put-secret-value --region us-east-1 \
+  --secret-id openclaw-igorbot/pypi \
+  --secret-string '{"token":"pypi-…","username":"__token__"}'
 
-OIDC `sub` claim: `repo:Quantum-L9/l9-ci-sdk:environment:pypi`
+aws secretsmanager get-secret-value --region us-east-1 \
+  --secret-id openclaw-igorbot/pypi --query SecretString --output text \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"], end="")' \
+  | gh secret set PYPI_API_TOKEN -R Quantum-L9/l9-ci-sdk --env pypi
+```
 
-Until that publisher matches, `.github/workflows/publish.yml` **fails closed**
-on tag push (correct). Emergency / bootstrap uploads may use a PyPI API token
-out-of-band (operator-held; not stored in this repo). Do not add a long-lived
-PyPI token to GitHub Actions secrets while Trusted Publishing is the intended
-path.
+Trusted Publishing (OIDC) remains optional future hardening; do not remove the
+API-token path until a publisher with matching claims is verified green on a
+tag dry-run.
 
 ### Version / tag note
 
@@ -115,4 +120,4 @@ path.
 - Older tag `v0.1.0` predates current remediations — do not use as an install
   pin for current `main`.
 - Future releases: bump version triad → tag `vX.Y.Z` matching
-  `pyproject.toml` → fix Trusted Publisher → let `publish.yml` upload.
+  `pyproject.toml` → `publish.yml` uploads with `PYPI_API_TOKEN`.

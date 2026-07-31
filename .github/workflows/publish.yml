@@ -3,7 +3,7 @@
 # l9_schema: 1
 # origin: l9-ci-sdk
 # layer: [ci, release, publish]
-# tags: [L9_CI, release, pypi, trusted-publishing]
+# tags: [L9_CI, release, pypi, api-token]
 # owner: platform
 # status: active
 # --- /L9_META ---
@@ -13,13 +13,12 @@
 # - `workflow_dispatch` builds the sdist/wheel and runs `twine check` ONLY
 #   (no publish) — safe to run at any time to validate the package.
 # - Pushing a `v*` tag builds, checks, verifies the tag matches the
-#   pyproject version, then publishes to PyPI via Trusted Publishing (OIDC).
+#   pyproject version, then publishes to PyPI with a project-scoped API
+#   token stored as environment secret `PYPI_API_TOKEN` on the GitHub
+#   `pypi` environment (synced from AWS `openclaw-igorbot/pypi`).
 #
-# Trusted Publishing prerequisite (one-time, outside this workflow): configure
-# a PyPI "trusted publisher" for project `l9-ci` bound to this repository,
-# workflow file (`publish.yml`), and the `pypi` environment. Until that is
-# configured, the publish job fails closed on a real tag push (it never fakes a
-# successful publish). See docs/PUBLISHING.md.
+# Scope: Owner Quantum-L9 / repo l9-ci-sdk / workflow publish.yml /
+# environment pypi. See docs/PUBLISHING.md.
 name: Publish l9-ci SDK
 
 on:
@@ -90,17 +89,27 @@ jobs:
       name: pypi
       url: https://pypi.org/project/l9-ci/
     permissions:
-      # OIDC token for PyPI Trusted Publishing — no API token is stored anywhere.
-      id-token: write
       # actions/download-artifact fetches the build artifact from the current
       # run via the Actions API, which requires actions: read when the job
       # overrides the default (restricted) permission set.
       actions: read
+      contents: read
     steps:
       - name: Download distribution artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           name: l9-ci-dist
           path: dist
-      - name: Publish to PyPI (Trusted Publishing)
+      - name: Require PyPI API token
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -z "${PYPI_API_TOKEN}" ]; then
+            echo "::error::Missing environment secret PYPI_API_TOKEN on GitHub environment 'pypi' (sync from AWS openclaw-igorbot/pypi)."
+            exit 1
+          fi
+      - name: Publish to PyPI (API token)
         uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247  # v1.14.1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
