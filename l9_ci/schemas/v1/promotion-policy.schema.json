@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9/promotion-policy/v1",
+  "title": "L9 Promotion Policy",
+  "type": "object",
+  "required": ["schema", "transitions", "requirements"],
+  "properties": {
+    "schema": { "const": "l9.promotion-policy/v1" },
+    "transitions": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 },
+        "uniqueItems": true
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "required": [
+        "minimum_observation_runs",
+        "minimum_observation_days",
+        "maximum_contract_failures",
+        "maximum_artifact_validation_failures",
+        "approval_required"
+      ],
+      "properties": {
+        "minimum_observation_runs": { "type": "integer", "minimum": 0 },
+        "minimum_observation_days": { "type": "integer", "minimum": 0 },
+        "maximum_contract_failures": { "type": "integer", "minimum": 0 },
+        "maximum_artifact_validation_failures": { "type": "integer", "minimum": 0 },
+        "approval_required": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

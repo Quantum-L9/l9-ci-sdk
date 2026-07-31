@@ -1,9 +1,30 @@
 """Git-backed repository inspection."""
 
 from __future__ import annotations
+
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+# Git hooks (and some CI wrappers) export GIT_DIR / GIT_WORK_TREE. Those override
+# `git -C <root>` and make inspection of an unrelated directory report the hook's
+# repository instead. Strip them so `-C` is authoritative.
+_GIT_ENV_OVERRIDE_KEYS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_COMMON_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+)
+
+
+def _git_subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    for key in _GIT_ENV_OVERRIDE_KEYS:
+        env.pop(key, None)
+    return env
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +81,7 @@ def is_git_repository(root: Path) -> bool:
         check=False,
         capture_output=True,
         text=True,
+        env=_git_subprocess_env(),
     )
     return completed.returncode == 0 and completed.stdout.strip() == "true"
 
@@ -70,6 +92,7 @@ def _run_git(root: Path, *arguments: str) -> str:
         check=False,
         capture_output=True,
         text=True,
+        env=_git_subprocess_env(),
     )
     if completed.returncode != 0:
         message = completed.stderr.strip() or completed.stdout.strip()
