@@ -1,14 +1,15 @@
 # l9-ci-sdk Path A evidence map (W1)
 # Authority: docs/release/v1.0.0-unblocking-plan.md §3
 # Tip audited: 64bd142c6728b7180f3ff20bbc0f12728636b9af (origin/main 2026-07-31)
-# Do not invent URLs. Waivers are explicit dated Path A allow-lists.
+# AUD-008 proofs sealed from docs/release/aud008-receipt.json (PR #46 merge bd21a73).
+# Do not invent URLs. Remaining waivers are explicit dated Path A allow-lists (Core pins only).
 schema: l9.release-evidence-map/v1
 audit_base_sha: 64bd142c6728b7180f3ff20bbc0f12728636b9af
 created_at: "2026-07-31"
 updated_at: "2026-07-31"
 notes:
   - "Path A contract freeze — Semgrep remains experimental."
-  - "AUD_008_* admin proofs unavailable via API; Path A dated waivers applied (never fabricated URLs)."
+  - "AUD_008_* resolved from aud008-receipt.json (issue #44, ruleset 20147356, PRs #45/#46)."
   - "Provenance.yaml capture SHAs named inside the fixture are not git objects here; fixture commit is 0c48774… (#17)."
 
 entries:
@@ -88,47 +89,42 @@ entries:
     owner: agent
 
   AUD_008_ISSUE_URL:
-    value: null
-    status: waived
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/issues/44"
+    status: resolved
     reason: >-
-      Path A waiver: gh issue search returned no AUD-008 tracking issue.
-      Required-check administrator evidence deferred to Path B / org admin.
-      Do not invent an issue URL.
+      AUD-008 tracking issue created via API (gh); receipt
+      docs/release/aud008-receipt.json.
     resolved_at: "2026-07-31"
-    owner: path-a-operator
-    approver: path-a-operator
+    owner: agent
 
   AUD_008_RULESET_URL:
-    value: null
-    status: waived
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/rules/20147356"
+    status: resolved
     reason: >-
-      Path A waiver: no org/repo ruleset found that names SDK self-validation
-      as a required check on main (branch protection unprotected; observed
-      rulesets are Copilot review or advisory). Admin must attach ruleset for
-      Path B; Path A proceeds without fabricated URL.
+      Active branch ruleset "SDK self-validation required on main" (id 20147356)
+      requiring check "Lint, type-check, test, coverage" (integration_id 15368)
+      on refs/heads/main. Installed via scripts/aud008_install_required_check.sh.
     resolved_at: "2026-07-31"
-    owner: path-a-operator
-    approver: path-a-operator
+    owner: agent
 
   AUD_008_NEGATIVE_PROOF_URL:
-    value: null
-    status: waived
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/pull/45"
+    status: resolved
     reason: >-
-      Path A waiver: no intentionally-failing blocked-merge PR identified via API.
-      Negative ruleset proof deferred to admin / Path B.
+      PR #45 (chore/aud008-negative-proof) merge blocked by Active ruleset
+      ("base branch policy prohibits the merge"); closed intentionally, never merged.
     resolved_at: "2026-07-31"
-    owner: path-a-operator
-    approver: path-a-operator
+    owner: agent
 
   AUD_008_POSITIVE_PROOF_URL:
-    value: null
-    status: waived
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/pull/46"
+    status: resolved
     reason: >-
-      Path A waiver: tip merges exist but are not AUD-008 positive proof without
-      a required-check ruleset. Positive proof deferred to admin / Path B.
+      PR #46 (chore/aud008-required-check) merged to main under Active ruleset
+      with required check "Lint, type-check, test, coverage" green
+      (merge commit bd21a73).
     resolved_at: "2026-07-31"
-    owner: path-a-operator
-    approver: path-a-operator
+    owner: agent
 
   SDK_VALIDATION_ARTIFACT_URL:
     value: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061"
@@ -141,7 +137,7 @@ entries:
     related_run_url: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197"
 
 summary:
-  resolved: 7
-  waived: 6
+  resolved: 11
+  waived: 2
   blocked_admin: 0
   ready_to_render_seal_files: true

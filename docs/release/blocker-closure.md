@@ -12,10 +12,10 @@
 
 ## Administrator evidence
 
-- Tracking issue: Path A waived (no AUD-008 issue found via API; deferred to Path B / org admin)
-- Active required-check ruleset: Path A waived (no self-validation required-check ruleset found; deferred to Path B)
-- Intentionally failing PR blocked from merge: Path A waived (deferred to Path B)
-- Restored PR accepted after required check passed: Path A waived (deferred to Path B); tip self-validation success: https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197
+- Tracking issue: https://github.com/Quantum-L9/l9-ci-sdk/issues/44
+- Active required-check ruleset: https://github.com/Quantum-L9/l9-ci-sdk/rules/20147356
+- Intentionally failing PR blocked from merge: https://github.com/Quantum-L9/l9-ci-sdk/pull/45
+- Restored PR accepted after required check passed: https://github.com/Quantum-L9/l9-ci-sdk/pull/46
 
 ## Cross-repository gate evidence
 
@@ -27,17 +27,13 @@
 
 - The routed `gate-result.json` matches a fresh SDK reevaluation byte-for-byte.
 - Core publication conclusion is derived from canonical gate status plus governance mode.
-- The SDK self-validation check runs on `main` (tip green); org **required-check ruleset** proof is Path A waived — must be attached before claiming AUD-008 admin closure for Path B.
+- The SDK self-validation check **`Lint, type-check, test, coverage`** is required on `main` via Active ruleset https://github.com/Quantum-L9/l9-ci-sdk/rules/20147356.
 - The runtime Semgrep fixture test executes without skip.
-- No evidence URL in this document is a placeholder. Waived keys cite `docs/release/evidence-map.yaml` explicitly instead of fabricated URLs.
+- No evidence URL in this document is a placeholder. Remaining waived keys cite `docs/release/evidence-map.yaml` explicitly instead of fabricated URLs.
 
-## Path A waivers
+## Path A waivers (remaining)
 
 | Key | Approver | Date | Reason |
 |---|---|---|---|
 | CORE_ACTIONS_SHA | path-a-operator | 2026-07-31 | Thin caller superseded composite action pins |
 | CORE_PUBLISH_SHA | path-a-operator | 2026-07-31 | Publish inside Core reusable jobs; not pinned in SDK |
-| AUD_008_ISSUE_URL | path-a-operator | 2026-07-31 | No tracking issue found; never invent URL |
-| AUD_008_RULESET_URL | path-a-operator | 2026-07-31 | No required self-validation ruleset found |
-| AUD_008_NEGATIVE_PROOF_URL | path-a-operator | 2026-07-31 | No blocked-merge proof located |
-| AUD_008_POSITIVE_PROOF_URL | path-a-operator | 2026-07-31 | Tip CI ≠ ruleset-bound positive proof |

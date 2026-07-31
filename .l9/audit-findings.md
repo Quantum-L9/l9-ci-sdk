@@ -5,7 +5,7 @@ Runtime SDK code revision: `0c487747b0fcd172edaefe9e843dac818de8fc12`
 SDK workflow/evidence revision: `4c7fbb785dac5b65cc74263c4b28afa6fa95959b`  
 Core reusable analysis revision: `c3f04e1268364e3623fc57f963937e2a0665e0e0`
 
-Evidence map SSOT: `docs/release/evidence-map.yaml` (Path A seal 2026-07-31).
+Evidence map SSOT: `docs/release/evidence-map.yaml` (AUD-008 sealed 2026-07-31 via receipt).
 
 ## Findings
 
@@ -24,7 +24,7 @@ Evidence map SSOT: `docs/release/evidence-map.yaml` (Path A seal 2026-07-31).
 - [x] **AUD-007** `BLOCKER` - Validation evidence and repository inventory must be bound to the immutable commit being released.
   - Evidence: SDK S3 (`4c7fbb785dac5b65cc74263c4b28afa6fa95959b`) and validation artifact https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061
 - [x] **AUD-008** `BLOCKER` - Required unit, lint, format, and architecture gates must run continuously on the commit under review.
-  - Evidence: Path A waiver for issue/ruleset/± proofs (see evidence-map); positive tip CI https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197; admin ruleset proof deferred to Path B
+  - Evidence: issue https://github.com/Quantum-L9/l9-ci-sdk/issues/44; Active ruleset https://github.com/Quantum-L9/l9-ci-sdk/rules/20147356; negative https://github.com/Quantum-L9/l9-ci-sdk/pull/45; positive https://github.com/Quantum-L9/l9-ci-sdk/pull/46
 - [x] **AUD-009** `NON-BLOCKER` - SDK version and installation identity must have one reproducible source of truth.
   - Evidence: PR #17 package metadata at `4bc1526330188a7e209adf4c1109236ec726d869`
 - [x] **AUD-010** `NON-BLOCKER` - Declared provider version policy must be enforced on the canonical normalization path before promotion.
@@ -58,7 +58,7 @@ Evidence map SSOT: `docs/release/evidence-map.yaml` (Path A seal 2026-07-31).
 - [x] **QA-006** `BLOCKER` - The Core-facing CLI boundary has no command-handler or argparse integration tests.
   - Evidence: PR #17 command integration tests plus SDK S1 execute CLI tests (`0c487747b0fcd172edaefe9e843dac818de8fc12`)
 - [x] **QA-007** `BLOCKER` - No static type gate proves the public SDK contracts and critical paths type-check.
-  - Evidence: PR #17/S3 strict mypy required check; tip self-validation https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197 (AUD-008 positive ruleset proof Path A waived)
+  - Evidence: PR #17/S3 strict mypy required check; tip self-validation https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197; AUD-008 ruleset-bound positive proof https://github.com/Quantum-L9/l9-ci-sdk/pull/46
 - [x] **QA-008** `NON-BLOCKER` - The repository reports a test count but has no line or branch coverage target, measurement, or critical-path coverage evidence.
   - Evidence: PR #17/S3 branch coverage ratchet; validation artifact https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061
 - [x] **QA-009** `BLOCKER` - Public API tests use subset assertions and cannot detect accidental exports or undeclared compatibility expansion.
@@ -70,8 +70,10 @@ Evidence map SSOT: `docs/release/evidence-map.yaml` (Path A seal 2026-07-31).
 
 - Release-blocking findings closed: **21 / 21**
 - Total findings closed: **28 / 28**
-- AUD-008 administrator issue: Path A waived — see `docs/release/evidence-map.yaml`
-- AUD-008 active ruleset: Path A waived — see `docs/release/evidence-map.yaml`
+- AUD-008 administrator issue: https://github.com/Quantum-L9/l9-ci-sdk/issues/44
+- AUD-008 active ruleset: https://github.com/Quantum-L9/l9-ci-sdk/rules/20147356
+- AUD-008 negative proof: https://github.com/Quantum-L9/l9-ci-sdk/pull/45
+- AUD-008 positive proof: https://github.com/Quantum-L9/l9-ci-sdk/pull/46
 - Canonical gate publication run: https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783
 - Canonical gate check: https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783/job/91188145152
 - Commit-bound SDK validation artifact: https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061
