@@ -1,4 +1,5 @@
 """Stable contract-set digest calculation with no filesystem mutation."""
+
 from __future__ import annotations
 
 import hashlib
@@ -17,7 +18,13 @@ def _safe_path(value: str) -> str:
     portable = unicodedata.normalize("NFC", value.replace("\\", "/"))
     windows = PureWindowsPath(value)
     path = PurePosixPath(portable)
-    if path.is_absolute() or windows.is_absolute() or windows.drive or ".." in path.parts or not path.parts:
+    if (
+        path.is_absolute()
+        or windows.is_absolute()
+        or windows.drive
+        or ".." in path.parts
+        or not path.parts
+    ):
         raise ValueError(f"unsafe contract path: {value}")
     normalized = path.as_posix()
     if normalized in {"", "."}:
@@ -49,7 +56,9 @@ def contract_file_hashes(files: Mapping[str, bytes]) -> dict[str, str]:
                 f"{original_paths[path]!r} and {raw_path!r}"
             )
         original_paths[path] = raw_path
-        normalized[path] = "sha256:" + hashlib.sha256(normalize_contract_bytes(content)).hexdigest()
+        normalized[path] = (
+            "sha256:" + hashlib.sha256(normalize_contract_bytes(content)).hexdigest()
+        )
     return dict(sorted(normalized.items()))
 
 

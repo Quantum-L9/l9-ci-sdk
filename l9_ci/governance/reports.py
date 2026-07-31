@@ -1,4 +1,5 @@
 """Validation for governed evidence reports from untrusted producers."""
+
 from __future__ import annotations
 
 import re
@@ -8,7 +9,9 @@ from urllib.parse import unquote, urlparse
 
 from .models import Diagnostic, EvaluationResult, EvaluationStatus
 
-_SECRET = re.compile(r"(?i)\b(api[_-]?key|client[_-]?secret|secret|access[_-]?token|password)\b\s*[:=]\s*([^\s,;]+)")
+_SECRET = re.compile(
+    r"(?i)\b(api[_-]?key|client[_-]?secret|secret|access[_-]?token|password)\b\s*[:=]\s*([^\s,;]+)"
+)
 _REDACTED = {"[redacted]", "<redacted>", "redacted", "***", "xxxxx"}
 _REQUIRED_TYPES: dict[str, type | tuple[type, ...]] = {
     "schema": str,
@@ -24,7 +27,9 @@ _REQUIRED_TYPES: dict[str, type | tuple[type, ...]] = {
 }
 
 
-def _walk(value: Any, path: str = "", seen: set[int] | None = None) -> Iterator[tuple[str, Any]]:
+def _walk(
+    value: Any, path: str = "", seen: set[int] | None = None
+) -> Iterator[tuple[str, Any]]:
     if seen is None:
         seen = set()
     if isinstance(value, (Mapping, list, tuple)):
@@ -56,7 +61,11 @@ def _looks_absolute_path(value: str) -> bool:
     parsed = urlparse(stripped)
     if parsed.scheme.lower() == "file":
         decoded = unquote(parsed.path)
-        return bool(parsed.netloc) or PurePosixPath(decoded).is_absolute() or PureWindowsPath(decoded.lstrip("/")) .is_absolute()
+        return (
+            bool(parsed.netloc)
+            or PurePosixPath(decoded).is_absolute()
+            or PureWindowsPath(decoded.lstrip("/")).is_absolute()
+        )
     if parsed.scheme:
         return False
     return False
@@ -64,39 +73,116 @@ def _looks_absolute_path(value: str) -> bool:
 
 def validate_governed_report(report: Mapping[str, Any]) -> EvaluationResult:
     if not isinstance(report, Mapping):
-        return EvaluationResult(EvaluationStatus.INVALID, (Diagnostic("report.input_invalid", "report must be a mapping"),))
+        return EvaluationResult(
+            EvaluationStatus.INVALID,
+            (Diagnostic("report.input_invalid", "report must be a mapping"),),
+        )
     diagnostics: list[Diagnostic] = []
     for name, expected_type in _REQUIRED_TYPES.items():
         if name not in report:
-            diagnostics.append(Diagnostic("report.required_missing", f"required report field {name!r} is missing", name))
+            diagnostics.append(
+                Diagnostic(
+                    "report.required_missing",
+                    f"required report field {name!r} is missing",
+                    name,
+                )
+            )
         elif not isinstance(report[name], expected_type):
-            diagnostics.append(Diagnostic("report.field_type_invalid", f"{name} has an invalid type", name))
+            diagnostics.append(
+                Diagnostic(
+                    "report.field_type_invalid", f"{name} has an invalid type", name
+                )
+            )
     if report.get("schema") != "l9.evidence-report/v1":
-        diagnostics.append(Diagnostic("report.schema_unsupported", "schema must be l9.evidence-report/v1", "schema"))
+        diagnostics.append(
+            Diagnostic(
+                "report.schema_unsupported",
+                "schema must be l9.evidence-report/v1",
+                "schema",
+            )
+        )
     if isinstance(report.get("report_id"), str) and not report["report_id"].strip():
-        diagnostics.append(Diagnostic("report.report_id_invalid", "report_id must be non-empty", "report_id"))
+        diagnostics.append(
+            Diagnostic(
+                "report.report_id_invalid", "report_id must be non-empty", "report_id"
+            )
+        )
     producer = report.get("producer")
-    if isinstance(producer, Mapping) and (not isinstance(producer.get("id"), str) or not producer.get("id", "").strip()):
-        diagnostics.append(Diagnostic("report.producer_invalid", "producer.id must be a non-empty string", "producer.id"))
+    if isinstance(producer, Mapping) and (
+        not isinstance(producer.get("id"), str) or not producer.get("id", "").strip()
+    ):
+        diagnostics.append(
+            Diagnostic(
+                "report.producer_invalid",
+                "producer.id must be a non-empty string",
+                "producer.id",
+            )
+        )
     outcome = report.get("outcome")
-    if isinstance(outcome, Mapping) and outcome.get("status") not in {"pass", "fail", "incomplete", "invalid"}:
-        diagnostics.append(Diagnostic("report.outcome_invalid", "outcome.status is invalid", "outcome.status"))
+    if isinstance(outcome, Mapping) and outcome.get("status") not in {
+        "pass",
+        "fail",
+        "incomplete",
+        "invalid",
+    }:
+        diagnostics.append(
+            Diagnostic(
+                "report.outcome_invalid", "outcome.status is invalid", "outcome.status"
+            )
+        )
     evidence_refs = report.get("evidence_refs")
     if isinstance(evidence_refs, list):
         if any(not isinstance(item, str) or not item.strip() for item in evidence_refs):
-            diagnostics.append(Diagnostic("report.evidence_ref_invalid", "evidence_refs must contain non-empty strings", "evidence_refs"))
+            diagnostics.append(
+                Diagnostic(
+                    "report.evidence_ref_invalid",
+                    "evidence_refs must contain non-empty strings",
+                    "evidence_refs",
+                )
+            )
         elif len(evidence_refs) != len(set(evidence_refs)):
-            diagnostics.append(Diagnostic("report.evidence_ref_duplicate", "evidence_refs must contain unique values", "evidence_refs"))
+            diagnostics.append(
+                Diagnostic(
+                    "report.evidence_ref_duplicate",
+                    "evidence_refs must contain unique values",
+                    "evidence_refs",
+                )
+            )
     for collection in ("diagnostics", "limitations"):
         value = report.get(collection)
-        if isinstance(value, list) and collection == "limitations" and any(not isinstance(item, str) or not item.strip() for item in value):
-            diagnostics.append(Diagnostic("report.limitation_invalid", "limitations must contain non-empty strings", collection))
+        if (
+            isinstance(value, list)
+            and collection == "limitations"
+            and any(not isinstance(item, str) or not item.strip() for item in value)
+        ):
+            diagnostics.append(
+                Diagnostic(
+                    "report.limitation_invalid",
+                    "limitations must contain non-empty strings",
+                    collection,
+                )
+            )
 
     for path, value in _walk(report):
         if not isinstance(value, str):
             continue
         if _contains_secret(value):
-            diagnostics.append(Diagnostic("report.secret_material_detected", "secret-like material is forbidden", path))
+            diagnostics.append(
+                Diagnostic(
+                    "report.secret_material_detected",
+                    "secret-like material is forbidden",
+                    path,
+                )
+            )
         if _looks_absolute_path(value):
-            diagnostics.append(Diagnostic("report.absolute_path_detected", "absolute paths are forbidden", path))
-    return EvaluationResult(EvaluationStatus.INVALID if diagnostics else EvaluationStatus.PASS, tuple(diagnostics))
+            diagnostics.append(
+                Diagnostic(
+                    "report.absolute_path_detected",
+                    "absolute paths are forbidden",
+                    path,
+                )
+            )
+    return EvaluationResult(
+        EvaluationStatus.INVALID if diagnostics else EvaluationStatus.PASS,
+        tuple(diagnostics),
+    )
