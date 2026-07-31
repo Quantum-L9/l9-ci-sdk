@@ -1,0 +1,168 @@
+# l9-ci-sdk Path A evidence map (W1)
+# Authority: docs/release/v1.0.0-unblocking-plan.md §3
+# Tip audited: 64bd142c6728b7180f3ff20bbc0f12728636b9af (origin/main 2026-07-31)
+# Do not invent URLs. Do not render into seal files until human review of this map.
+schema: l9.release-evidence-map/v1
+audit_base_sha: 64bd142c6728b7180f3ff20bbc0f12728636b9af
+created_at: "2026-07-31"
+updated_at: "2026-07-31"
+notes:
+  - "Agent kickoff only — seal-file rewrite deferred pending map review."
+  - "Provenance.yaml capture SHAs (aa3adf1… / d3c74087…) are not in this clone history; fixture commit on main is 0c48774… (#17)."
+
+entries:
+  SDK_S1_SHA:
+    value: "0c487747b0fcd172edaefe9e843dac818de8fc12"
+    status: resolved
+    reason: >-
+      PR #17 merge on main — lands public API manifest tests, CLI/version policy,
+      Semgrep 1.170.0 enforcement, gate matrix, architecture enforcement (S1 contract).
+    resolved_at: "2026-07-31"
+    owner: agent
+    needs_human_confirm: true
+
+  SDK_CODE_SHA:
+    value: "0c487747b0fcd172edaefe9e843dac818de8fc12"
+    status: resolved
+    reason: >-
+      Same #17 commit introduces tests/fixtures/semgrep/runtime/* and
+      tests/providers/semgrep/test_runtime_fixture.py (QA-010). Cross-check:
+      provenance.yaml present at that commit; capture-time SHAs named inside
+      provenance are absent from git objects (squash/orphan capture metadata).
+    resolved_at: "2026-07-31"
+    owner: agent
+    needs_human_confirm: true
+
+  SDK_WORKFLOW_SHA:
+    value: "4c7fbb785dac5b65cc74263c4b28afa6fa95959b"
+    status: resolved
+    reason: >-
+      Merge PR #33 (feat/thin-analysis-callers). Content commit dd779532ea3a6efc654371a94c68f4c0d7b2e6f3
+      reduces l9-analysis* to thin Core analyze-semgrep callers. Self-validation
+      workflow (.github/workflows/ci.yml) landed earlier in #17; this merge is the
+      tip where thin callers + required CI coexist on main.
+    resolved_at: "2026-07-31"
+    owner: agent
+    needs_human_confirm: true
+
+  CORE_ANALYZE_SHA:
+    value: "c3f04e1268364e3623fc57f963937e2a0665e0e0"
+    status: resolved
+    reason: >-
+      Live identical pin on all five analysis callers at audit tip
+      (l9-analysis.yml, -merge, -nightly, -supply-chain, -release).
+    resolved_at: "2026-07-31"
+    owner: agent
+    needs_human_confirm: false
+
+  CORE_ACTIONS_SHA:
+    value: null
+    status: waived
+    reason: >-
+      Composite Core action pins superseded by thin reusable
+      analyze-semgrep.yml caller (AUD-006 / PR #33). No separate CORE_ACTIONS
+      pin remains in SDK callers at tip.
+    resolved_at: "2026-07-31"
+    owner: human
+    approver: null
+    waiver_pending_approver: true
+
+  CORE_PUBLISH_SHA:
+    value: null
+    status: waived
+    reason: >-
+      Gate/publish path is invoked inside Core reusable analyze/publish jobs
+      from the thin caller (see tip run Publish analysis (Core) / publish).
+      No distinct Core publish SHA is pinned in SDK workflow files at tip.
+    resolved_at: "2026-07-31"
+    owner: human
+    approver: null
+    waiver_pending_approver: true
+
+  CORE_GATE_PUBLICATION_RUN_URL:
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783"
+    status: resolved
+    reason: >-
+      Agent-proposed candidate: successful L9 Analysis (merge) on audit tip
+      64bd142… including job "Publish analysis (Core) / publish". Human must
+      confirm this is the canonical gate-publication evidence (vs a dedicated
+      Core dogfood run).
+    resolved_at: "2026-07-31"
+    owner: human
+    needs_human_confirm: true
+
+  CORE_GATE_CHECK_URL:
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783/job/91188145152"
+    status: resolved
+    reason: >-
+      Agent-proposed candidate: publish job on the tip merge analysis run above.
+      Human confirm permalink is the intended published gate check.
+    resolved_at: "2026-07-31"
+    owner: human
+    needs_human_confirm: true
+
+  AUD_008_ISSUE_URL:
+    value: null
+    status: blocked_admin
+    reason: >-
+      gh issue search for AUD-008 / required-check / self-validation ruleset
+      returned no matching issue. Admin must supply tracking issue URL or waive.
+    resolved_at: "2026-07-31"
+    owner: human_admin
+
+  AUD_008_RULESET_URL:
+    value: null
+    status: blocked_admin
+    reason: >-
+      Repo rulesets API shows only "Code Quality Copilot review for default
+      branch" (id 19469354). Org rulesets found are advisory/evaluate hygiene
+      or disabled — none named as required SDK self-validation on main.
+      Branch protection API: unprotected. Admin must point at the active
+      required-check ruleset or waive for Path A.
+    resolved_at: "2026-07-31"
+    owner: human_admin
+    observed_candidates:
+      - "https://github.com/Quantum-L9/l9-ci-sdk/rules/19469354"
+      - "http://github.com/organizations/Quantum-L9/settings/rules/19936069"
+      - "http://github.com/organizations/Quantum-L9/settings/rules/19936070"
+
+  AUD_008_NEGATIVE_PROOF_URL:
+    value: null
+    status: blocked_admin
+    reason: >-
+      No intentionally-failing PR / blocked-merge proof located via API from
+      this agent session. Admin/human must supply or waive.
+    resolved_at: "2026-07-31"
+    owner: human_admin
+
+  AUD_008_POSITIVE_PROOF_URL:
+    value: null
+    status: blocked_admin
+    reason: >-
+      No ruleset-positive merge proof bound to required self-validation check
+      identified. Tip merges exist but are not AUD-008 evidence without the
+      required-check ruleset. Admin/human must supply or waive.
+    resolved_at: "2026-07-31"
+    owner: human_admin
+
+  SDK_VALIDATION_ARTIFACT_URL:
+    value: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061"
+    status: resolved
+    reason: >-
+      Tip SDK self-validation run 30640182197 (headSha 64bd142…) uploaded
+      artifact validation-evidence id 8797085061 (3459 bytes, not expired).
+      Human confirm HTML artifact URL is the preferred citation form.
+    resolved_at: "2026-07-31"
+    owner: agent
+    needs_human_confirm: true
+    related_run_url: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197"
+
+summary:
+  resolved: 7
+  waived_pending_approver: 2
+  blocked_admin: 4
+  ready_to_render_seal_files: false
+  render_blocked_by:
+    - "Human confirm of agent-resolved SHAs/URLs (needs_human_confirm)"
+    - "Approver on CORE_ACTIONS_SHA / CORE_PUBLISH_SHA waivers"
+    - "AUD_008_* blocked_admin (issue, ruleset, ± proofs) or Path A waivers"
