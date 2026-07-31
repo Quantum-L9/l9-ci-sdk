@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 301
+Files: 316
 
 ## Contents
 
@@ -92,6 +92,7 @@ Files: 301
 - `docs/adr/0009-repository-manifest-reconciliation.md`
 - `docs/adr/0010-yaml-governance-static-checks.md`
 - `docs/adr/0011-biome-static-checks.md`
+- `docs/adr/0014-deterministic-governance-evidence-layer.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -103,6 +104,7 @@ Files: 301
 - `docs/architecture/deterministic-serialization.md`
 - `docs/architecture/execution-profiles.md`
 - `docs/architecture/gate-evaluation.md`
+- `docs/architecture/governance-evidence-layer.md`
 - `docs/architecture/operational-controls.md`
 - `docs/architecture/provider-spi.md`
 - `docs/architecture/public-api.md`
@@ -169,6 +171,13 @@ Files: 301
 - `l9_ci/gates/__init__.py`
 - `l9_ci/gates/evaluator.py`
 - `l9_ci/gates/model.py`
+- `l9_ci/governance/__init__.py`
+- `l9_ci/governance/attestation.py`
+- `l9_ci/governance/authority.py`
+- `l9_ci/governance/digest.py`
+- `l9_ci/governance/models.py`
+- `l9_ci/governance/promotion.py`
+- `l9_ci/governance/reports.py`
 - `l9_ci/identity/__init__.py`
 - `l9_ci/identity/resolver.py`
 - `l9_ci/integration/__init__.py`
@@ -210,12 +219,16 @@ Files: 301
 - `l9_ci/rulesets/semgrep/python/l9-transport.yml`
 - `l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml`
 - `l9_ci/schemas/v1/agent-review-payload.schema.json`
+- `l9_ci/schemas/v1/attestation-envelope.schema.json`
 - `l9_ci/schemas/v1/coverage.schema.json`
 - `l9_ci/schemas/v1/evidence-record.schema.json`
+- `l9_ci/schemas/v1/evidence-report.schema.json`
 - `l9_ci/schemas/v1/finding-bundle.schema.json`
 - `l9_ci/schemas/v1/finding-classification.schema.json`
 - `l9_ci/schemas/v1/finding.schema.json`
 - `l9_ci/schemas/v1/gate-result.schema.json`
+- `l9_ci/schemas/v1/policy-observation.schema.json`
+- `l9_ci/schemas/v1/promotion-policy.schema.json`
 - `l9_ci/schemas/v1/provider-failure.schema.json`
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
@@ -271,6 +284,8 @@ Files: 301
 - `tests/fixtures/semgrep/zero-findings-no-paths.json`
 - `tests/gates/test_evaluator.py`
 - `tests/gates/test_gate_result_schema.py`
+- `tests/governance/test_governance_layer.py`
+- `tests/governance/test_governance_schemas.py`
 - `tests/identity/test_resolver.py`
 - `tests/integration/__init__.py`
 - `tests/integration/test_agent_payload_projection.py`

@@ -12,6 +12,10 @@ EXPECTED_SCHEMAS = {
     "provider-failure.schema.json",
     "coverage.schema.json",
     "finding-bundle.schema.json",
+    "promotion-policy.schema.json",
+    "policy-observation.schema.json",
+    "attestation-envelope.schema.json",
+    "evidence-report.schema.json",
 }
 
 

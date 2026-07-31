@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9/policy-observation/v1",
+  "title": "L9 Policy Observation",
+  "type": "object",
+  "required": ["schema", "first_observed_at", "last_observed_at", "completed_runs", "contract_failures", "artifact_validation_failures"],
+  "properties": {
+    "schema": {"const": "l9.policy-observation/v1"},
+    "first_observed_at": {"type": "string", "format": "date-time"},
+    "last_observed_at": {"type": "string", "format": "date-time"},
+    "completed_runs": {"type": "integer", "minimum": 0},
+    "contract_failures": {"type": "integer", "minimum": 0},
+    "artifact_validation_failures": {"type": "integer", "minimum": 0},
+    "provenance": {"type": "object"}
+  },
+  "additionalProperties": false
+}
