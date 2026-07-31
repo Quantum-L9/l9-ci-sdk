@@ -1,0 +1,7 @@
+# Intentional: Trusted Publisher OIDC for this repo returns invalid-publisher.
+# Publish uses API token from GitHub environment `pypi` (synced from AWS
+# openclaw-igorbot/pypi) until OIDC is verified green.
+rules:
+  use-trusted-publishing:
+    ignore:
+      - publish.yml
