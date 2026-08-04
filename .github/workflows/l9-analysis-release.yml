@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   analysis:
-    uses: Quantum-L9/l9-ci-core/.github/workflows/analyze-semgrep.yml@c3f04e1268364e3623fc57f963937e2a0665e0e0
+    uses: Quantum-L9/l9-ci-core/.github/workflows/analyze-semgrep.yml@555d577eb805851b624cf7b0b8fc4df75a225d9f
     permissions:
       actions: read
       checks: write
