@@ -88,7 +88,16 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install classifier deps
-        run: python -m pip install --quiet pyyaml
+        run: |
+          # PyYAML is pinned canonically in requirements.txt (==6.0.3); install
+          # from it so the classifier resolves the same version the SDK is
+          # validated against, and fall back to an unpinned install only when
+          # the manifest is absent (SDK dropped into a repo without it).
+          if [ -f requirements.txt ]; then
+            python -m pip install --quiet -r requirements.txt
+          else
+            python -m pip install --quiet pyyaml
+          fi
       - name: Compute changed files
         id: diff
         env:
@@ -240,7 +249,16 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install validation tools
-        run: pip install --quiet pyyaml
+        run: |
+          # PyYAML is pinned canonically in requirements.txt (==6.0.3); install
+          # from it so YAML validation resolves the same version the SDK is
+          # validated against, and fall back to an unpinned install only when
+          # the manifest is absent.
+          if [ -f requirements.txt ]; then
+            pip install --quiet -r requirements.txt
+          else
+            pip install --quiet pyyaml
+          fi
       - name: Validate workflow + governance YAML
         run: |
           python3 - <<'PY'
@@ -438,7 +456,14 @@ jobs:
             echo "[SKIP] tools/audit_engine.py not present"
             exit 0
           fi
-          pip install --quiet pyyaml
+          # PyYAML pinned canonically in requirements.txt (==6.0.3); prefer it
+          # over an unpinned install so the audit engine runs the validated
+          # version, falling back only when the manifest is absent.
+          if [ -f requirements.txt ]; then
+            pip install --quiet -r requirements.txt
+          else
+            pip install --quiet pyyaml
+          fi
           PYTHONPATH=. python3 tools/audit_engine.py --json > audit_results.json 2>&1 || echo "::warning::audit engine reported findings (advisory)"
           head -c 2000 audit_results.json || true
 
