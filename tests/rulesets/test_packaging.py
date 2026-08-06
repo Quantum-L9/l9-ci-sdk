@@ -99,6 +99,20 @@ def test_wheel_contains_every_source_package_file(built_wheel: Path) -> None:
     )
 
 
+def test_wheel_contains_packaged_semgrep_profile_registry(built_wheel: Path) -> None:
+    """The versioned profile registry is package *data*, not importable Python,
+    so a broken packaging config would ship the SDK without it and every
+    ``semgrep run`` would fail closed on a missing registry. Assert the file is
+    present inside the built wheel explicitly (not only via the whole-tree
+    sweep) so this regression names itself."""
+    with zipfile.ZipFile(built_wheel) as archive:
+        members = set(archive.namelist())
+    assert "l9_ci/rulesets/semgrep/profiles.yaml" in members, (
+        "built wheel is missing the packaged Semgrep profile registry "
+        "(l9_ci/rulesets/semgrep/profiles.yaml); packaging dropped SDK data"
+    )
+
+
 def test_wheel_contains_no_bytecode_cache(built_wheel: Path) -> None:
     with zipfile.ZipFile(built_wheel) as archive:
         leaked = [
@@ -158,10 +172,12 @@ def test_wheel_installs_cleanly_and_cli_runs_outside_repo(
             str(venv_python),
             "-c",
             "from l9_ci.rulesets.semgrep import ruleset_dir, default_identity_map_path, "
-            "SUPPORTED_LANGUAGES\n"
+            "SUPPORTED_LANGUAGES, default_profile_name, resolve_profile, profiles_path\n"
             "for language in SUPPORTED_LANGUAGES:\n"
             "    assert list(ruleset_dir(language).glob('*.yml')), language\n"
             "assert default_identity_map_path().is_file()\n"
+            "assert profiles_path().is_file()\n"
+            "assert resolve_profile(default_profile_name()).include_l9_ruleset\n"
             "print('packaged-ruleset-resolution-ok')\n",
         ],
         capture_output=True,

@@ -1,0 +1,38 @@
+---
+schema: l9.semgrep-profiles/v1
+metadata:
+  provider_id: semgrep
+  version: 1.0.0
+  status: authoritative
+# Canonical, versioned Semgrep ruleset-profile registry shipped as SDK package
+# data. A "profile" is a named, deterministic selection over the two config
+# sources the packaged `l9-ci semgrep run` composes for one language:
+#   1. the community registry ruleset for the language (p/python, p/typescript)
+#   2. the SDK-packaged L9 baseline ruleset directory
+#      (l9_ci/rulesets/semgrep/<language>/)
+# A downstream consumer pins one versioned profile name via
+# `l9-ci semgrep run --language <lang> --profile <name>` instead of re-deriving
+# the --config composition per repository, so the selection stays reproducible
+# across SDK upgrades. Profiles ONLY choose among already-packaged configs;
+# they never introduce a second scanner provider, SARIF projection, GitHub
+# upload, or automatic promotion of any rule to blocking.
+#
+# `default_profile` is the composition every consumer inherits when
+# `--profile` is omitted, and it is backward-compatible with the pre-profile
+# behaviour (community registry ruleset + packaged L9 ruleset).
+default_profile: l9-standard
+profiles:
+  l9-standard:
+    description: >-
+      Community registry ruleset for the language plus the SDK-packaged L9
+      baseline ruleset. The default composition every downstream consumer
+      inherits; equivalent to the pre-profile default behaviour.
+    include_registry_ruleset: true
+    include_l9_ruleset: true
+  l9-baseline:
+    description: >-
+      SDK-packaged L9 baseline ruleset only; the community registry ruleset is
+      omitted. For repositories that want the versioned L9 rules with no
+      dependency on the community registry.
+    include_registry_ruleset: false
+    include_l9_ruleset: true
