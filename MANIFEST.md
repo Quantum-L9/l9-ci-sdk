@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 324
+Files: 326
 
 ## Contents
 
@@ -113,6 +113,7 @@ Files: 324
 - `docs/architecture/repository-manifest.md`
 - `docs/architecture/repository-snapshots.md`
 - `docs/architecture/semgrep-provider.md`
+- `docs/architecture/semgrep-ruleset-profiles.md`
 - `docs/architecture/validation-contract.md`
 - `docs/architecture/version-negotiation.md`
 - `docs/architecture/yaml-governance.md`
@@ -218,6 +219,7 @@ Files: 324
 - `l9_ci/rulesets/__init__.py`
 - `l9_ci/rulesets/semgrep/__init__.py`
 - `l9_ci/rulesets/semgrep/identity-map.yaml`
+- `l9_ci/rulesets/semgrep/profiles.yaml`
 - `l9_ci/rulesets/semgrep/python/l9-baseline-security.yml`
 - `l9_ci/rulesets/semgrep/python/l9-handler-signature.yml`
 - `l9_ci/rulesets/semgrep/python/l9-logging.yml`
