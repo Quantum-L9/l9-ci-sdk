@@ -19,9 +19,11 @@ boundary:
     - semantic validation
     - deterministic serialization
     - agent-review payload projection
+    - deterministic SARIF projection
     - deterministic repository manifest generation
   Core_owns:
     - GitHub Actions orchestration
+    - SARIF upload to GitHub code scanning
     - workflow permissions
     - provider enablement selection
     - required versus optional provider selection
@@ -63,6 +65,17 @@ CLI:
         --input BUNDLE
         --output PAYLOAD
         [--strict]
+    bundle_project_sarif:
+      syntax: >-
+        l9-ci bundle project-sarif
+        --input BUNDLE
+        --output SARIF
+        [--strict]
+      description: >-
+        Deterministically project a canonical finding bundle onto the supported
+        SARIF 2.1.0 subset (schema l9.sarif-log/v1) for GitHub code scanning.
+        SDK-owned and redaction-safe: no raw report parsing, no source lines or
+        secrets, no gate verdict change, no GitHub upload (Core publishes).
     compatibility_check:
       syntax: >-
         l9-ci compatibility check

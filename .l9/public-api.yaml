@@ -105,9 +105,13 @@ packages:
     - AgentReviewPayload
     - OperationalLimits
     - RedactionResult
+    - SARIF_LOG_SUBSET_SCHEMA
+    - SARIF_SCHEMA_URI
+    - SARIF_VERSION
     - VersionNegotiationResult
     - negotiate_versions
     - project_agent_review_payload
+    - project_sarif_log
     - validate_record_counts
     - validate_redaction
     - validate_report_size
