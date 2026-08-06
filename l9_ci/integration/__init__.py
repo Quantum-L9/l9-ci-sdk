@@ -13,6 +13,12 @@ from .limits import (
 )
 from .projection import project_agent_review_payload
 from .redaction import RedactionResult, validate_redaction
+from .sarif import (
+    SARIF_LOG_SUBSET_SCHEMA,
+    SARIF_SCHEMA_URI,
+    SARIF_VERSION,
+    project_sarif_log,
+)
 from .versioning import (
     VersionNegotiationResult,
     negotiate_versions,
@@ -33,10 +39,14 @@ __all__ = [
     "AgentReviewPayload",
     "OperationalLimits",
     "RedactionResult",
+    "SARIF_LOG_SUBSET_SCHEMA",
+    "SARIF_SCHEMA_URI",
+    "SARIF_VERSION",
     "SemanticVersion",  # deprecated alias — see compatibility_allowlist
     "VersionNegotiationResult",
     "negotiate_versions",
     "project_agent_review_payload",
+    "project_sarif_log",
     "validate_record_counts",
     "validate_redaction",
     "validate_report_size",

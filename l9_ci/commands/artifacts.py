@@ -16,6 +16,7 @@ from l9_ci.artifacts import (
 from l9_ci.commands.errors import emit_error
 from l9_ci.integration import (
     project_agent_review_payload,
+    project_sarif_log,
     validate_redaction,
 )
 
@@ -38,6 +39,12 @@ def register_artifact_commands(
     project.add_argument("--strict", action="store_true")
     project.add_argument("--format", choices=("text", "json"), default="text")
     project.set_defaults(handler=handle_project_agent_payload)
+    sarif = bundle_subparsers.add_parser("project-sarif")
+    sarif.add_argument("--input", required=True, type=Path)
+    sarif.add_argument("--output", required=True, type=Path)
+    sarif.add_argument("--strict", action="store_true")
+    sarif.add_argument("--format", choices=("text", "json"), default="text")
+    sarif.set_defaults(handler=handle_project_sarif)
 
 
 def handle_bundle_validate(args: argparse.Namespace) -> int:
@@ -68,12 +75,27 @@ def handle_project_agent_payload(args: argparse.Namespace) -> int:
     return int(ExitCode.SUCCESS)
 
 
+def handle_project_sarif(args: argparse.Namespace) -> int:
+    try:
+        bundle = load_and_validate_bundle(args.input)
+        sarif_log = project_sarif_log(bundle, strict=args.strict)
+        validate_redaction(sarif_log).require_valid()
+        _validate_against_schema(sarif_log, "sarif-log.schema.json")
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_bytes(canonical_json_bytes(sarif_log))
+    except Exception as exc:
+        return emit_error(exc, output_format=OutputFormat(args.format))
+    print(args.output)
+    return int(ExitCode.SUCCESS)
+
+
 def _validate_agent_payload_schema(payload: dict[str, Any]) -> None:
+    _validate_against_schema(payload, "agent-review-payload.schema.json")
+
+
+def _validate_against_schema(payload: dict[str, Any], schema_filename: str) -> None:
     schema_path = (
-        files("l9_ci")
-        .joinpath("schemas")
-        .joinpath("v1")
-        .joinpath("agent-review-payload.schema.json")
+        files("l9_ci").joinpath("schemas").joinpath("v1").joinpath(schema_filename)
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     schema_root = files("l9_ci").joinpath("schemas").joinpath("v1")
@@ -97,6 +119,6 @@ def _validate_agent_payload_schema(payload: dict[str, Any]) -> None:
             for error in errors
         ]
         raise ValueError(
-            "agent payload schema validation failed:\n"
+            f"{schema_filename} schema validation failed:\n"
             + "\n".join(f"- {message}" for message in messages)
         )

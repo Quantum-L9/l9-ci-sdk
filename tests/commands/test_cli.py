@@ -89,6 +89,47 @@ def test_bundle_validate_success(monkeypatch, capsys, tmp_path) -> None:
     assert run_cli(["bundle", "validate", str(bundle_path)], monkeypatch) == 0
 
 
+def test_bundle_project_sarif_success(monkeypatch, capsys, tmp_path) -> None:
+    bundle_path = _write_bundle(tmp_path / "bundle.json", _bundle())
+    out = tmp_path / "out.sarif.json"
+    assert (
+        run_cli(
+            [
+                "bundle",
+                "project-sarif",
+                "--input",
+                str(bundle_path),
+                "--output",
+                str(out),
+            ],
+            monkeypatch,
+        )
+        == 0
+    )
+    sarif = json.loads(out.read_text(encoding="utf-8"))
+    assert sarif["version"] == "2.1.0"
+    assert sarif["runs"][0]["tool"]["driver"]["name"] == "l9-ci-sdk"
+
+
+def test_bundle_project_sarif_missing_input_json_error(
+    monkeypatch, capsys, tmp_path
+) -> None:
+    code = run_cli(
+        [
+            "bundle",
+            "project-sarif",
+            "--input",
+            str(tmp_path / "missing.json"),
+            "--output",
+            str(tmp_path / "out.sarif.json"),
+            "--format",
+            "json",
+        ],
+        monkeypatch,
+    )
+    assert code != 0
+
+
 # --- gate exit-code mapping (fail-closed) -----------------------------------
 
 
