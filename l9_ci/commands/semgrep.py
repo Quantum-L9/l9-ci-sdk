@@ -13,6 +13,9 @@ from l9_ci.providers.semgrep import SemgrepProvider
 from l9_ci.rulesets.semgrep import (
     SUPPORTED_LANGUAGES,
     default_identity_map_path,
+    default_profile_name,
+    profile_names,
+    resolve_profile,
     ruleset_dir,
 )
 
@@ -125,6 +128,18 @@ def register_semgrep_commands(
             "ruleset (and any --extra-config) only"
         ),
     )
+    run.add_argument(
+        "--profile",
+        choices=profile_names(),
+        default=None,
+        metavar="PROFILE",
+        help=(
+            "Versioned packaged ruleset profile selecting which config sources "
+            "to compose (default: the registry's default_profile). A profile "
+            "chooses among already-packaged configs only; --no-registry-config "
+            "and --extra-config still apply on top of it"
+        ),
+    )
     _add_common_arguments(run)
     run.set_defaults(handler=handle_run)
 
@@ -149,14 +164,20 @@ def handle_detect(args: argparse.Namespace) -> int:
 def _build_run_config_arguments(args: argparse.Namespace) -> tuple[str, ...]:
     """Compose the --config arguments for one global-ruleset execution.
 
-    Order: community registry ruleset (unless disabled) -> packaged L9
-    ruleset for the requested language -> caller-supplied --extra-config
-    values, in the order given.
+    The selected versioned profile (``--profile``, default the registry's
+    ``default_profile``) decides which packaged config sources participate.
+    Order: community registry ruleset (when the profile includes it and
+    ``--no-registry-config`` is not set) -> packaged L9 ruleset for the
+    requested language (when the profile includes it) -> caller-supplied
+    ``--extra-config`` values, in the order given. The default profile
+    reproduces the pre-profile composition (registry ruleset + L9 ruleset).
     """
+    profile = resolve_profile(args.profile or default_profile_name())
     arguments: list[str] = []
-    if not args.no_registry_config:
+    if profile.include_registry_ruleset and not args.no_registry_config:
         arguments.extend(("--config", _REGISTRY_CONFIG_BY_LANGUAGE[args.language]))
-    arguments.extend(("--config", str(ruleset_dir(args.language))))
+    if profile.include_l9_ruleset:
+        arguments.extend(("--config", str(ruleset_dir(args.language))))
     for extra_config in args.extra_config:
         arguments.extend(("--config", extra_config))
     return tuple(arguments)

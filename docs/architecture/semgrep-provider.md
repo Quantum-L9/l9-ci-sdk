@@ -66,6 +66,38 @@ complete measure of all files scanned.
 The limitation must remain documented until a real report fixture confirms a
 stable scanned-path field.
 
+## Packaged execution: `l9-ci semgrep run`
+
+`l9-ci semgrep run --language {python,typescript}` executes Semgrep with the
+SDK's packaged global ruleset for one language and normalizes the report in a
+single step. Downstream consumers inherit one versioned ruleset per language
+with no per-repository `--config` authoring.
+
+The `--config` arguments passed to Semgrep are composed deterministically, in
+this order:
+
+1. the community registry ruleset for the language (`p/python` or
+   `p/typescript`), when the selected profile includes it and
+   `--no-registry-config` is not set;
+2. the SDK-packaged L9 baseline ruleset directory for the language
+   (`l9_ci/rulesets/semgrep/<language>/`), when the selected profile includes
+   it;
+3. each caller-supplied `--extra-config` value, in the order given.
+
+`--profile <name>` selects a versioned entry from the packaged profile
+registry (`l9_ci/rulesets/semgrep/profiles.yaml`) that decides which of the two
+packaged config sources participate. When `--profile` is omitted the registry's
+`default_profile` applies, which reproduces the pre-profile composition
+(registry ruleset + L9 ruleset). Profiles only choose among already-packaged
+configs; they never add a second scanner, SARIF projection, GitHub upload, or
+promotion of a rule to blocking. An unknown profile fails closed at argument
+parsing. See [`semgrep-ruleset-profiles.md`](semgrep-ruleset-profiles.md) for
+the registry contract and the shipped profiles.
+
+Identity resolution is unchanged by profile selection: L9-authored rules carry
+trusted `metadata.l9.canonical_rule_id`, and third-party registry rules resolve
+through the versioned SDK identity map.
+
 ---
 # `pyproject.toml` additions
 Merge these with existing dependencies:
