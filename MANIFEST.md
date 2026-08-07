@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 324
+Files: 325
 
 ## Contents
 
@@ -128,6 +128,7 @@ Files: 324
 - `docs/release/known-limitations.md`
 - `docs/release/v1.0.0-notes.md`
 - `docs/release/v1.0.0-unblocking-plan.md`
+- `docs/release/v1.0.1-notes.md`
 - `docs/source/phase-4.md`
 - `docs/source/sdk-spec.md`
 - `docs/templates/l9-biome-scan-caller.yml`
