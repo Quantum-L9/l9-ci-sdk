@@ -21,7 +21,7 @@
 # dependencies] ci group.
 
 # Linter / formatter.
-ruff==0.16.0
+ruff==0.16.2
 
 # Static type checker + the stub packages that give mypy real signatures for
 # the SDK's untyped third-party imports. These stubs are the "mypy" half of the
