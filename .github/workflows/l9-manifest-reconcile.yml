@@ -1,27 +1,17 @@
 ---
-# L9 repository manifest reconcile (auto-fix bot)
+# L9 SDK repository reconciliation bot.
 #
-# Dual-purpose file: this is BOTH the live dogfood workflow for l9-ci-sdk and
-# the copy-in template for downstream consumer repositories.
+# This workflow is self-maintenance for l9-ci-sdk only. It is NOT a copy-in
+# template and must not be distributed through Quantum-L9/.github or seeded
+# into consumer repositories.
 #
-# Dogfood path (this repo):
-#   Checkout the PR head, then run the SDK from the working tree:
-#     PYTHONPATH=. python -m l9_ci manifest generate ...
+# It reconciles two deterministic repository-derived artifacts:
+#   1. MANIFEST.md from tracked repository truth.
+#   2. The editable root package version recorded in uv.lock from pyproject.toml.
 #
-# Consumer copy-in path (other repos — replace the generate step):
-#   1. Keep permissions, concurrency, commit, and fork-patch steps as-is.
-#   2. After checkout, provision an immutable SDK that includes `manifest`:
-#        - id: sdk
-#          uses: Quantum-L9/l9-ci-core/.github/actions/provision-sdk@<pinned-core-sha>
-#   3. Generate with the provisioned executable (do NOT use PYTHONPATH=.):
-#        "${{ steps.sdk.outputs.executable }}" manifest generate \
-#          --repository-root . --output MANIFEST.md --tracked-only \
-#          --exclude-dir memory-bank
-#   4. Pin an SDK revision that includes the manifest CLI (via whatever pin
-#      mechanism provision-sdk already uses for analysis callers).
-#
-# Core reusable workflow packaging is intentionally out of scope; consumers
-# adopt by copying this file and switching to provision-sdk as above.
+# The uv.lock reconciliation intentionally changes only the editable root
+# package's version field. Dependency changes still require a real `uv lock`;
+# this step prevents producer identity drift when the project version changes.
 
 name: L9 Manifest Reconcile
 
@@ -39,20 +29,20 @@ concurrency:
 
 jobs:
   reconcile:
-    name: Reconcile repository manifest
+    name: Reconcile repository derived state
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout PR head
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          # Bot may push a reconcile commit to the PR head on same-repo PRs.
+          # Bot may push a reconcile commit to same-repository PR heads.
           persist-credentials: true
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
@@ -62,27 +52,61 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
+      - name: Reconcile editable root version in uv.lock
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib
+          import re
+          import tomllib
+
+          pyproject = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          expected = pyproject["project"]["version"]
+          lock_path = pathlib.Path("uv.lock")
+          text = lock_path.read_text(encoding="utf-8")
+
+          pattern = re.compile(
+              r'(\[\[package\]\]\nname = "l9-ci"\nversion = ")([^"]+)("\nsource = \{ editable = "\." \})'
+          )
+          matches = list(pattern.finditer(text))
+          if len(matches) != 1:
+              raise SystemExit(
+                  f"expected exactly one editable l9-ci root package in uv.lock, found {len(matches)}"
+              )
+          current = matches[0].group(2)
+          if current != expected:
+              text = pattern.sub(rf'\g<1>{expected}\g<3>', text, count=1)
+              lock_path.write_text(text, encoding="utf-8")
+              print(f"uv.lock editable root version: {current} -> {expected}")
+          else:
+              print(f"uv.lock editable root version already aligned: {expected}")
+          PY
+
       - name: Generate manifest from repository truth
-        id: manifest
         run: |
           set -euo pipefail
           export PYTHONPATH="$PWD"
-          # memory-bank/ is a local agent scratchpad (incl. WIP); never inventory it.
+          # memory-bank/ is local agent scratch/history, never product inventory.
           python -m l9_ci manifest generate \
             --repository-root . \
             --output MANIFEST.md \
             --tracked-only \
             --exclude-dir memory-bank
-          if git diff --quiet -- MANIFEST.md; then
+
+      - name: Detect reconciliation changes
+        id: reconcile
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- MANIFEST.md uv.lock; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            git diff -- MANIFEST.md
+            git diff -- MANIFEST.md uv.lock
           fi
 
-      - name: Commit manifest correction to PR
+      - name: Commit reconciliation to PR
         if: >-
-          steps.manifest.outputs.changed == 'true' &&
+          steps.reconcile.outputs.changed == 'true' &&
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -92,26 +116,26 @@ jobs:
           git config user.name "l9-manifest-bot"
           git config user.email "l9-manifest-bot@users.noreply.github.com"
           git checkout -B "$HEAD_REF"
-          git add MANIFEST.md
-          git commit -m "chore(manifest): reconcile repository truth"
+          git add -- MANIFEST.md uv.lock
+          git commit -m "chore(repo): reconcile derived repository state"
           git push origin "HEAD:$HEAD_REF"
-          echo "Manifest corrected. The synchronize event starts CI again on the new head."
+          echo "Derived state corrected. The synchronize event starts CI again on the new head."
 
       - name: Export fork patch
         if: >-
-          steps.manifest.outputs.changed == 'true' &&
+          steps.reconcile.outputs.changed == 'true' &&
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository
-        run: git diff --binary -- MANIFEST.md > manifest-reconcile.patch
+        run: git diff --binary -- MANIFEST.md uv.lock > repository-reconcile.patch
 
       - name: Upload fork reconciliation patch
         if: >-
-          steps.manifest.outputs.changed == 'true' &&
+          steps.reconcile.outputs.changed == 'true' &&
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: manifest-reconcile-patch
-          path: manifest-reconcile.patch
+          name: repository-reconcile-patch
+          path: repository-reconcile.patch
           if-no-files-found: error
           retention-days: 14
