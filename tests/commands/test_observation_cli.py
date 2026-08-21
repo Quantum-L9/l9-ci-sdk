@@ -6,6 +6,19 @@ import sys
 import pytest
 
 import l9_ci.__main__ as main_module
+from l9_ci.artifacts import bundle_bytes
+from l9_ci.contracts import (
+    Confidence,
+    EvidenceRecord,
+    Finding,
+    FindingBundle,
+    FindingClassification,
+    ResolutionStatus,
+    RuleMode,
+    Severity,
+    SnapshotDescriptor,
+    SourceLocation,
+)
 
 REVISION = "a" * 40
 DIGEST = "b" * 64
@@ -84,3 +97,92 @@ def test_observation_build_rejects_unknown_check(monkeypatch, tmp_path) -> None:
     )
     assert code != 0
     assert not output.exists()
+
+
+def _bundle() -> FindingBundle:
+    location = SourceLocation("src/example.py", start_line=7)
+    evidence = EvidenceRecord(
+        evidence_id="ev-1",
+        snapshot_id="snapshot-1",
+        provider_id="semgrep",
+        provider_rule_id="python.example",
+        evidence_type="static-analysis",
+        message="example evidence",
+        locations=(location,),
+        severity=Severity.HIGH,
+        confidence=Confidence.HIGH,
+    )
+    finding = Finding(
+        finding_id="finding-1",
+        snapshot_id="snapshot-1",
+        provider_id="semgrep",
+        provider_rule_id="python.example",
+        canonical_rule_id="l9.example.rule",
+        category="security",
+        message="example finding",
+        evidence_ids=("ev-1",),
+        locations=(location,),
+        fingerprint="fingerprint-1",
+        severity=Severity.HIGH,
+        confidence=Confidence.HIGH,
+    )
+    classification = FindingClassification(
+        finding_id="finding-1",
+        mode=RuleMode.BLOCKING,
+        resolution_status=ResolutionStatus.DEFAULTED,
+        used_default=True,
+    )
+    return FindingBundle(
+        SDK_version="2.0.0",
+        generated_at="2026-08-21T20:00:00Z",
+        snapshot=SnapshotDescriptor(
+            snapshot_id="snapshot-1",
+            repository_root=".",
+            revision=REVISION,
+            dirty=False,
+        ),
+        providers=(),
+        evidence=(evidence,),
+        findings=(finding,),
+        classifications=(classification,),
+        provider_failures=(),
+        coverage=(),
+    )
+
+
+def test_project_mandatory_findings_accepts_absolute_cli_input(
+    monkeypatch, tmp_path
+) -> None:
+    bundle_path = tmp_path / "finding-bundle.json"
+    bundle_path.write_bytes(bundle_bytes(_bundle()))
+    output = tmp_path / "mandatory-findings-observation.json"
+
+    code = run_cli(
+        [
+            "observation",
+            "project-mandatory-findings",
+            "--input",
+            str(bundle_path),
+            "--repository",
+            "Quantum-L9/example",
+            "--configuration-digest",
+            DIGEST,
+            "--run-id",
+            "12345",
+            "--attempt",
+            "1",
+            "--started-at",
+            "2026-08-21T20:00:00Z",
+            "--completed-at",
+            "2026-08-21T20:00:01Z",
+            "--output",
+            str(output),
+        ],
+        monkeypatch,
+    )
+
+    assert code == 0
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["check"]["id"] == "l9.mandatory-findings"
+    assert payload["subject"]["revision"]["commit"] == REVISION
+    assert payload["artifacts"][0].get("path") is None
