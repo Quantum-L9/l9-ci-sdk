@@ -29,9 +29,7 @@ EXECUTION_STATUSES = frozenset({"passed", "failed", "error", "skipped"})
 
 def _sha256_digest(value: str) -> dict[str, str]:
     normalized = value.strip().lower()
-    if len(normalized) != 64 or any(
-        ch not in "0123456789abcdef" for ch in normalized
-    ):
+    if len(normalized) != 64 or any(ch not in "0123456789abcdef" for ch in normalized):
         raise ValueError("digest must be a lowercase 64-character sha256 hex value")
     return {"algorithm": "sha256", "value": normalized}
 
@@ -45,9 +43,7 @@ def _parse_repository(repository: str) -> tuple[str, str]:
 
 def _validate_revision(revision: str) -> str:
     value = revision.strip().lower()
-    if len(value) not in {40, 64} or any(
-        ch not in "0123456789abcdef" for ch in value
-    ):
+    if len(value) not in {40, 64} or any(ch not in "0123456789abcdef" for ch in value):
         raise ValueError("revision must be a full 40- or 64-character hex commit")
     return value
 
