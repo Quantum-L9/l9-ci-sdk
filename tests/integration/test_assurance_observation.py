@@ -120,7 +120,9 @@ def _bundle(severity: Severity) -> FindingBundle:
     )
 
 
-def test_mandatory_findings_projection_preserves_finding_and_not_policy_verdict() -> None:
+def test_mandatory_findings_projection_preserves_finding_and_not_policy_verdict() -> (
+    None
+):
     observation = project_mandatory_findings_observation(
         _bundle(Severity.HIGH),
         repository="Quantum-L9/example",
