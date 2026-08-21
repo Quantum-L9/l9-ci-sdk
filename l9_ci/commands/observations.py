@@ -20,7 +20,9 @@ def register_observation_commands(
     build = commands.add_parser("build")
     _add_common_execution_arguments(build)
     build.add_argument("--check-id", required=True)
-    build.add_argument("--status", required=True, choices=("passed", "failed", "error", "skipped"))
+    build.add_argument(
+        "--status", required=True, choices=("passed", "failed", "error", "skipped")
+    )
     build.add_argument("--finding-count", type=int, default=0)
     build.add_argument("--error-count", type=int, default=0)
     build.add_argument("--warning-count", type=int, default=0)
@@ -86,6 +88,7 @@ def handle_project_mandatory_findings(args: argparse.Namespace) -> int:
             raise ValueError(
                 "--revision does not match FindingBundle snapshot revision"
             )
+        source_path = None if args.input.is_absolute() else args.input.as_posix()
         payload = project_mandatory_findings_observation(
             bundle,
             repository=args.repository,
@@ -95,7 +98,7 @@ def handle_project_mandatory_findings(args: argparse.Namespace) -> int:
             started_at=args.started_at,
             completed_at=args.completed_at,
             mode=args.mode,
-            source_path=args.input.as_posix(),
+            source_path=source_path,
         )
         _write_output(args.output, payload)
     except Exception as exc:
