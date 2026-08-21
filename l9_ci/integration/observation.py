@@ -10,7 +10,7 @@ from typing import Any, Mapping, Sequence
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from l9_ci.contracts import FindingBundle, RuleMode, Severity
+from l9_ci.contracts import FindingBundle, Severity
 
 OBSERVATION_PROTOCOL = "l9.observation"
 OBSERVATION_SCHEMA_VERSION = "1.0.0"
@@ -29,7 +29,9 @@ EXECUTION_STATUSES = frozenset({"passed", "failed", "error", "skipped"})
 
 def _sha256_digest(value: str) -> dict[str, str]:
     normalized = value.strip().lower()
-    if len(normalized) != 64 or any(ch not in "0123456789abcdef" for ch in normalized):
+    if len(normalized) != 64 or any(
+        ch not in "0123456789abcdef" for ch in normalized
+    ):
         raise ValueError("digest must be a lowercase 64-character sha256 hex value")
     return {"algorithm": "sha256", "value": normalized}
 
@@ -43,7 +45,9 @@ def _parse_repository(repository: str) -> tuple[str, str]:
 
 def _validate_revision(revision: str) -> str:
     value = revision.strip().lower()
-    if len(value) not in {40, 64} or any(ch not in "0123456789abcdef" for ch in value):
+    if len(value) not in {40, 64} or any(
+        ch not in "0123456789abcdef" for ch in value
+    ):
         raise ValueError("revision must be a full 40- or 64-character hex commit")
     return value
 
@@ -124,7 +128,10 @@ def build_observation(
     if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt < 1:
         raise ValueError("attempt must be an integer >= 1")
     counts = (finding_count, error_count, warning_count, informational_count)
-    if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in counts):
+    if any(
+        not isinstance(value, int) or isinstance(value, bool) or value < 0
+        for value in counts
+    ):
         raise ValueError("observation summary counts must be non-negative integers")
     if finding_count != len(findings):
         raise ValueError("finding_count must equal the number of findings")
@@ -208,9 +215,7 @@ def project_mandatory_findings_observation(
     if not bundle.snapshot.revision:
         raise ValueError("FindingBundle must carry an exact revision for Assurance")
 
-    classifications = {
-        item.finding_id: item for item in bundle.classifications
-    }
+    classifications = {item.finding_id: item for item in bundle.classifications}
     projected: list[dict[str, Any]] = []
     error_count = len(bundle.provider_failures)
     warning_count = 0
@@ -241,7 +246,9 @@ def project_mandatory_findings_observation(
                 "providerRuleId": finding.provider_rule_id,
                 "category": finding.category,
                 "limitations": list(finding.limitations),
-                "sourceLocations": [location.to_dict() for location in finding.locations],
+                "sourceLocations": [
+                    location.to_dict() for location in finding.locations
+                ],
             },
         }
         classification = classifications.get(finding.finding_id)
