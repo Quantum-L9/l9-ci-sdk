@@ -121,7 +121,7 @@ never reads or evaluates its contents.
 | This governance pack | identical | identical |
 | Provider | semgrep | semgrep |
 | Caller workflow's `env.L9_LANGUAGE` | `"python"` | `"typescript"` |
-| Generic lint/test (separate) | ruff / mypy / pytest — see [`../l9-lint-test.yml`](../l9-lint-test.yml) | eslint / `tsc --noEmit` / `vitest run` — see [`../l9-lint-test-node.yml`](../l9-lint-test-node.yml) |
+| Generic lint/test (separate) | ruff / mypy / pytest — see [`../../docs/templates/l9-lint-test.yml`](../../docs/templates/l9-lint-test.yml) | eslint / `tsc --noEmit` / `vitest run` — see [`../../docs/templates/l9-lint-test-node.yml`](../../docs/templates/l9-lint-test-node.yml) |
 
 The analysis pipeline (this pack + semgrep + the SDK) is identical across
 languages. Only `env.L9_LANGUAGE` and your out-of-band lint/test suite differ.
@@ -152,8 +152,8 @@ For a strict-TypeScript service (e.g. eslint + `tsc --noEmit` + `vitest run`):
    `.github/workflows/l9-analysis.yml` and set `env.L9_LANGUAGE` to `"python"`
    or `"typescript"` — the single per-language line (see table above).
 3. (Optional) copy the matching lint/test template for your language:
-   [`../l9-lint-test.yml`](../l9-lint-test.yml) (Python) or
-   [`../l9-lint-test-node.yml`](../l9-lint-test-node.yml) (Node/TypeScript).
+   [`../../docs/templates/l9-lint-test.yml`](../../docs/templates/l9-lint-test.yml) (Python) or
+   [`../../docs/templates/l9-lint-test-node.yml`](../../docs/templates/l9-lint-test-node.yml) (Node/TypeScript).
 
 Pin Core to the same immutable commit referenced throughout
 [`../l9-analysis.yml`](../l9-analysis.yml) (currently

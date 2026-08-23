@@ -1,8 +1,14 @@
-# Managed by Quantum-L9/.github. Pinned to a tag so main can move safely.
+# Managed by Quantum-L9/.github.
 #
-# This file should never need editing again. Governance logic lives in
-# Quantum-L9/.github/.github/workflows/governance-*.yml; shipping a change means
-# force-moving the v1 tag there, not touching this file.
+# Governance logic lives in Quantum-L9/.github/.github/workflows/governance-*.yml.
+#
+# DEVIATION FROM THE ORG TEMPLATE: the org copy references those callees by the
+# floating `@v1` tag. This repository forbids mutable refs — lint/check_action_pins.py
+# and tests/architecture/test_l9_wiring.py both reject them (AUD-008), because a
+# force-moved tag changes what runs here without an SDK commit. The refs below are
+# therefore pinned to the commit `v1` resolved to (v1 == v3.1.0 ==
+# 3e841ea4f7f8be2a8c9fc45cad5bed46fe801d08). Adopting a newer governance release
+# means updating this SHA in a reviewed commit, not force-moving a tag.
 #
 # SECRETS: a called workflow does NOT inherit caller secrets automatically. Today
 # both callees use only the automatic GITHUB_TOKEN, so nothing is passed. If a
@@ -21,13 +27,23 @@ on:
   issues:
     types: [opened, edited, reopened]
 
+# A called reusable workflow cannot hold more permission than its caller, so this
+# block is the union of what the two callees declare at the pinned commit, and no
+# more: governance-pr.yml needs `pull-requests: write`, governance-issue.yml needs
+# `issues: write` (it labels the issue and comments on a suspected credential leak).
+# Narrowing either scope here makes the corresponding governance job fail to start.
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   pr:
     if: github.event_name == 'pull_request'
-    uses: Quantum-L9/.github/.github/workflows/governance-pr.yml@v1
+    uses: Quantum-L9/.github/.github/workflows/governance-pr.yml@3e841ea4f7f8be2a8c9fc45cad5bed46fe801d08  # v1 (v3.1.0)
     # secrets: inherit
 
   issue:
     if: github.event_name == 'issues'
-    uses: Quantum-L9/.github/.github/workflows/governance-issue.yml@v1
+    uses: Quantum-L9/.github/.github/workflows/governance-issue.yml@3e841ea4f7f8be2a8c9fc45cad5bed46fe801d08  # v1 (v3.1.0)
     # secrets: inherit

@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 351
+Files: 350
 
 ## Contents
 
@@ -32,7 +32,6 @@ Files: 351
 - `.github/governance/semgrep-policy.yaml`
 - `.github/governance/waivers.yaml`
 - `.github/labels.yml`
-- `.github/pull_request_template.md`
 - `.github/scripts/agent_review_payload.py`
 - `.github/scripts/classify_pr.py`
 - `.github/scripts/evaluate_ci_gate.py`
@@ -47,13 +46,10 @@ Files: 351
 - `.github/workflows/l9-analysis.yml`
 - `.github/workflows/l9-biome-scan-dogfood.yml`
 - `.github/workflows/l9-biome-scan.yml`
-- `.github/workflows/l9-lint-test-node.yml`
-- `.github/workflows/l9-lint-test.yml`
 - `.github/workflows/l9-manifest-reconcile.yml`
 - `.github/workflows/l9-self-ci.yml`
 - `.github/workflows/l9-yaml-governance-dogfood.yml`
 - `.github/workflows/l9-yaml-governance.yml`
-- `.github/workflows/on-org-update.yml`
 - `.github/workflows/publish.yml`
 - `.github/zizmor.yml`
 - `.gitignore`
@@ -147,7 +143,10 @@ Files: 351
 - `docs/source/phase-4.md`
 - `docs/source/sdk-spec.md`
 - `docs/templates/l9-biome-scan-caller.yml`
+- `docs/templates/l9-lint-test-node.yml`
+- `docs/templates/l9-lint-test.yml`
 - `docs/templates/l9-yaml-governance-caller.yml`
+- `docs/templates/on-org-update.yml`
 - `l9_ci/__init__.py`
 - `l9_ci/__main__.py`
 - `l9_ci/artifacts/__init__.py`

@@ -1,5 +1,22 @@
 # Receiver for org template updates. Place at .github/workflows/on-org-update.yml.
 # When Quantum-L9/.github pushes a template change, this workflow auto-syncs.
+#
+# NOT ACTIVE IN THIS REPOSITORY — parked in docs/templates/ pending two
+# prerequisites, both of which must land before it moves back under
+# .github/workflows/:
+#
+#   1. `scripts/sync_ci_from_pack.py` does not exist here. Every
+#      `org_template_updated` dispatch would take the `else` branch below and
+#      report success without syncing anything or opening the advertised PR.
+#   2. The `contents: write` + `pull-requests: write` scopes it needs are
+#      rejected by tests/architecture/test_l9_wiring.py's least-privilege
+#      invariant. Activating it requires an explicit, reviewed entry in that
+#      test's _ALLOWED_WRITE_SCOPES table — a deliberate exemption, not a
+#      silent one, for a workflow triggered by repository_dispatch.
+#
+# Until then Quantum-L9/.github seeds this repository push-side
+# (seed-governance.yml / continuous-sync.yml), which is how the templates in
+# this directory arrived; the receiver is not on the critical path.
 name: Sync on org update
 
 on:

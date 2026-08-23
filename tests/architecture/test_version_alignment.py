@@ -20,8 +20,7 @@ def test_source_package_integration_and_lock_versions_match() -> None:
     editable_roots = [
         package
         for package in uv_lock["package"]
-        if package.get("name") == "l9-ci"
-        and package.get("source") == {"editable": "."}
+        if package.get("name") == "l9-ci" and package.get("source") == {"editable": "."}
     ]
     assert len(editable_roots) == 1
 

@@ -80,6 +80,10 @@ _ALLOWED_EXTERNAL_ACTION_PREFIXES = (
     "actions/",
     f"{CORE_REPO}/",
     "pypa/gh-action-pypi-publish@",
+    # First-party org governance repo, not a third-party vendor: governance.yml
+    # is the org-seeded caller for Quantum-L9/.github's governance-pr /
+    # governance-issue reusable workflows. Still SHA-pinned by the test above.
+    "Quantum-L9/.github/",
 )
 
 # Workflows with intentional elevated write scopes beyond checks:write.
@@ -87,6 +91,10 @@ _ALLOWED_WRITE_SCOPES = {
     "l9-manifest-reconcile.yml": {"contents"},  # bot commits MANIFEST.md
     "l9-self-ci.yml": {"pull-requests"},  # marker comment
     "publish.yml": {"id-token", "actions"},  # OIDC publish + download-artifact
+    # Caller permissions cap the called reusable workflow, so this is the union
+    # the two pinned Quantum-L9/.github callees declare: PR gate annotations and
+    # issue triage labels / credential-leak comments.
+    "governance.yml": {"issues", "pull-requests"},
 }
 
 # Governance companions that are real YAML (not JSON-as-YAML).

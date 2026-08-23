@@ -20,7 +20,8 @@
         "digest": {"$ref": "#/$defs/digest"},
         "mediaType": {"type": "string", "minLength": 1},
         "path": {"type": "string", "minLength": 1},
-        "uri": {"type": "string", "minLength": 1}
+        "uri": {"type": "string", "minLength": 1},
+        "sdkVersion": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"}
       },
       "required": ["name", "digest"],
       "unevaluatedProperties": false
@@ -69,11 +70,11 @@
     "producer": {
       "type": "object",
       "properties": {
-        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$"},
+        "id": {"const": "l9-ci-sdk"},
         "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"},
         "buildDigest": {"$ref": "#/$defs/digest"},
         "executionIdentity": {"type": "string", "minLength": 1},
-        "repository": {"type": "string", "minLength": 1}
+        "repository": {"const": "Quantum-L9/l9-ci-sdk"}
       },
       "required": ["id", "version"],
       "unevaluatedProperties": false

@@ -4,6 +4,12 @@
 # Org-distributed copy of Quantum-L9/l9-ci-core presets/typescript
 # `.github/workflows/l9-lint-test.yml`. Do not invent a second lint owner.
 #
+# It lives in docs/templates/, NOT .github/workflows/. This SDK is Python-only:
+# it has no package.json or lockfile, so the `cache: npm` steps below cannot
+# resolve a cache dependency path and every job would fail here before reaching
+# its skip logic. This repository's own Biome coverage is the dedicated
+# l9-biome-scan-dogfood.yml workflow; consumers copy this caller instead.
+#
 # Formatter/linter ownership: Biome owns JS/TS/JSON (format + lint) via the
 # SDK-owned reusable workflow below. ESLint is NOT a second formatter owner
 # here. Type checking (tsc) and the repository test suite stay in this repo.

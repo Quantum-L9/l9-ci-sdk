@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -25,6 +27,17 @@ SUPPORTED_OBSERVATION_CHECKS = frozenset(
     }
 )
 EXECUTION_STATUSES = frozenset({"passed", "failed", "error", "skipped"})
+
+# jsonschema treats `format` as an annotation unless a format checker with a
+# registered `date-time` implementation is installed, and that implementation
+# (rfc3339-validator) is a test-only dependency. Rather than promote a validator
+# library into the SDK's runtime dependencies, the two observation timestamps are
+# checked here directly, so a malformed startedAt/completedAt cannot pass
+# validation in an installation that carries only the base dependencies.
+_RFC3339 = re.compile(
+    r"^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$"
+)
+_TIMESTAMP_FIELDS = ("startedAt", "completedAt")
 
 
 def _sha256_digest(value: str) -> dict[str, str]:
@@ -62,8 +75,36 @@ def _observation_id(payload_without_id: Mapping[str, Any]) -> str:
     return f"sha256:{digest}"
 
 
+def _timestamp_errors(payload: Mapping[str, Any]) -> list[str]:
+    execution = payload.get("execution")
+    if not isinstance(execution, Mapping):
+        return []
+    errors: list[str] = []
+    for field in _TIMESTAMP_FIELDS:
+        value = execution.get(field)
+        if not isinstance(value, str) or not _RFC3339.match(value):
+            errors.append(f"execution/{field}: {value!r} is not an RFC3339 date-time")
+            continue
+        try:
+            datetime.fromisoformat(value)
+        except ValueError:
+            errors.append(
+                f"execution/{field}: {value!r} is not a valid calendar date-time"
+            )
+    return errors
+
+
 def validate_observation(payload: Mapping[str, Any]) -> None:
-    """Validate an SDK-produced observation against the bundled v1 contract."""
+    """Validate an SDK-produced observation against the bundled v1 contract.
+
+    Schema conformance alone is not sufficient. ``observationId`` is a
+    content address, so validation also recomputes it over the rest of the
+    payload and requires an exact match: an observation that was mutated after
+    it was built -- in storage, or in transit between processes -- keeps a
+    well-formed ID that no longer describes its content, and the schema cannot
+    detect that. Recomputing here is what makes the identity usable for
+    deduplication and integrity checks downstream.
+    """
     schema_path = files("l9_ci").joinpath("schemas", "v1", "observation.schema.json")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
@@ -79,6 +120,23 @@ def validate_observation(payload: Mapping[str, Any]) -> None:
         raise ValueError(
             "observation schema validation failed:\n"
             + "\n".join(f"- {item}" for item in rendered)
+        )
+
+    integrity = _timestamp_errors(payload)
+    declared_id = payload["observationId"]
+    expected_id = _observation_id(
+        {key: value for key, value in payload.items() if key != "observationId"}
+    )
+    if declared_id != expected_id:
+        integrity.append(
+            f"observationId: {declared_id!r} does not match the content address "
+            f"of this payload ({expected_id!r}); the observation was modified "
+            "after it was built"
+        )
+    if integrity:
+        raise ValueError(
+            "observation validation failed:\n"
+            + "\n".join(f"- {item}" for item in integrity)
         )
 
 
@@ -273,6 +331,9 @@ def project_mandatory_findings_observation(
             "value": bundle.canonical_digest(),
         },
         "mediaType": "application/vnd.l9.finding-bundle+json",
+        # The bundle's own SDK version describes the source artifact, not the
+        # producer of this observation. See the producer_version note below.
+        "sdkVersion": bundle.SDK_version,
     }
     if source_path:
         source = Path(source_path)
@@ -281,8 +342,20 @@ def project_mandatory_findings_observation(
         bundle_artifact["path"] = source.as_posix()
 
     status = "error" if bundle.provider_failures else "passed"
+    # `producer` describes what built THIS observation, which is the SDK
+    # executing right now -- not the SDK that produced the input bundle.
+    # load_and_validate_bundle accepts any v1-schema bundle, so attributing the
+    # bundle's SDK_version here would let a bundle written by an older SDK yield
+    # an observation claiming to have been produced by a version that never
+    # implemented this protocol, and which the v2 producer trust configuration
+    # may refuse. The bundle's version is retained on its artifact record above.
+    # Imported inside the function: l9_ci/__init__ imports this subpackage, so a
+    # module-level import would be circular (l9_ci.commands.observations does
+    # the same for the same reason).
+    from l9_ci import __version__
+
     return build_observation(
-        producer_version=bundle.SDK_version,
+        producer_version=__version__,
         repository=repository,
         revision=bundle.snapshot.revision,
         check_id="l9.mandatory-findings",
