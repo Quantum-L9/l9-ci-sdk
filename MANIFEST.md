@@ -1,14 +1,22 @@
 # Consolidated Manifest
 
-Files: 336
+Files: 351
 
 ## Contents
 
+- `.biomeignore`
 - `.cursor/rules/git-worktree-hygiene.mdc`
 - `.cursor/rules/readme-and-agents-docs.mdc`
+- `.editorconfig`
 - `.github/CODEOWNERS`
+- `.github/FUNDING.yml`
+- `.github/ISSUE_TEMPLATE/1-bug.yml`
+- `.github/ISSUE_TEMPLATE/2-feature.yml`
+- `.github/ISSUE_TEMPLATE/3-task.yml`
+- `.github/ISSUE_TEMPLATE/4-incident.yml`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
 - `.github/ISSUE_TEMPLATE/ci-failure.yml`
+- `.github/ISSUE_TEMPLATE/config.yml`
 - `.github/ISSUE_TEMPLATE/feature_request.yml`
 - `.github/ISSUE_TEMPLATE/gov-violation.yml`
 - `.github/PULL_REQUEST_TEMPLATE.md`
@@ -23,12 +31,15 @@ Files: 336
 - `.github/governance/rule-modes.yaml`
 - `.github/governance/semgrep-policy.yaml`
 - `.github/governance/waivers.yaml`
+- `.github/labels.yml`
+- `.github/pull_request_template.md`
 - `.github/scripts/agent_review_payload.py`
 - `.github/scripts/classify_pr.py`
 - `.github/scripts/evaluate_ci_gate.py`
 - `.github/scripts/render_ci_summary.py`
 - `.github/scripts/update_marker_comment.py`
 - `.github/workflows/ci.yml`
+- `.github/workflows/governance.yml`
 - `.github/workflows/l9-analysis-merge.yml`
 - `.github/workflows/l9-analysis-nightly.yml`
 - `.github/workflows/l9-analysis-release.yml`
@@ -36,10 +47,13 @@ Files: 336
 - `.github/workflows/l9-analysis.yml`
 - `.github/workflows/l9-biome-scan-dogfood.yml`
 - `.github/workflows/l9-biome-scan.yml`
+- `.github/workflows/l9-lint-test-node.yml`
+- `.github/workflows/l9-lint-test.yml`
 - `.github/workflows/l9-manifest-reconcile.yml`
 - `.github/workflows/l9-self-ci.yml`
 - `.github/workflows/l9-yaml-governance-dogfood.yml`
 - `.github/workflows/l9-yaml-governance.yml`
+- `.github/workflows/on-org-update.yml`
 - `.github/workflows/publish.yml`
 - `.github/zizmor.yml`
 - `.gitignore`
@@ -57,6 +71,7 @@ Files: 336
 - `.l9/tool-stack.yaml`
 - `.pre-commit-config.yaml`
 - `.semgrepignore`
+- `.vscode/extensions.json`
 - `AGENTS.md`
 - `ALIGNMENT.md`
 - `ARCHITECTURE.md`
