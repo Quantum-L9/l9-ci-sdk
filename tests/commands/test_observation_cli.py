@@ -9,10 +9,13 @@ import l9_ci.__main__ as main_module
 from l9_ci.artifacts import bundle_bytes
 from l9_ci.contracts import (
     Confidence,
+    Coverage,
+    CoverageStatus,
     EvidenceRecord,
     Finding,
     FindingBundle,
     FindingClassification,
+    ProviderRun,
     ResolutionStatus,
     RuleMode,
     Severity,
@@ -141,12 +144,14 @@ def _bundle() -> FindingBundle:
             revision=REVISION,
             dirty=False,
         ),
-        providers=(),
+        # The CLI path runs the full artifact validator, which rejects evidence
+        # and findings whose provider_id is not a registered provider run.
+        providers=(ProviderRun("semgrep", "1.0.0", "1.100.0", "import", True),),
         evidence=(evidence,),
         findings=(finding,),
         classifications=(classification,),
         provider_failures=(),
-        coverage=(),
+        coverage=(Coverage("semgrep", CoverageStatus.COMPLETE, 1, 1, ()),),
     )
 
 

@@ -23,7 +23,11 @@ def register_observation_commands(
     build.add_argument(
         "--status", required=True, choices=("passed", "failed", "error", "skipped")
     )
-    build.add_argument("--finding-count", type=int, default=0)
+    # No --finding-count: `build` carries no way to supply finding records, and
+    # build_observation requires finding_count == len(findings). The option could
+    # therefore only ever be passed as 0, and any positive value failed the
+    # command outright. Observations that carry findings are produced by
+    # `project-mandatory-findings`, which derives the count from the bundle.
     build.add_argument("--error-count", type=int, default=0)
     build.add_argument("--warning-count", type=int, default=0)
     build.add_argument("--informational-count", type=int, default=0)
@@ -68,7 +72,6 @@ def handle_build(args: argparse.Namespace) -> int:
             status=args.status,
             started_at=args.started_at,
             completed_at=args.completed_at,
-            finding_count=args.finding_count,
             error_count=args.error_count,
             warning_count=args.warning_count,
             informational_count=args.informational_count,
