@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 326
+Files: 330
 
 ## Contents
 
@@ -192,6 +192,7 @@ Files: 326
 - `l9_ci/integration/limits.py`
 - `l9_ci/integration/projection.py`
 - `l9_ci/integration/redaction.py`
+- `l9_ci/integration/sarif.py`
 - `l9_ci/integration/versioning.py`
 - `l9_ci/pipeline/__init__.py`
 - `l9_ci/pipeline/lifecycle.py`
@@ -239,6 +240,7 @@ Files: 326
 - `l9_ci/schemas/v1/promotion-policy.schema.json`
 - `l9_ci/schemas/v1/provider-failure.schema.json`
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
+- `l9_ci/schemas/v1/sarif-log.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
 - `lint/check_action_pins.py`
 - `lint/check_governance_json.py`
@@ -275,6 +277,7 @@ Files: 326
 - `tests/contracts/test_compatibility_rules.py`
 - `tests/contracts/test_deterministic_serialization.py`
 - `tests/contracts/test_model_invariants.py`
+- `tests/contracts/test_sarif_contract.py`
 - `tests/contracts/test_schema_conformance.py`
 - `tests/execution/test_profiles.py`
 - `tests/execution/test_selection.py`
@@ -300,6 +303,7 @@ Files: 326
 - `tests/integration/test_agent_payload_projection.py`
 - `tests/integration/test_limits.py`
 - `tests/integration/test_redaction.py`
+- `tests/integration/test_sarif_projection.py`
 - `tests/integration/test_versioning.py`
 - `tests/pipeline/test_lifecycle.py`
 - `tests/pipeline/test_runner.py`
