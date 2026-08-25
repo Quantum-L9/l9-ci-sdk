@@ -1,17 +1,26 @@
 # Consolidated Manifest
 
-Files: 326
+Files: 346
 
 ## Contents
 
+- `.biomeignore`
 - `.cursor/rules/git-worktree-hygiene.mdc`
 - `.cursor/rules/readme-and-agents-docs.mdc`
+- `.editorconfig`
 - `.github/CODEOWNERS`
+- `.github/ISSUE_TEMPLATE/1-bug.yml`
+- `.github/ISSUE_TEMPLATE/2-feature.yml`
+- `.github/ISSUE_TEMPLATE/3-task.yml`
+- `.github/ISSUE_TEMPLATE/4-incident.yml`
 - `.github/ISSUE_TEMPLATE/bug_report.yml`
 - `.github/ISSUE_TEMPLATE/ci-failure.yml`
+- `.github/ISSUE_TEMPLATE/config.yml`
 - `.github/ISSUE_TEMPLATE/feature_request.yml`
 - `.github/ISSUE_TEMPLATE/gov-violation.yml`
+- `.github/ISSUE_TEMPLATE/seed-ci-failure.yml`
 - `.github/PULL_REQUEST_TEMPLATE.md`
+- `.github/PULL_REQUEST_TEMPLATE/agent.md`
 - `.github/dependabot.yml`
 - `.github/governance/README.md`
 - `.github/governance/execution-profiles.yaml`
@@ -21,14 +30,18 @@ Files: 326
 - `.github/governance/quality-thresholds.yaml`
 - `.github/governance/rule-modes.selfci.yaml`
 - `.github/governance/rule-modes.yaml`
+- `.github/governance/semgrep-finding-policy.yaml`
+- `.github/governance/semgrep-identity-map.yaml`
 - `.github/governance/semgrep-policy.yaml`
 - `.github/governance/waivers.yaml`
+- `.github/pull_request_template.md`
 - `.github/scripts/agent_review_payload.py`
 - `.github/scripts/classify_pr.py`
 - `.github/scripts/evaluate_ci_gate.py`
 - `.github/scripts/render_ci_summary.py`
 - `.github/scripts/update_marker_comment.py`
 - `.github/workflows/ci.yml`
+- `.github/workflows/governance.yml`
 - `.github/workflows/l9-analysis-merge.yml`
 - `.github/workflows/l9-analysis-nightly.yml`
 - `.github/workflows/l9-analysis-release.yml`
@@ -36,6 +49,8 @@ Files: 326
 - `.github/workflows/l9-analysis.yml`
 - `.github/workflows/l9-biome-scan-dogfood.yml`
 - `.github/workflows/l9-biome-scan.yml`
+- `.github/workflows/l9-lint-test-node.yml`
+- `.github/workflows/l9-lint-test.yml`
 - `.github/workflows/l9-manifest-reconcile.yml`
 - `.github/workflows/l9-self-ci.yml`
 - `.github/workflows/l9-yaml-governance-dogfood.yml`
@@ -57,6 +72,7 @@ Files: 326
 - `.l9/tool-stack.yaml`
 - `.pre-commit-config.yaml`
 - `.semgrepignore`
+- `.vscode/extensions.json`
 - `AGENTS.md`
 - `ALIGNMENT.md`
 - `ARCHITECTURE.md`
@@ -192,6 +208,7 @@ Files: 326
 - `l9_ci/integration/limits.py`
 - `l9_ci/integration/projection.py`
 - `l9_ci/integration/redaction.py`
+- `l9_ci/integration/sarif.py`
 - `l9_ci/integration/versioning.py`
 - `l9_ci/pipeline/__init__.py`
 - `l9_ci/pipeline/lifecycle.py`
@@ -239,6 +256,7 @@ Files: 326
 - `l9_ci/schemas/v1/promotion-policy.schema.json`
 - `l9_ci/schemas/v1/provider-failure.schema.json`
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
+- `l9_ci/schemas/v1/sarif-log.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
 - `lint/check_action_pins.py`
 - `lint/check_governance_json.py`
@@ -275,6 +293,7 @@ Files: 326
 - `tests/contracts/test_compatibility_rules.py`
 - `tests/contracts/test_deterministic_serialization.py`
 - `tests/contracts/test_model_invariants.py`
+- `tests/contracts/test_sarif_contract.py`
 - `tests/contracts/test_schema_conformance.py`
 - `tests/execution/test_profiles.py`
 - `tests/execution/test_selection.py`
@@ -300,6 +319,7 @@ Files: 326
 - `tests/integration/test_agent_payload_projection.py`
 - `tests/integration/test_limits.py`
 - `tests/integration/test_redaction.py`
+- `tests/integration/test_sarif_projection.py`
 - `tests/integration/test_versioning.py`
 - `tests/pipeline/test_lifecycle.py`
 - `tests/pipeline/test_runner.py`
