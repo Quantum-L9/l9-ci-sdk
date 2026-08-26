@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 330
+Files: 336
 
 ## Contents
 
@@ -161,6 +161,7 @@ Files: 330
 - `l9_ci/commands/gates.py`
 - `l9_ci/commands/integration.py`
 - `l9_ci/commands/manifest.py`
+- `l9_ci/commands/observations.py`
 - `l9_ci/commands/providers.py`
 - `l9_ci/commands/semgrep.py`
 - `l9_ci/contracts/__init__.py`
@@ -190,6 +191,7 @@ Files: 330
 - `l9_ci/integration/__init__.py`
 - `l9_ci/integration/agent_payload.py`
 - `l9_ci/integration/limits.py`
+- `l9_ci/integration/observation.py`
 - `l9_ci/integration/projection.py`
 - `l9_ci/integration/redaction.py`
 - `l9_ci/integration/sarif.py`
@@ -236,6 +238,7 @@ Files: 330
 - `l9_ci/schemas/v1/finding-classification.schema.json`
 - `l9_ci/schemas/v1/finding.schema.json`
 - `l9_ci/schemas/v1/gate-result.schema.json`
+- `l9_ci/schemas/v1/observation.schema.json`
 - `l9_ci/schemas/v1/policy-observation.schema.json`
 - `l9_ci/schemas/v1/promotion-policy.schema.json`
 - `l9_ci/schemas/v1/provider-failure.schema.json`
@@ -257,6 +260,7 @@ Files: 330
 - `tests/architecture/test_l9_wiring.py`
 - `tests/architecture/test_public_api.py`
 - `tests/architecture/test_schema_inventory.py`
+- `tests/architecture/test_version_alignment.py`
 - `tests/baseline/__init__.py`
 - `tests/baseline/test_baseline_kernel.py`
 - `tests/biome/test_biome_scan.py`
@@ -267,6 +271,7 @@ Files: 330
 - `tests/commands/test_cli.py`
 - `tests/commands/test_errors.py`
 - `tests/commands/test_manifest_cli.py`
+- `tests/commands/test_observation_cli.py`
 - `tests/commands/test_semgrep_command.py`
 - `tests/commands/test_semgrep_run_contract.py`
 - `tests/compatibility/fixtures/finding-bundle-v1-bad-summary.json`
@@ -301,6 +306,7 @@ Files: 330
 - `tests/identity/test_resolver.py`
 - `tests/integration/__init__.py`
 - `tests/integration/test_agent_payload_projection.py`
+- `tests/integration/test_assurance_observation.py`
 - `tests/integration/test_limits.py`
 - `tests/integration/test_redaction.py`
 - `tests/integration/test_sarif_projection.py`

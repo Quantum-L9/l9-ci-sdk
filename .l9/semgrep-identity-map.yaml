@@ -2,7 +2,7 @@
 schema: l9.identity-map/v1
 metadata:
   provider_id: semgrep
-  version: 1.1.0
+  version: 1.2.0
   status: authoritative
 # Provenance: every provider_rule_id below is a REAL Semgrep registry check_id,
 # captured by running `semgrep --config <pack>` against local synthetic
@@ -33,6 +33,17 @@ rules:
     canonical_rule_id: L9-PYTHON-SUBPROCESS-SHELL-TRUE
   gitlab.bandit.B602:
     canonical_rule_id: L9-PYTHON-SUBPROCESS-SHELL-TRUE
+
+  # --- subprocess invoked with tainted (user-controlled) argv, no shell ---
+  # Distinct MECHANISM from shell=True above: the command is a list, argv[0] is
+  # fixed, and no shell interprets it -- so L9-PYTHON-SUBPROCESS-SHELL-TRUE does
+  # NOT describe this rule. Semantics read from the rule's own output against
+  # l9-cognitive-runtime@45d87e9: message "Detected subprocess function with
+  # user controlled data", metadata.cwe "CWE-78: ... OS Command Injection",
+  # metadata.vulnerability_class "Command Injection", owasp "A03:2021 -
+  # Injection". Not guessed from severity, confidence, or rule name.
+  python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args:
+    canonical_rule_id: L9-PYTHON-SUBPROCESS-TAINTED-ARGS
 
   # --- unsafe deserialization (pickle) ---
   python.lang.security.deserialization.pickle.avoid-pickle:

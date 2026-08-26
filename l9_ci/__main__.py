@@ -7,6 +7,7 @@ from l9_ci.commands import (
     register_gate_commands,
     register_integration_commands,
     register_manifest_commands,
+    register_observation_commands,
     register_provider_commands,
     register_semgrep_commands,
 )
@@ -20,6 +21,7 @@ def main() -> int:
     register_gate_commands(subparsers)
     register_integration_commands(subparsers)
     register_manifest_commands(subparsers)
+    register_observation_commands(subparsers)
     register_provider_commands(subparsers)
     register_semgrep_commands(subparsers)
     args = parser.parse_args()

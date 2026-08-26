@@ -2,8 +2,16 @@
 schema: l9.architecture-spec/v1
 metadata:
   repository: Quantum-L9/l9-ci-sdk
-  version: 1.1.0
+  version: 2.0.0
   status: authoritative
+
+identity:
+  role: canonical-ci-observation-sdk
+  description: >-
+    Deterministic repository capability detection, provider execution,
+    canonical evidence/findings, technical evaluation, and revision-bound
+    observation production for the Quantum-L9 CI constellation.
+
 layers:
   contracts:
     package: l9_ci.contracts
@@ -11,28 +19,20 @@ layers:
       - immutable canonical models
       - canonical enums
       - model invariants
-    may_depend_on:
-      - Python standard library
+    may_depend_on: [Python standard library]
   repository:
     package: l9_ci.repository
     responsibility:
       - repository enumeration
       - Git inspection
       - deterministic snapshot identity
-    may_depend_on:
-      - Python standard library
-    must_not_depend_on:
-      - providers
-      - policy
-      - gates
-      - integration
+    may_depend_on: [Python standard library]
+    must_not_depend_on: [providers, policy, gates, integration]
   capabilities:
     package: l9_ci.capabilities
     responsibility:
       - repository capability detection
-    may_depend_on:
-      - repository
-      - contracts
+    may_depend_on: [repository, contracts]
   providers:
     package: l9_ci.providers
     responsibility:
@@ -41,40 +41,26 @@ layers:
       - report import
       - provider normalization
       - provider coverage
-    may_depend_on:
-      - contracts
-      - identity
-      - repository
-    must_not_depend_on:
-      - artifacts
-      - gates
-      - integration
-      - workflow code
+    may_depend_on: [contracts, identity, repository]
+    must_not_depend_on: [artifacts, gates, integration, workflow code]
   identity:
     package: l9_ci.identity
     responsibility:
       - explicit canonical rule identity resolution
-    may_depend_on:
-      - contracts
+    may_depend_on: [contracts]
   policy:
     package: l9_ci.policy
     responsibility:
       - policy loading
       - finding classification
-    may_depend_on:
-      - contracts
-    must_not_depend_on:
-      - providers
-      - artifacts
-      - gates
+    may_depend_on: [contracts]
+    must_not_depend_on: [providers, artifacts, gates]
   execution:
     package: l9_ci.execution
     responsibility:
       - execution profiles
-      - provider selection
-    may_depend_on:
-      - capabilities
-      - providers
+      - provider selection primitives
+    may_depend_on: [capabilities, providers]
   artifacts:
     package: l9_ci.artifacts
     responsibility:
@@ -82,86 +68,53 @@ layers:
       - schema validation
       - semantic validation
       - atomic writes
-    may_depend_on:
-      - contracts
-    must_not_depend_on:
-      - providers
-      - policy
-      - gates
+    may_depend_on: [contracts]
+    must_not_depend_on: [providers, policy, gates]
   gates:
     package: l9_ci.gates
     responsibility:
-      - gate evaluation
-    may_depend_on:
-      - contracts
-    must_not_depend_on:
-      - providers
-      - policy
-      - integration
+      - technical gate evaluation only
+    may_depend_on: [contracts]
+    must_not_depend_on: [providers, policy, integration]
   pipeline:
     package: l9_ci.pipeline
     responsibility:
       - public SDK composition flows
       - provider lifecycle composition
-    may_depend_on:
-      - contracts
-      - repository
-      - capabilities
-      - execution
-      - providers
-      - identity
-      - policy
-      - artifacts
-      - integration
+    may_depend_on: [contracts, repository, capabilities, execution, providers, identity, policy, artifacts, integration]
   integration:
     package: l9_ci.integration
     responsibility:
       - operational limits
       - compatibility negotiation
       - redaction validation
-      - non-canonical projections
-    may_depend_on:
-      - contracts
-    must_not_depend_on:
-      - providers
-      - pipeline
+      - agent/SARIF projections
+      - l9.observation/v1 construction and validation
+      - mandatory-findings observation projection
+    may_depend_on: [contracts]
+    must_not_depend_on: [providers, pipeline]
   cli:
     package: l9_ci.cli
     responsibility:
       - stable exit codes
       - structured diagnostics
       - output formatting
-    may_depend_on:
-      - Python standard library
+    may_depend_on: [Python standard library]
   commands:
     package: l9_ci.commands
     responsibility:
       - command registration
       - public CLI composition
-    may_depend_on:
-      - artifacts
-      - capabilities
-      - cli
-      - gates
-      - integration
-      - pipeline
-      - providers
-      - repository
-      - rulesets
+    may_depend_on: [artifacts, capabilities, cli, gates, integration, pipeline, providers, repository, rulesets]
   rulesets:
     package: l9_ci.rulesets
     responsibility:
-      - versioned, SDK-packaged provider rule files shipped as package data
+      - versioned SDK-packaged provider rule files
       - packaged provider identity maps
-      - importlib.resources-based path resolution (source tree or wheel)
-    may_depend_on:
-      - Python standard library
-    must_not_depend_on:
-      - providers
-      - policy
-      - gates
-      - pipeline
-      - integration
+      - source-tree and wheel path resolution
+    may_depend_on: [Python standard library]
+    must_not_depend_on: [providers, policy, gates, pipeline, integration]
+
 public_surface:
   packages:
     - l9_ci.contracts
@@ -176,7 +129,7 @@ public_surface:
     - l9_ci.integration
     - l9_ci.cli
     - l9_ci.rulesets
-    - l9_ci.rulesets
+
 forbidden_dependency_edges:
   - contracts_to_providers
   - contracts_to_artifacts
@@ -191,6 +144,8 @@ forbidden_dependency_edges:
   - SDK_to_LSP
   - SDK_to_Repair
   - SDK_to_Corpus
+  - SDK_to_Assurance_runtime
+
 canonical_flow:
   - repository
   - capabilities
@@ -198,6 +153,14 @@ canonical_flow:
   - providers
   - identity
   - policy
-  - gates
+  - technical-gates
   - artifacts
-  - projections
+  - observations-and-projections
+
+boundaries:
+  Core:
+    owns: organization orchestration, enforcement, permissions, publication
+  Assurance:
+    owns: observation admission, control evaluation, final organization decision
+  SDK:
+    must_never_emit: final Assurance verdict
