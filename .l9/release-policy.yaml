@@ -2,7 +2,8 @@
 schema: l9.release-policy/v1
 metadata:
   repository: Quantum-L9/l9-ci-sdk
-  version: 1.0.0
+  version: 2.0.0
+
 release_channels:
   experimental:
     requirements:
@@ -19,7 +20,7 @@ release_channels:
       - timeout behavior is tested
       - output limit behavior is tested
       - no raw secret or source snippet leakage
-      - Core integration path publishes canonical gate results
+      - Core integration path publishes canonical technical gate results
   supported:
     requirements:
       - shadow observation completed
@@ -29,6 +30,7 @@ release_channels:
       - release checklist completed
       - known limitations accepted
       - supported Semgrep version range documented
+
 Semgrep:
   current_state: experimental
   target_state: shadow
@@ -40,3 +42,28 @@ Semgrep:
     core_gate_check: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182783/job/91188145152"
     required_check_ruleset: "https://github.com/Quantum-L9/l9-ci-sdk/rules/20147356"
     validation_artifact: "https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061"
+
+ObservationV2:
+  protocol: l9.observation/v1
+  producer_version: 2.0.0
+  current_state: candidate
+  target_state: shadow
+  supported_checks:
+    - l9.repository-metadata
+    - l9.transport-packet
+    - l9.sdk-validation
+    - l9.lint
+    - l9.tests
+    - l9.mandatory-findings
+  promotion_requirements:
+    - deterministic observation identity tests pass
+    - exact revision binding tests pass
+    - observation schema validation passes
+    - mandatory-findings fidelity tests pass
+    - Core consumes exact v2 SDK revision in a real GitHub Actions canary
+    - all six required observation classes are emitted for one exact revision
+    - Assurance admits the exact candidate producer build without schema translation
+  blockers:
+    - real Core-to-SDK-v2 canary not yet evidenced
+    - complete six-observation execution not yet evidenced
+    - Assurance production producer trust activation not yet evidenced

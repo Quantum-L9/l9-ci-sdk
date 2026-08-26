@@ -3,15 +3,9 @@ schema: l9.public-api/v1
 metadata:
   status: authoritative
   description: >-
-    The single canonical public Python API surface. Root exports
-    (l9_ci.__all__), the public-api docs, and the exact-equality architecture
-    test (tests/architecture/test_public_api.py) all derive from this file. A
-    package's __all__ must equal exactly the symbols listed here plus any entry
-    in compatibility_allowlist. Adding or removing a public symbol is a
-    versioned compatibility decision (see .l9/compatibility.yaml).
-# Public packages must match .l9/architecture.yaml public_surface.
-# l9_ci.rulesets is listed with an empty symbol set below (package-data
-# namespace); see test_rulesets_public_surface for submodule checks.
+    Canonical public Python API surface. Root exports, package __all__ values,
+    and architecture tests must remain exact. Public symbol changes are
+    versioned compatibility decisions.
 packages:
   l9_ci.contracts:
     - Confidence
@@ -95,23 +89,27 @@ packages:
     - GateResult
     - GateStatus
     - evaluate_gate
-  # SemanticVersion is canonical in l9_ci.contracts (AUD-005: one canonical
-  # home per symbol); l9_ci.integration carries only a deprecated
-  # compatibility alias, recorded in compatibility_allowlist below (AUD-001).
   l9_ci.integration:
     - AGENT_REVIEW_PAYLOAD_PROTOCOL
     - AGENT_REVIEW_PAYLOAD_SCHEMA_VERSION
     - AgentFinding
     - AgentReviewPayload
+    - EXECUTION_STATUSES
+    - OBSERVATION_PROTOCOL
+    - OBSERVATION_SCHEMA_VERSION
     - OperationalLimits
     - RedactionResult
     - SARIF_LOG_SUBSET_SCHEMA
     - SARIF_SCHEMA_URI
     - SARIF_VERSION
+    - SUPPORTED_OBSERVATION_CHECKS
     - VersionNegotiationResult
+    - build_observation
     - negotiate_versions
     - project_agent_review_payload
+    - project_mandatory_findings_observation
     - project_sarif_log
+    - validate_observation
     - validate_record_counts
     - validate_redaction
     - validate_report_size
@@ -120,19 +118,7 @@ packages:
     - ExitCode
     - OutputFormat
     - render_success
-  # l9_ci.rulesets is a pure package-data namespace (see .l9/architecture.yaml);
-  # its __all__ is intentionally empty. Downstream consumers resolve packaged
-  # ruleset paths through l9_ci.rulesets.semgrep, a submodule covered by its
-  # own explicit check (test_rulesets_public_surface), not by this manifest.
   l9_ci.rulesets: []
-# Intentional deviations from the exact set, if any, recorded for compatibility
-# review. Empty = every package's __all__ must equal its list above exactly.
 compatibility_allowlist:
-  # AUD-001 remediation: SemanticVersion originally shipped from
-  # l9_ci.integration and was moved to l9_ci.contracts (65715d0) without an
-  # alias — a breaking change for existing importers. This deprecated
-  # re-export preserves compatibility; removal is a versioned decision under
-  # .l9/compatibility.yaml (deprecate now, drop no earlier than the next
-  # major release).
   l9_ci.integration:
     - SemanticVersion

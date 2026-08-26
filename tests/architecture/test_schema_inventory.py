@@ -17,6 +17,7 @@ EXPECTED_SCHEMAS = {
     "attestation-envelope.schema.json",
     "evidence-report.schema.json",
     "sarif-log.schema.json",
+    "observation.schema.json",
 }
 
 
