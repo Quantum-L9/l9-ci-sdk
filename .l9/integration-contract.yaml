@@ -3,10 +3,16 @@ schema: l9.integration-contract/v1
 metadata:
   producer: Quantum-L9/l9-ci-sdk
   consumer: Quantum-L9/l9-ci-core
-  version: 1.0.0
+  version: 2.0.0
   status: authoritative
+
+principle: >-
+  SDK owns factual analysis and observation semantics. It does not own the
+  final organization Assurance decision.
+
 boundary:
   SDK_owns:
+    - repository capability detection
     - provider execution contract
     - provider-native report import
     - canonical evidence
@@ -18,95 +24,95 @@ boundary:
     - schema validation
     - semantic validation
     - deterministic serialization
+    - technical gate evaluation
     - agent-review payload projection
     - deterministic SARIF projection
     - deterministic repository manifest generation
+    - l9.observation/v1 construction and validation
+    - mandatory-findings observation projection
   Core_owns:
     - GitHub Actions orchestration
-    - SARIF upload to GitHub code scanning
+    - organization CI execution topology
     - workflow permissions
-    - provider enablement selection
-    - required versus optional provider selection
-    - policy file selection
-    - artifact upload
-    - artifact retention
-    - gate publication
-    - pull-request summaries
-    - organization rollout policy
+    - provider enablement and requiredness selection
+    - exact provider/tool version selection
+    - immutable SDK provisioning
+    - central organization governance selection
+    - artifact upload and retention
+    - technical gate enforcement until Assurance integration
+    - GitHub publication
+  Assurance_owns:
+    - observation admission and producer trust
+    - control evaluation
+    - final policy verdict
+    - immutable Assurance decision artifacts
   prohibited:
     - Core parsing provider-native scanner reports
     - Core reconstructing canonical findings
+    - Core constructing l9.observation/v1 payloads itself
     - SDK uploading workflow artifacts
     - SDK reading GitHub workflow context directly
-    - SDK deciding organization-wide provider promotion
+    - SDK selecting organization rollout policy
+    - SDK treating a technical gate result as the final Assurance verdict
+    - downstream consumers reconstructing an Assurance decision from SDK gate output
+
 CLI:
   executable: l9-ci
   commands:
+    providers_detect:
+      syntax: l9-ci providers detect --root ROOT --format json
+      description: Deterministically detect repository languages and provider candidacy.
     semgrep_normalize:
       syntax: >-
-        l9-ci semgrep normalize
-        --input REPORT
-        --output BUNDLE
-        --root ROOT
-        --snapshot-id SNAPSHOT
-        [--provider-version VERSION]
-        [--identity-map PATH]
-        [--policy PATH]
-        [--strict]
-        [--required]
-        [--generated-at TIMESTAMP]
-        [--revision REVISION]
-        [--dirty | --no-dirty]
+        l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT
+        --snapshot-id SNAPSHOT [--provider-version VERSION] [--identity-map PATH]
+        [--policy PATH] [--strict] [--required] [--generated-at TIMESTAMP]
+        [--revision REVISION] [--dirty | --no-dirty]
     bundle_validate:
       syntax: l9-ci bundle validate BUNDLE
     bundle_project_agent_payload:
       syntax: >-
-        l9-ci bundle project-agent-payload
-        --input BUNDLE
-        --output PAYLOAD
-        [--strict]
+        l9-ci bundle project-agent-payload --input BUNDLE --output PAYLOAD [--strict]
     bundle_project_sarif:
       syntax: >-
-        l9-ci bundle project-sarif
-        --input BUNDLE
-        --output SARIF
-        [--strict]
-      description: >-
-        Deterministically project a canonical finding bundle onto the supported
-        SARIF 2.1.0 subset (schema l9.sarif-log/v1) for GitHub code scanning.
-        SDK-owned and redaction-safe: no raw report parsing, no source lines or
-        secrets, no gate verdict change, no GitHub upload (Core publishes).
+        l9-ci bundle project-sarif --input BUNDLE --output SARIF [--strict]
     compatibility_check:
-      syntax: >-
-        l9-ci compatibility check
-        --bundle BUNDLE
-        [--minimum-SDK-version VERSION]
+      syntax: l9-ci compatibility check --bundle BUNDLE [--minimum-SDK-version VERSION]
     manifest_generate:
       syntax: >-
-        l9-ci manifest generate
-        --repository-root ROOT
-        --output MANIFEST
-        [--tracked-only]
-        [--exclude-path PATH]
-        [--exclude-dir DIR]
+        l9-ci manifest generate --repository-root ROOT --output MANIFEST
+        [--tracked-only] [--exclude-path PATH] [--exclude-dir DIR]
     manifest_check:
       syntax: >-
-        l9-ci manifest check
-        --repository-root ROOT
-        --output MANIFEST
-        [--tracked-only]
-        [--exclude-path PATH]
-        [--exclude-dir DIR]
+        l9-ci manifest check --repository-root ROOT --output MANIFEST
+        [--tracked-only] [--exclude-path PATH] [--exclude-dir DIR]
     gate_evaluate:
       syntax: >-
-        l9-ci gate evaluate
-        --bundle BUNDLE
-        [--output GATE_RESULT]
+        l9-ci gate evaluate --bundle BUNDLE [--output GATE_RESULT]
         [--strict-unresolved | --no-strict-unresolved]
       description: >-
-        Evaluate a validated canonical bundle and emit the canonical
-        gate-result artifact. This is the SDK's single gate-decision authority;
-        Core publishes the emitted result rather than reconstructing a verdict.
+        Evaluate one validated canonical bundle and emit the SDK technical
+        gate-result artifact. This result may be enforced by Core during the
+        pre-Assurance transition but is not an organization Assurance decision.
+    observation_build:
+      syntax: >-
+        l9-ci observation build --repository OWNER/NAME --revision SHA
+        --check-id CHECK --configuration-digest SHA256 --run-id RUN
+        --attempt N --status STATUS --started-at TIME --completed-at TIME
+        --output OBSERVATION
+      description: >-
+        Construct and validate one factual revision-bound l9.observation/v1
+        from explicit execution facts. No organization verdict is inferred.
+    observation_project_mandatory_findings:
+      syntax: >-
+        l9-ci observation project-mandatory-findings --input BUNDLE
+        --repository OWNER/NAME --configuration-digest SHA256 --run-id RUN
+        --attempt N --started-at TIME --completed-at TIME --output OBSERVATION
+      description: >-
+        Project all canonical FindingBundle findings into the
+        l9.mandatory-findings observation. Assurance owns which severities are
+        mandatory and the resulting control decision.
+
 exit_codes:
   success: 0
   gate_failure: 1
@@ -118,25 +124,49 @@ exit_codes:
   internal_error: 7
   incompatible_version: 8
   operational_limit_exceeded: 9
+
 artifact_layout:
   raw:
     root: artifacts/raw
-    pattern: artifacts/raw/<provider>/<report>
   canonical:
     root: artifacts/l9
     bundle: artifacts/l9/finding-bundle.json
     agent_payload: artifacts/l9/agent-review-payload.json
-    gate_result: artifacts/l9/gate-result.json
+    technical_gate_result: artifacts/l9/gate-result.json
+    observation: artifacts/l9/observations/<check>.json
   publication:
     owner: Core
     SDK_behavior: local_filesystem_only
+
+observation_protocol:
+  schema: l9.observation/v1
+  producer_id: l9-ci-sdk
+  subject_kind: git-revision
+  revision_binding: exact
+  supported_checks:
+    - l9.repository-metadata
+    - l9.transport-packet
+    - l9.sdk-validation
+    - l9.lint
+    - l9.tests
+    - l9.mandatory-findings
+  invariants:
+    - configuration digest is required
+    - run ID and attempt are required
+    - started/completed timestamps are required
+    - observations are deterministic for identical inputs
+    - unknown finding severity is never silently downgraded
+    - mandatory-findings projection retains all canonical findings
+    - no Assurance verdict is emitted by the SDK
+
 requiredness:
   source: Core invocation
   values:
     required:
-      failure_behavior: provider failure prevents successful strict gate evaluation
+      failure_behavior: provider failure prevents successful strict technical gate evaluation
     optional:
-      failure_behavior: failure remains visible but does not independently fail the gate
+      failure_behavior: failure remains visible but does not independently fail the technical gate
+
 version_negotiation:
   required_fields:
     - schema
@@ -145,5 +175,5 @@ version_negotiation:
   rules:
     - unsupported artifact major versions are rejected
     - minimum SDK requirements are explicit
-    - exact SDK pinning is recommended for CI
+    - exact SDK pinning is required for central CI
     - consumers must not infer compatibility from artifact shape alone
