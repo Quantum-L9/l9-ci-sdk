@@ -1,6 +1,7 @@
 ---
 schema: l9.ownership-spec/v1
 repository: Quantum-L9/l9-ci-sdk
+
 ownership:
   l9_ci/contracts:
     owns:
@@ -36,7 +37,7 @@ ownership:
   l9_ci/execution:
     owns:
       - execution profiles
-      - provider selection
+      - provider selection primitives
   l9_ci/artifacts:
     owns:
       - canonical serialization
@@ -45,13 +46,15 @@ ownership:
       - atomic writes
   l9_ci/gates:
     owns:
-      - pass, fail, incomplete, and invalid gate outcomes
+      - technical pass, fail, incomplete, and invalid outcomes
   l9_ci/integration:
     owns:
       - compatibility negotiation
       - operational limits
       - redaction validation
       - non-canonical projections
+      - l9.observation/v1 construction and validation
+      - mandatory-findings observation projection
   l9_ci/cli:
     owns:
       - stable exit codes
@@ -59,39 +62,49 @@ ownership:
       - structured diagnostics
   l9_ci/rulesets:
     owns:
-      - versioned, SDK-packaged provider rule files (shipped as package data)
+      - versioned SDK-packaged provider rules
       - packaged provider identity maps
-      - packaged-path resolution (source tree or installed wheel)
+
 external_boundaries:
   l9-ci-core:
-    relationship: consumer
+    relationship: orchestrator_consumer
     allowed:
       - invoke public CLI
-      - supply policy
+      - select centrally governed execution inputs
       - select required providers
-      - publish gate results
-      - upload artifacts
+      - enforce SDK technical gates
+      - upload and publish SDK artifacts
+      - request factual observation construction
     prohibited:
       - parse provider-native reports
       - reconstruct canonical findings
       - mutate canonical bundles
       - synthesize rule identity
-# GitHub Actions workflow ownership (AUD-006).
+      - construct l9.observation/v1 without SDK validation
+  l9-assurance:
+    relationship: decision_consumer
+    allowed:
+      - admit trusted SDK observations
+      - evaluate controls against exact-revision observations
+      - issue final Assurance decisions
+    prohibited:
+      - redefine SDK provider facts
+  Quantum-L9/.github:
+    relationship: none_for_ci_distribution
+    prohibited:
+      - distribute SDK/Core CI workflows
+      - distribute organization governance packs
+
 workflow_ownership:
   owner: l9-ci-core
   statement: >-
-    l9-ci-core owns GitHub Actions orchestration, the reusable analysis
-    workflows, artifact upload, and the copy-in caller TEMPLATE. The SDK is NOT a
-    workflow-template authority: the files under .github/workflows/ here are this
-    repository's OWN minimal live callers, not a template to be copied verbatim
-    into other repos. All real work delegates to Core-owned composite actions
-    (provision-sdk, invoke-sdk, validate-bundle, route-artifacts) and Core's
-    reusable publish-analysis.yml.
-  remaining_core_side_requirement: >-
-    The SDK caller still runs `semgrep scan` and hands the report to Core's
-    composite actions within one job because Core's reusable normalize workflow
-    (normalize-semgrep-report.yml) re-checks-out github.sha and reads the report
-    from the tree, so it cannot receive a freshly-generated (uncommitted) report.
-    To let the SDK caller shrink to a pure `uses:` thin caller, l9-ci-core must
-    provide a reusable analysis workflow that accepts the raw report as an
-    uploaded ARTIFACT rather than an in-tree path. Tracked in this repo's TODO.md.
+    l9-ci-core owns organization CI orchestration and GitHub permissions. The
+    SDK never becomes a workflow-distribution authority. Any workflows in this
+    repository are SDK self-CI/dogfood surfaces, not organization templates.
+
+final_decision_boundary:
+  SDK_gate: technical_evaluation_only
+  Assurance_decision: authoritative_organization_policy_verdict
+  invariant: >-
+    SDK technical gate output must never be relabeled or reconstructed as an
+    Assurance decision.
