@@ -2,6 +2,13 @@
 
 Follow-ups tracked outside the current change set.
 
+## Issue unblock (session reference)
+
+**Cluster:** Quantum-L9/l9-ci-sdk#50
+**Owning fix:** https://github.com/Quantum-L9/l9-ci-sdk/pull/77 (`07272e2`) — ruff-pre-commit `v0.15.5` → `v0.16.3` to match `requirements-ci.txt`
+**Next:** hand l9-ci-sdk#77 to l9-pr-remediation; do not merge from issue-remediation
+**Pickup:** Graphiti PICKUP written 2026-08-29
+
 ## generated_at provenance
 
 `FindingBundle.generated_at` is a required ISO-8601 timestamp in the artifact
