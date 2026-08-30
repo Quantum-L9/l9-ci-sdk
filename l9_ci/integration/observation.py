@@ -265,6 +265,18 @@ def project_mandatory_findings_observation(
     All canonical findings are retained. Assurance owns the policy that decides
     which severities are mandatory. Findings with unknown or absent severity
     are rejected rather than silently downgraded.
+
+    Known v0.1 limitation -- per-finding evidence lineage is not projected.
+    `Finding` requires at least one `evidence_id` and enforces uniqueness, but
+    those references do not cross the seam: only the whole-bundle digest does,
+    as the single artifact record built below. Assurance's finding schema has an
+    `evidence` array and this projection leaves it empty, so a consumer can
+    verify that *a* bundle produced these findings but cannot attribute an
+    individual finding to the evidence records behind it. Closing this means
+    projecting each finding's `evidence_ids` as assurance artifact references,
+    which is a contract change on both sides and is deliberately out of scope
+    for v0.1. Secondary locations are likewise demoted into
+    `metadata.sourceLocations`, where the consumer schema treats them as opaque.
     """
     if not bundle.snapshot.revision:
         raise ValueError("FindingBundle must carry an exact revision for Assurance")
