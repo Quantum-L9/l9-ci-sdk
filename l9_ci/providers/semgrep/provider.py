@@ -427,10 +427,12 @@ class SemgrepProvider:
             findings,
         )
         limitations.extend(coverage_limitations)
-        # Coverage is COMPLETE only when the report exposed a verified scanned
-        # inventory and no errors occurred. A zero-finding report with no
-        # verified paths.scanned must not silently present as COMPLETE, or a
-        # required provider could pass the gate on unproven coverage.
+        # Coverage is COMPLETE when the report exposed a verified scanned
+        # inventory and no fatal report errors occurred. Warn-level entries
+        # stay in limitations and do not force PARTIAL (honour semgrep
+        # level=warn). A zero-finding report with no verified paths.scanned
+        # must not silently present as COMPLETE, or a required provider
+        # could pass the gate on unproven coverage.
         if failures or not coverage_verified:
             coverage_status = CoverageStatus.PARTIAL
         else:
