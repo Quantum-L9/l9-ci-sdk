@@ -7,8 +7,8 @@
     "digest": {
       "type": "object",
       "properties": {
-        "algorithm": {"const": "sha256"},
-        "value": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        "algorithm": { "const": "sha256" },
+        "value": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
       },
       "required": ["algorithm", "value"],
       "unevaluatedProperties": false
@@ -16,12 +16,12 @@
     "artifact": {
       "type": "object",
       "properties": {
-        "name": {"type": "string", "minLength": 1},
-        "digest": {"$ref": "#/$defs/digest"},
-        "mediaType": {"type": "string", "minLength": 1},
-        "path": {"type": "string", "minLength": 1},
-        "uri": {"type": "string", "minLength": 1},
-        "sdkVersion": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"}
+        "name": { "type": "string", "minLength": 1 },
+        "digest": { "$ref": "#/$defs/digest" },
+        "mediaType": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "uri": { "type": "string", "minLength": 1 },
+        "sdkVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" }
       },
       "required": ["name", "digest"],
       "unevaluatedProperties": false
@@ -29,52 +29,52 @@
     "finding": {
       "type": "object",
       "properties": {
-        "findingId": {"type": "string", "minLength": 1},
-        "ruleId": {"type": "string", "minLength": 1},
-        "ruleVersion": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"},
-        "severity": {"enum": ["critical", "high", "medium", "low", "informational"]},
-        "disposition": {"enum": ["open", "accepted", "suppressed", "resolved", "not-applicable"]},
-        "message": {"type": "string", "minLength": 1},
+        "findingId": { "type": "string", "minLength": 1 },
+        "ruleId": { "type": "string", "minLength": 1 },
+        "ruleVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" },
+        "severity": { "enum": ["critical", "high", "medium", "low", "informational"] },
+        "disposition": { "enum": ["open", "accepted", "suppressed", "resolved", "not-applicable"] },
+        "message": { "type": "string", "minLength": 1 },
         "location": {
           "type": "object",
           "properties": {
-            "path": {"type": "string", "minLength": 1},
-            "lineStart": {"type": "integer", "minimum": 1},
-            "columnStart": {"type": "integer", "minimum": 1},
-            "lineEnd": {"type": "integer", "minimum": 1},
-            "columnEnd": {"type": "integer", "minimum": 1}
+            "path": { "type": "string", "minLength": 1 },
+            "lineStart": { "type": "integer", "minimum": 1 },
+            "columnStart": { "type": "integer", "minimum": 1 },
+            "lineEnd": { "type": "integer", "minimum": 1 },
+            "columnEnd": { "type": "integer", "minimum": 1 }
           },
           "unevaluatedProperties": false
         },
-        "fingerprint": {"type": "string", "minLength": 1},
-        "evidence": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+        "fingerprint": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
         "remediation": {
           "type": "object",
           "properties": {
-            "capability": {"type": "string", "minLength": 1},
-            "defectClass": {"type": "string", "minLength": 1},
-            "priority": {"enum": ["critical", "high", "medium", "low"]}
+            "capability": { "type": "string", "minLength": 1 },
+            "defectClass": { "type": "string", "minLength": 1 },
+            "priority": { "enum": ["critical", "high", "medium", "low"] }
           },
           "unevaluatedProperties": false
         },
-        "metadata": {"type": "object", "additionalProperties": true}
+        "metadata": { "type": "object", "additionalProperties": true }
       },
       "required": ["findingId", "ruleId", "severity", "disposition", "message"],
       "unevaluatedProperties": false
     }
   },
   "properties": {
-    "schema": {"const": "l9.observation"},
-    "schemaVersion": {"const": "1.0.0"},
-    "observationId": {"type": "string", "minLength": 1},
+    "schema": { "const": "l9.observation" },
+    "schemaVersion": { "const": "1.0.0" },
+    "observationId": { "type": "string", "minLength": 1 },
     "producer": {
       "type": "object",
       "properties": {
-        "id": {"const": "l9-ci-sdk"},
-        "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$"},
-        "buildDigest": {"$ref": "#/$defs/digest"},
-        "executionIdentity": {"type": "string", "minLength": 1},
-        "repository": {"const": "Quantum-L9/l9-ci-sdk"}
+        "id": { "const": "l9-ci-sdk" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" },
+        "buildDigest": { "$ref": "#/$defs/digest" },
+        "executionIdentity": { "type": "string", "minLength": 1 },
+        "repository": { "const": "Quantum-L9/l9-ci-sdk" }
       },
       "required": ["id", "version"],
       "unevaluatedProperties": false
@@ -82,13 +82,13 @@
     "subject": {
       "type": "object",
       "properties": {
-        "kind": {"const": "git-revision"},
+        "kind": { "const": "git-revision" },
         "repository": {
           "type": "object",
           "properties": {
-            "host": {"type": "string", "minLength": 1},
-            "owner": {"type": "string", "minLength": 1},
-            "name": {"type": "string", "minLength": 1}
+            "host": { "type": "string", "minLength": 1 },
+            "owner": { "type": "string", "minLength": 1 },
+            "name": { "type": "string", "minLength": 1 }
           },
           "required": ["host", "owner", "name"],
           "unevaluatedProperties": false
@@ -96,13 +96,13 @@
         "revision": {
           "type": "object",
           "properties": {
-            "commit": {"type": "string", "pattern": "^(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{64})$"},
-            "treeDigest": {"$ref": "#/$defs/digest"}
+            "commit": { "type": "string", "pattern": "^(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{64})$" },
+            "treeDigest": { "$ref": "#/$defs/digest" }
           },
           "required": ["commit"],
           "unevaluatedProperties": false
         },
-        "metadata": {"type": "object", "additionalProperties": {"type": "string"}}
+        "metadata": { "type": "object", "additionalProperties": { "type": "string" } }
       },
       "required": ["kind", "repository", "revision"],
       "unevaluatedProperties": false
@@ -120,9 +120,9 @@
             "l9.mandatory-findings"
           ]
         },
-        "version": {"const": "1.0.0"},
-        "configurationDigest": {"$ref": "#/$defs/digest"},
-        "mode": {"type": "string", "minLength": 1}
+        "version": { "const": "1.0.0" },
+        "configurationDigest": { "$ref": "#/$defs/digest" },
+        "mode": { "type": "string", "minLength": 1 }
       },
       "required": ["id", "version", "configurationDigest"],
       "unevaluatedProperties": false
@@ -130,13 +130,13 @@
     "execution": {
       "type": "object",
       "properties": {
-        "runId": {"type": "string", "minLength": 1},
-        "attempt": {"type": "integer", "minimum": 1},
-        "status": {"enum": ["passed", "failed", "error", "skipped"]},
-        "startedAt": {"type": "string", "format": "date-time"},
-        "completedAt": {"type": "string", "format": "date-time"},
-        "environmentDigest": {"$ref": "#/$defs/digest"},
-        "invocationDigest": {"$ref": "#/$defs/digest"}
+        "runId": { "type": "string", "minLength": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "status": { "enum": ["passed", "failed", "error", "skipped"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "environmentDigest": { "$ref": "#/$defs/digest" },
+        "invocationDigest": { "$ref": "#/$defs/digest" }
       },
       "required": ["runId", "attempt", "status", "startedAt", "completedAt"],
       "unevaluatedProperties": false
@@ -144,29 +144,29 @@
     "summary": {
       "type": "object",
       "properties": {
-        "findingCount": {"type": "integer", "minimum": 0},
-        "errorCount": {"type": "integer", "minimum": 0},
-        "warningCount": {"type": "integer", "minimum": 0},
-        "informationalCount": {"type": "integer", "minimum": 0}
+        "findingCount": { "type": "integer", "minimum": 0 },
+        "errorCount": { "type": "integer", "minimum": 0 },
+        "warningCount": { "type": "integer", "minimum": 0 },
+        "informationalCount": { "type": "integer", "minimum": 0 }
       },
       "required": ["findingCount", "errorCount", "warningCount", "informationalCount"],
       "unevaluatedProperties": false
     },
-    "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}, "maxItems": 10000},
-    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" }, "maxItems": 10000 },
+    "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
     "provenance": {
       "type": "object",
       "properties": {
-        "builder": {"type": "string", "minLength": 1},
-        "buildType": {"type": "string", "minLength": 1},
-        "invocationId": {"type": "string", "minLength": 1},
-        "materials": {"type": "array", "items": {"$ref": "#/$defs/artifact"}}
+        "builder": { "type": "string", "minLength": 1 },
+        "buildType": { "type": "string", "minLength": 1 },
+        "invocationId": { "type": "string", "minLength": 1 },
+        "materials": { "type": "array", "items": { "$ref": "#/$defs/artifact" } }
       },
       "unevaluatedProperties": false
     },
     "extensions": {
       "type": "object",
-      "propertyNames": {"pattern": "^[a-z0-9]+(?:\\.[a-z0-9-]+)+$"},
+      "propertyNames": { "pattern": "^[a-z0-9]+(?:\\.[a-z0-9-]+)+$" },
       "additionalProperties": true
     }
   },
