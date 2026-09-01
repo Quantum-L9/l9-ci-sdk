@@ -400,6 +400,9 @@ class SemgrepProvider:
         ):
             for index, report_error in enumerate(report_errors):
                 message = _semgrep_error_message(report_error, index)
+                limitations.append(message)
+                if not _semgrep_error_is_fatal(report_error):
+                    continue
                 failures.append(
                     ProviderFailure(
                         provider_id="semgrep",
@@ -410,10 +413,10 @@ class SemgrepProvider:
                         fatal=context.required,
                         diagnostics={
                             "report_error_index": index,
+                            "semgrep_level": _semgrep_error_level(report_error),
                         },
                     )
                 )
-                limitations.append(message)
         (
             considered_paths,
             analyzed_paths,
@@ -588,6 +591,20 @@ def _category(metadata: Mapping[str, Any]) -> str:
         if first:
             return first.strip().lower().replace(" ", "-")
     return "static-analysis"
+
+
+def _semgrep_error_level(error: Any) -> str | None:
+    if isinstance(error, Mapping):
+        level = error.get("level")
+        if isinstance(level, str) and level.strip():
+            return level.strip().lower()
+    return None
+
+
+def _semgrep_error_is_fatal(error: Any) -> bool:
+    """Honour semgrep's own `level`. Missing/unrecognised → fail closed."""
+    level = _semgrep_error_level(error)
+    return level != "warn"
 
 
 def _semgrep_error_message(error: Any, index: int) -> str:
