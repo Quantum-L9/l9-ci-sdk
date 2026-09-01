@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 336
+Files: 338
 
 ## Contents
 
@@ -288,6 +288,8 @@ Files: 336
 - `tests/execution/test_selection.py`
 - `tests/fixtures/semgrep/malformed.json`
 - `tests/fixtures/semgrep/provenance.yaml`
+- `tests/fixtures/semgrep/report-error-error.json`
+- `tests/fixtures/semgrep/report-error-warn.json`
 - `tests/fixtures/semgrep/report-errors.json`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
