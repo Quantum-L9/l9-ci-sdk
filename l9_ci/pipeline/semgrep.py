@@ -12,7 +12,7 @@ from l9_ci.contracts import (
     ProviderRun,
     SnapshotDescriptor,
 )
-from l9_ci.identity import RuleIdentityMap
+from l9_ci.identity import RuleIdentityMap, describe_unresolved_identity
 from l9_ci.integration import (
     OperationalLimits,
     validate_record_counts,
@@ -147,16 +147,13 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         limits=request.limits,
     )
     if request.strict:
-        unresolved_identity = tuple(
-            finding.finding_id
+        unresolved = tuple(
+            finding
             for finding in normalization.findings
             if finding.canonical_rule_id is None
         )
-        if unresolved_identity:
-            joined = ", ".join(sorted(unresolved_identity))
-            raise ValueError(
-                f"strict identity resolution failed for findings: {joined}"
-            )
+        if unresolved:
+            raise ValueError(describe_unresolved_identity(unresolved))
 
     classifications: tuple[FindingClassification, ...] = ()
     if request.policy_path:
