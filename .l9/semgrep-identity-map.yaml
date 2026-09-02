@@ -2,7 +2,7 @@
 schema: l9.identity-map/v1
 metadata:
   provider_id: semgrep
-  version: 1.2.0
+  version: 1.3.0
   status: authoritative
 # Provenance: every provider_rule_id below is a REAL Semgrep registry check_id,
 # captured by running `semgrep --config <pack>` against local synthetic
@@ -43,6 +43,18 @@ rules:
   # metadata.vulnerability_class "Command Injection", owasp "A03:2021 -
   # Injection". Not guessed from severity, confidence, or rule name.
   python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args:
+    canonical_rule_id: L9-PYTHON-SUBPROCESS-TAINTED-ARGS
+  # Same MECHANISM, different registry pack. Semantics read from the rule's own
+  # output against l9-ci-sdk@da4d228 (l9_ci/providers/semgrep/provider.py:145,
+  # a list-form subprocess.run with no shell=True whose argv carries
+  # caller-supplied arguments): message "Detected user input entering a
+  # `subprocess` call unsafely. This could result in a command injection
+  # vulnerability", metadata.cwe "CWE-78: ... OS Command Injection",
+  # metadata.vulnerability_class "Command Injection", owasp "A03:2021 -
+  # Injection" -- identical classification to the entry above. The `django.`
+  # prefix is the pack's namespace, not a framework precondition; the rule
+  # matches plain subprocess calls. Not guessed from severity or rule name.
+  python.django.security.injection.command.subprocess-injection.subprocess-injection:
     canonical_rule_id: L9-PYTHON-SUBPROCESS-TAINTED-ARGS
 
   # --- unsafe deserialization (pickle) ---
