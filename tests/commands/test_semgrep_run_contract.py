@@ -48,11 +48,15 @@ def test_run_cli_preserves_public_command_and_builds_execute_request(
         ],
     )
     assert request.execute is True
+    # The SDK runtime is provisioned into the scanned repository, so every
+    # execute request excludes it; see _RUNTIME_SCAFFOLDING_EXCLUSIONS.
     assert request.execution_arguments == (
         "--config",
         "p/python",
         "--config",
         str(ruleset_dir("python")),
+        "--exclude",
+        ".l9/runtime",
     )
     assert request.timeout_seconds == 30
 
@@ -83,6 +87,8 @@ def test_run_cli_default_profile_matches_omitted_profile(
         "p/python",
         "--config",
         str(ruleset_dir("python")),
+        "--exclude",
+        ".l9/runtime",
     )
 
 
@@ -107,9 +113,13 @@ def test_run_cli_l9_baseline_profile_omits_registry_config(
             "l9-baseline",
         ],
     )
+    # Opting out of the registry ruleset does not opt out of the scaffolding
+    # exclusion: the provisioned runtime is never repository code.
     assert request.execution_arguments == (
         "--config",
         str(ruleset_dir("python")),
+        "--exclude",
+        ".l9/runtime",
     )
     assert "p/python" not in request.execution_arguments
 

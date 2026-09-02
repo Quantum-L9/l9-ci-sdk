@@ -183,6 +183,33 @@ def _build_run_config_arguments(args: argparse.Namespace) -> tuple[str, ...]:
     return tuple(arguments)
 
 
+# The SDK provisions its own runtime -- a detached checkout plus a virtualenv of
+# third-party dependencies -- INTO the repository under analysis. Core's
+# `provision-sdk` defaults to `.l9/runtime/sdk` and refuses to place it outside
+# `GITHUB_WORKSPACE`, so the scan root and the toolchain directory are the same
+# tree by construction.
+#
+# Without this exclusion `semgrep scan .` analyzes the CI toolchain's own
+# dependencies as if they were repository code. Observed in Quantum-L9 central
+# CI: 51 of 52 findings came from `.l9/runtime/sdk/venv/.../site-packages/`
+# (pip, urllib3, cryptography, peewee, semgrep), none of which carry an L9
+# canonical rule id -- so `--strict` failed the organization's required check
+# closed on every Python repository.
+#
+# `.l9/` is L9 infrastructure, never product code. Excluding the runtime
+# subtree (not all of `.l9/`) keeps the exclusion narrow: repository-authored
+# `.l9/` contracts stay in scope.
+_RUNTIME_SCAFFOLDING_EXCLUSIONS = (".l9/runtime",)
+
+
+def _build_run_exclusion_arguments() -> tuple[str, ...]:
+    """Compose the --exclude arguments that keep SDK scaffolding out of scans."""
+    arguments: list[str] = []
+    for pattern in _RUNTIME_SCAFFOLDING_EXCLUSIONS:
+        arguments.extend(("--exclude", pattern))
+    return tuple(arguments)
+
+
 def _request(
     args: argparse.Namespace,
     *,
@@ -270,7 +297,8 @@ def handle_run(args: argparse.Namespace) -> int:
             execute=True,
             provider_version=None,
             identity_map_path=args.identity_map or default_identity_map_path(),
-            execution_arguments=_build_run_config_arguments(args),
+            execution_arguments=_build_run_config_arguments(args)
+            + _build_run_exclusion_arguments(),
         ),
         default=ExitCode.PROVIDER_EXECUTION_FAILURE,
     )
