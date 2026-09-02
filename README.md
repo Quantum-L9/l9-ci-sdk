@@ -101,8 +101,7 @@ Details: [`docs/architecture/yaml-governance.md`](docs/architecture/yaml-governa
 
 Roles are the intended architecture. The `v0.1` column is what actually
 consumes this SDK today — the two are not the same, and the difference matters
-when reading the role column as a description of live wiring. Map:
-[`l9-assurance/docs/constellation-v0.1.md`](https://github.com/Quantum-L9/l9-assurance/blob/main/docs/constellation-v0.1.md).
+when reading the role column as a description of live wiring.
 
 | Product | Role | Consumes this SDK in v0.1 |
 |---|---|---|
