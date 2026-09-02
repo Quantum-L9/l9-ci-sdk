@@ -279,7 +279,7 @@ def handle_normalize(args: argparse.Namespace) -> int:
             report_path=args.input,
             execute=False,
             provider_version=args.provider_version,
-            identity_map_path=args.identity_map,
+            identity_map_path=args.identity_map or default_identity_map_path(),
         ),
         default=ExitCode.PROVIDER_REPORT_FAILURE,
     )

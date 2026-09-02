@@ -7,7 +7,11 @@ import pytest
 
 import l9_ci.__main__ as main_module
 import l9_ci.commands.semgrep as semgrep_commands
-from l9_ci.rulesets.semgrep import default_profile_name, ruleset_dir
+from l9_ci.rulesets.semgrep import (
+    default_identity_map_path,
+    default_profile_name,
+    ruleset_dir,
+)
 
 
 def _capture_run(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> SimpleNamespace:
@@ -170,3 +174,61 @@ def test_normalize_cli_requires_provider_version(
     with pytest.raises(SystemExit) as excinfo:
         main_module.main()
     assert excinfo.value.code == 2
+
+
+def test_normalize_cli_defaults_to_packaged_identity_map(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Omitting --identity-map must load the same packaged map as `semgrep run`.
+
+    Organization callers never pass --identity-map. Before this default,
+    normalize ran with zero identity coverage while run used the packaged map.
+    """
+    request = _capture_run(
+        monkeypatch,
+        [
+            "l9-ci",
+            "semgrep",
+            "normalize",
+            "--input",
+            str(tmp_path / "report.json"),
+            "--output",
+            str(tmp_path / "bundle.json"),
+            "--provider-version",
+            "1.171.0",
+            "--root",
+            str(tmp_path),
+            "--snapshot-id",
+            "snapshot-1",
+        ],
+    )
+    assert request.execute is False
+    assert request.identity_map_path == default_identity_map_path()
+
+
+def test_normalize_cli_explicit_identity_map_overrides_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    override = tmp_path / "custom-identity.yaml"
+    override.write_text("provider_id: semgrep\nrules: {}\n", encoding="utf-8")
+    request = _capture_run(
+        monkeypatch,
+        [
+            "l9-ci",
+            "semgrep",
+            "normalize",
+            "--input",
+            str(tmp_path / "report.json"),
+            "--output",
+            str(tmp_path / "bundle.json"),
+            "--provider-version",
+            "1.171.0",
+            "--root",
+            str(tmp_path),
+            "--snapshot-id",
+            "snapshot-1",
+            "--identity-map",
+            str(override),
+        ],
+    )
+    assert request.identity_map_path == override
