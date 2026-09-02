@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 336
+Files: 338
 
 ## Contents
 
@@ -187,6 +187,7 @@ Files: 336
 - `l9_ci/governance/promotion.py`
 - `l9_ci/governance/reports.py`
 - `l9_ci/identity/__init__.py`
+- `l9_ci/identity/diagnostics.py`
 - `l9_ci/identity/resolver.py`
 - `l9_ci/integration/__init__.py`
 - `l9_ci/integration/agent_payload.py`
@@ -303,6 +304,7 @@ Files: 336
 - `tests/gates/test_gate_result_schema.py`
 - `tests/governance/test_governance_layer.py`
 - `tests/governance/test_governance_schemas.py`
+- `tests/identity/test_diagnostics.py`
 - `tests/identity/test_resolver.py`
 - `tests/integration/__init__.py`
 - `tests/integration/test_agent_payload_projection.py`

@@ -20,6 +20,7 @@ from l9_ci.artifacts import load_and_validate_bundle
 from l9_ci.cli import ExitCode
 from l9_ci.commands.semgrep import (
     _build_run_config_arguments,
+    _build_run_exclusion_arguments,
     handle_run,
     register_semgrep_commands,
 )
@@ -219,3 +220,36 @@ def test_handle_run_surfaces_provider_execution_failure_without_raising(
 
     assert exit_code == int(ExitCode.PROVIDER_EXECUTION_FAILURE)
     assert not output.exists()
+
+
+def test_run_excludes_the_sdk_runtime_scaffolding() -> None:
+    """Regression: central CI analyzed its own toolchain.
+
+    Core's `provision-sdk` materialises the SDK -- including a virtualenv of
+    third-party dependencies -- at `.l9/runtime/sdk` INSIDE the repository
+    being scanned, and refuses to place it outside GITHUB_WORKSPACE. Quantum-L9
+    central run 33583852808 consequently reported 52 unresolved findings of
+    which 51 came from `.l9/runtime/sdk/venv/.../site-packages/` (pip, urllib3,
+    cryptography, peewee, semgrep), failing the organization's required check
+    closed on every Python repository.
+    """
+    assert _build_run_exclusion_arguments() == ("--exclude", ".l9/runtime")
+
+
+def test_run_exclusion_is_narrow_enough_to_keep_repository_l9_contracts() -> None:
+    # `.l9/` also holds repository-authored contracts that are legitimately in
+    # scope; only the provisioned runtime subtree is excluded.
+    assert ".l9" not in _build_run_exclusion_arguments()
+
+
+def test_run_execution_arguments_carry_both_configs_and_exclusions() -> None:
+    args = _build_run_namespace(output="bundle.json")
+    combined = _build_run_config_arguments(args) + _build_run_exclusion_arguments()
+    assert combined == (
+        "--config",
+        "p/python",
+        "--config",
+        str(ruleset_dir("python")),
+        "--exclude",
+        ".l9/runtime",
+    )
