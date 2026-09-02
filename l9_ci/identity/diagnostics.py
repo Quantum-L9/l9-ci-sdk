@@ -32,22 +32,29 @@ MAX_REPORTED_RULES = 20
 class _Located(Protocol):
     # Read-only members: a mutable protocol attribute is invariant, which would
     # reject the concrete `tuple[SourceLocation, ...]` the Finding contract uses.
+    # Bodies are docstrings, matching `providers.spi.Provider` -- a bare `...`
+    # is a statement with no effect and CodeQL reports it.
     @property
-    def normalized_path(self) -> str: ...
+    def normalized_path(self) -> str:
+        """Return the repository-relative source path."""
 
     @property
-    def start_line(self) -> int | None: ...
+    def start_line(self) -> int | None:
+        """Return the 1-based start line when the provider reported one."""
 
 
 class _UnresolvedFinding(Protocol):
     @property
-    def finding_id(self) -> str: ...
+    def finding_id(self) -> str:
+        """Return the content-addressed finding identifier."""
 
     @property
-    def provider_rule_id(self) -> str: ...
+    def provider_rule_id(self) -> str:
+        """Return the provider's own rule identifier."""
 
     @property
-    def locations(self) -> Sequence[_Located]: ...
+    def locations(self) -> Sequence[_Located]:
+        """Return the source locations this finding was raised at."""
 
 
 def _example_location(finding: _UnresolvedFinding) -> str:
