@@ -7,8 +7,9 @@ correctness with respect to l9-ci-core:
 * every Core / external action reference is pinned to an immutable commit SHA
   (covers ci.yml too, so the AUD-008 pinning cannot regress);
 * non-actions references point only at l9-ci-core (no rogue third-party org);
-* least-privilege permissions (``contents: read``; only a publishing job may
-  hold ``checks: write``);
+* least-privilege permissions (``contents: read``; thin Core analysis callers
+  may grant ``security-events: write`` only so the reusable kernel can publish
+  its SDK-owned SARIF projection; other write scopes stay explicitly bounded);
 * each caller is a thin reusable-workflow stub that hands its profile /
   matrix id to the Core-owned analyze-semgrep kernel (v2 handoff shape);
 * governance files parse as JSON and declare the profiles the callers use.
@@ -116,6 +117,11 @@ def test_least_privilege_permissions(workflow: Path) -> None:
     )
     scopes = set(_WRITE_SCOPE.findall(text))
     allowed = {"checks"} | _ALLOWED_WRITE_SCOPES.get(workflow.name, set())
+    if workflow in CALLERS:
+        # Core's reusable analysis kernel publishes the SDK-owned SARIF
+        # projection. GitHub requires the caller to delegate this scope; the
+        # called workflow cannot elevate beyond the caller's permissions.
+        allowed.add("security-events")
     forbidden = scopes - allowed
     assert forbidden == set(), (
         f"{workflow.name} requests forbidden write scopes: {sorted(forbidden)}"
@@ -155,6 +161,15 @@ def test_caller_is_thin_kernel_stub(caller: Path) -> None:
         assert marker not in text.replace("'l9-ci semgrep run'", "").replace(
             "'l9-ci gate evaluate'", ""
         ), f"{caller.name} re-implements kernel logic ({marker!r})"
+
+
+@pytest.mark.parametrize("caller", CALLERS, ids=[path.name for path in CALLERS])
+def test_caller_delegates_sarif_publish_permission(caller: Path) -> None:
+    permissions = _load(caller)["jobs"]["analysis"].get("permissions", {})
+    assert permissions.get("security-events") == "write", (
+        f"{caller.name} must grant security-events: write so Core's reusable "
+        "publish job can upload the SDK-owned SARIF projection"
+    )
 
 
 def test_governance_files_are_valid_json() -> None:

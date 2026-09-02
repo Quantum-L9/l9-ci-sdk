@@ -25,6 +25,7 @@ jobs:
       actions: read
       checks: write
       contents: read
+      security-events: write
     with:
       profile: pr_fast
       matrix-id: pr-semgrep

@@ -27,6 +27,7 @@ jobs:
       actions: read
       checks: write
       contents: read
+      security-events: write
     with:
       profile: release
       matrix-id: release-semgrep

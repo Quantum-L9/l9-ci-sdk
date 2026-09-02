@@ -27,6 +27,7 @@ jobs:
       actions: read
       checks: write
       contents: read
+      security-events: write
     with:
       profile: merge
       matrix-id: merge-semgrep
