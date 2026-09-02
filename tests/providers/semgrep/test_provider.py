@@ -173,6 +173,19 @@ def test_required_provider_zero_result_gates_incomplete(fixture_name: str) -> No
     assert _gate_status_for_required(normalization) is GateStatus.INCOMPLETE
 
 
+def test_required_warn_timeout_with_scanned_paths_gates_pass() -> None:
+    normalization = _normalize("report-error-warn.json", required=True)
+    assert normalization.failures == ()
+    assert normalization.coverage.status is CoverageStatus.COMPLETE
+    assert _gate_status_for_required(normalization) is GateStatus.PASS
+
+
+def test_required_error_level_with_scanned_paths_gates_incomplete() -> None:
+    normalization = _normalize("report-error-error.json", required=True)
+    assert normalization.failures != ()
+    assert _gate_status_for_required(normalization) is GateStatus.INCOMPLETE
+
+
 def test_build_execution_plan_uses_relative_scan_target() -> None:
     """The scan target must stay relative ("."), not the resolved absolute
     repository_root: execute() runs the command with cwd=repository_root,

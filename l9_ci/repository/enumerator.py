@@ -6,6 +6,7 @@ from typing import Iterable
 
 _DEFAULT_EXCLUDED_DIRECTORIES = {
     ".git",
+    ".l9",
     ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
