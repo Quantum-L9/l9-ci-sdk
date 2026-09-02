@@ -30,13 +30,13 @@ Files: 340
 - `.github/scripts/update_marker_comment.py`
 - `.github/workflows/ci.yml`
 - `.github/workflows/l9-analysis-merge.yml`
-- `.github/workflows/l9-analysis-nightly.yml`
 - `.github/workflows/l9-analysis-release.yml`
 - `.github/workflows/l9-analysis-supply-chain.yml`
 - `.github/workflows/l9-analysis.yml`
 - `.github/workflows/l9-biome-scan-dogfood.yml`
 - `.github/workflows/l9-biome-scan.yml`
 - `.github/workflows/l9-manifest-reconcile.yml`
+- `.github/workflows/l9-nightly.yml`
 - `.github/workflows/l9-self-ci.yml`
 - `.github/workflows/l9-yaml-governance-dogfood.yml`
 - `.github/workflows/l9-yaml-governance.yml`
