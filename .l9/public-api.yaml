@@ -57,6 +57,7 @@ packages:
     - IdentityResolution
     - IdentityResolutionStatus
     - RuleIdentityMap
+    - describe_unresolved_identity
     - resolve_rule_identity
   l9_ci.policy:
     - ClassificationResult
