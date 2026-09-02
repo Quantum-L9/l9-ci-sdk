@@ -26,6 +26,7 @@ jobs:
       actions: read
       checks: write
       contents: read
+      security-events: write
     with:
       profile: nightly
       matrix-id: nightly-semgrep
