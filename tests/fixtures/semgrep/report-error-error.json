@@ -1,0 +1,17 @@
+{
+  "version": "representative-fixture",
+  "results": [],
+  "errors": [
+    {
+      "code": 2,
+      "level": "error",
+      "type": "Timeout",
+      "message": "Fatal timeout scanning src/example.py",
+      "path": "src/example.py"
+    }
+  ],
+  "paths": {
+    "scanned": ["src/example.py"],
+    "skipped": []
+  }
+}

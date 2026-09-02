@@ -400,6 +400,9 @@ class SemgrepProvider:
         ):
             for index, report_error in enumerate(report_errors):
                 message = _semgrep_error_message(report_error, index)
+                limitations.append(message)
+                if not _semgrep_error_is_fatal(report_error):
+                    continue
                 failures.append(
                     ProviderFailure(
                         provider_id="semgrep",
@@ -410,10 +413,10 @@ class SemgrepProvider:
                         fatal=context.required,
                         diagnostics={
                             "report_error_index": index,
+                            "semgrep_level": _semgrep_error_level(report_error),
                         },
                     )
                 )
-                limitations.append(message)
         (
             considered_paths,
             analyzed_paths,
@@ -424,10 +427,12 @@ class SemgrepProvider:
             findings,
         )
         limitations.extend(coverage_limitations)
-        # Coverage is COMPLETE only when the report exposed a verified scanned
-        # inventory and no errors occurred. A zero-finding report with no
-        # verified paths.scanned must not silently present as COMPLETE, or a
-        # required provider could pass the gate on unproven coverage.
+        # Coverage is COMPLETE when the report exposed a verified scanned
+        # inventory and no fatal report errors occurred. Warn-level entries
+        # stay in limitations and do not force PARTIAL (honour semgrep
+        # level=warn). A zero-finding report with no verified paths.scanned
+        # must not silently present as COMPLETE, or a required provider
+        # could pass the gate on unproven coverage.
         if failures or not coverage_verified:
             coverage_status = CoverageStatus.PARTIAL
         else:
@@ -588,6 +593,20 @@ def _category(metadata: Mapping[str, Any]) -> str:
         if first:
             return first.strip().lower().replace(" ", "-")
     return "static-analysis"
+
+
+def _semgrep_error_level(error: Any) -> str | None:
+    if isinstance(error, Mapping):
+        level = error.get("level")
+        if isinstance(level, str) and level.strip():
+            return level.strip().lower()
+    return None
+
+
+def _semgrep_error_is_fatal(error: Any) -> bool:
+    """Honour semgrep's own `level`. Missing/unrecognised → fail closed."""
+    level = _semgrep_error_level(error)
+    return level != "warn"
 
 
 def _semgrep_error_message(error: Any, index: int) -> str:
