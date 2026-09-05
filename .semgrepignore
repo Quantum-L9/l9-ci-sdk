@@ -1,2 +1,15 @@
 # Local session resume + agent WIP — not part of the SDK analysis surface.
 memory-bank/
+
+# Synthetic vulnerable source used to capture the provider fixtures. The code
+# under here is deliberately unsafe (an `exec(user_input)` sink) because it is
+# the scan INPUT that produces tests/fixtures/semgrep/results.json — it is
+# never imported or executed by the SDK.
+#
+# Semgrep's built-in default ignore list already excludes paths containing
+# "tests/fixtures" (tests/fixtures/semgrep/provenance.yaml records this), but a
+# project .semgrepignore REPLACES those defaults rather than extending them, so
+# adding the `memory-bank/` entry above silently re-exposed this tree. The
+# fixture capture itself is unaffected either way: its recorded command passes
+# --x-ignore-semgrepignore-files.
+tests/fixtures/semgrep/source/

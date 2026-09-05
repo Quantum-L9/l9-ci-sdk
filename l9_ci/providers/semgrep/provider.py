@@ -142,6 +142,12 @@ class SemgrepProvider:
         }
         environment.update(request.environment)
         try:
+            # `command` is the argv sequence built by build_execution_plan: a
+            # resolved semgrep executable plus the caller's already-parsed
+            # argument list. It is passed as a list with no shell, so there is
+            # no shell metacharacter interpretation to inject through, and the
+            # environment is reduced to a fixed allowlist above.
+            # nosemgrep: python.django.security.injection.command.subprocess-injection.subprocess-injection
             completed = subprocess.run(
                 command,
                 cwd=request.repository_root,

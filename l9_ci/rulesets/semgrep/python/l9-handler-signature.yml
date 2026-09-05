@@ -70,9 +70,13 @@ rules:
       mode: shadow
       contract: handler_signature
       autofix_safe: false
-    pattern: |
-      async def handler(packet: TransportPacket) -> $RET:
-        ...
-    metavariable-regex:
-      metavariable: $RET
-      regex: '^(?!TransportPacket$).+'
+    # `metavariable-regex` must be an item of a `patterns` list; as a sibling
+    # of `pattern` it is silently dropped and the rule flags every async
+    # handler, including the compliant `-> TransportPacket` signature.
+    patterns:
+      - pattern: |
+          async def handler(packet: TransportPacket) -> $RET:
+            ...
+      - metavariable-regex:
+          metavariable: $RET
+          regex: '^(?!TransportPacket$).+'

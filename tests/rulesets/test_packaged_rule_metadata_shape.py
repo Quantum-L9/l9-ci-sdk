@@ -12,6 +12,7 @@ already test) and asserts the metadata shape the provider actually reads.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -89,3 +90,112 @@ def test_every_rule_declares_a_staged_rollout_mode() -> None:
                 f"{rule_file.name}:{rule['id']}: metadata.mode must be one of "
                 f"{sorted(allowed_modes)}, got {mode!r}"
             )
+
+
+# Semgrep's rule schema divides operators into two groups: the pattern
+# operators that may stand alone at rule top level (`pattern`, `patterns`,
+# `pattern-either`, `pattern-regex`) and the *constraint* operators below,
+# which -- per
+# https://docs.semgrep.dev/writing-rules/rule-syntax -- "must be nested
+# underneath a `patterns` field". A constraint written as a sibling of
+# `pattern-either` is not a schema error: `semgrep --validate` reports the
+# config valid and then silently drops the constraint, so the rule matches
+# everything its bare pattern matches.
+#
+# That defect shipped in two packaged rules and produced 79 false positives
+# across the fleet: `l9.logging.forbidden-secret-field` flagged every logger
+# call with an argument (`logging.getLogger(__name__)` included) because its
+# $SECRET regex never applied, and
+# `l9.handler.missing-transportpacket-return` would have flagged compliant
+# `-> TransportPacket` handlers for the same reason.
+SEMGREP_PATTERNS_ONLY_OPERATORS = frozenset(
+    {
+        "focus-metavariable",
+        "metavariable-analysis",
+        "metavariable-comparison",
+        "metavariable-pattern",
+        "metavariable-regex",
+        "metavariable-type",
+        "pattern-inside",
+        "pattern-not",
+        "pattern-not-inside",
+        "pattern-not-regex",
+    }
+)
+
+
+@pytest.mark.parametrize("rule_file", _rule_files(), ids=lambda p: p.name)
+def test_constraint_operators_are_nested_under_patterns(rule_file: Path) -> None:
+    for rule in _load_rules(rule_file):
+        misplaced = sorted(SEMGREP_PATTERNS_ONLY_OPERATORS & set(rule))
+        assert not misplaced, (
+            f"{rule_file.name}:{rule['id']}: {misplaced} sit at rule top level. "
+            "Semgrep only honours these as items of a `patterns` list; as a "
+            "sibling of `pattern`/`pattern-either` they are silently dropped "
+            "and the rule over-matches. `semgrep --validate` will NOT catch "
+            "this -- nest them under `patterns`."
+        )
+
+
+# `l9.routing.gateclient-bypass-execute` is a `pattern-regex` rule, so it
+# searches raw file text with no syntactic context. It was authored as a bare
+# `/v1/execute|/execute`, which fired on every mention of the path anywhere in
+# a file -- a filename ending in execute.md, CLI help text about skipping a
+# paste step, an error string naming execute_via frontmatter, and docstrings
+# that merely describe the Gate-routed endpoint. All of them are prose, none is
+# a raw call, and the rule's own message is about raw calls bypassing
+# GateClient, so every fleet occurrence was a false positive.
+#
+# (This comment deliberately avoids spelling those examples as quoted literals:
+# a pattern-regex rule cannot tell a comment from code, so writing them out
+# would make this very block a finding. The exact strings live in
+# GATECLIENT_MUST_NOT_MATCH below, which is what the assertions read.)
+#
+# It now requires a string literal that ENDS at the path. These cases pin that
+# boundary so a future edit cannot quietly widen it back to a text search.
+GATECLIENT_RULE_ID = "l9.routing.gateclient-bypass-execute"
+# These four are the rule's own positive fixtures, so the routing rules match
+# them exactly as intended -- that is what the tests below assert. Suppressed by
+# id rather than reworded, because the strings have to stay byte-for-byte what
+# the rule is supposed to catch.
+GATECLIENT_MUST_MATCH = (
+    'requests.post("http://node:8000/v1/execute", json={})',  # nosemgrep: l9.routing.gateclient-bypass-execute,l9.routing.hardcoded-peer-node-url
+    'EXECUTE_PATH = "/v1/execute"',  # nosemgrep: l9.routing.gateclient-bypass-execute
+    'url = f"{base}/execute"',  # nosemgrep: l9.routing.gateclient-bypass-execute
+    "PATH = '/execute'",  # nosemgrep: l9.routing.gateclient-bypass-execute
+)
+GATECLIENT_MUST_NOT_MATCH = (
+    'FILES = ("references/execute.md",)',
+    'help_text = "Skip paste/execute; only copy lower Results grid"',
+    'err = "cursor-build render missing kind/execute_via frontmatter"',
+    '"""The converge action EIE owns (POST /v1/execute) validates the rows."""',
+    "# Route follow-up work through the Gate rather than POST /v1/execute.",
+)
+
+
+def _gateclient_pattern() -> str:
+    for rule_file in _rule_files():
+        for rule in _load_rules(rule_file):
+            if rule["id"] == GATECLIENT_RULE_ID:
+                pattern = rule.get("pattern-regex")
+                assert isinstance(pattern, str), (
+                    f"{GATECLIENT_RULE_ID} must keep a pattern-regex; if it is "
+                    "rewritten as an AST rule, port these cases to the new form"
+                )
+                return pattern
+    raise AssertionError(f"{GATECLIENT_RULE_ID} not found in the packaged ruleset")
+
+
+@pytest.mark.parametrize("source", GATECLIENT_MUST_MATCH)
+def test_gateclient_rule_still_catches_raw_execute_paths(source: str) -> None:
+    assert re.search(_gateclient_pattern(), source), (
+        f"{GATECLIENT_RULE_ID} no longer flags a raw /execute path: {source!r}"
+    )
+
+
+@pytest.mark.parametrize("source", GATECLIENT_MUST_NOT_MATCH)
+def test_gateclient_rule_ignores_prose_mentions_of_execute(source: str) -> None:
+    assert not re.search(_gateclient_pattern(), source), (
+        f"{GATECLIENT_RULE_ID} fires on prose, not a call: {source!r}. The "
+        "literal must end at the /execute path."
+    )
