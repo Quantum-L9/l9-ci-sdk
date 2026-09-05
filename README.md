@@ -108,7 +108,7 @@ when reading the role column as a description of live wiring.
 | [`l9-ci-core`](https://github.com/Quantum-L9/l9-ci-core) | Orchestrates | Yes — provisions and invokes the SDK |
 | **l9-ci-sdk** (this repo) | Observes / contracts | — |
 | [`l9-ci-debt-resolver`](https://github.com/Quantum-L9/l9-ci-debt-resolver) | Diagnoses | No — its adapter targets `l9.sdk-knowledge-document/v1`, which this SDK does not emit |
-| [`PR_Repair`](https://github.com/Quantum-L9/PR_Repair) | Mutates | No — standalone in v0.1; its agent-review payload is a different contract that shares a name |
+| [`l9-pr-repair`](https://github.com/Quantum-L9/l9-pr-repair) | Mutates | No — standalone in v0.1; its agent-review payload is a different contract that shares a name |
 | [`l9-ci-debt-intelligence`](https://github.com/Quantum-L9/l9-ci-debt-intelligence) | Learns | Declared: `l9.finding-bundle/v1` is its one active production input |
 | [`l9-ci-debt-lsp`](https://github.com/Quantum-L9/l9-ci-debt-lsp) | Prevents | No — direct `l9.sdk-finding/v1` consumption is inactive; no producer exists |
 | [`l9-assurance`](https://github.com/Quantum-L9/l9-assurance) | Decides | Yes — admits `l9.mandatory-findings` observations |

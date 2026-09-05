@@ -333,7 +333,7 @@ Three test files are **modified, not appended to** — `test_schema_inventory.py
             "Quantum-L9/l9-ci-debt-lsp",
             "Quantum-L9/l9-assurance",
             "Quantum-L9/l9-harness",
-            "Quantum-L9/PR_Repair"
+            "Quantum-L9/l9-pr-repair"
           ]
         },
         "version": { "type": "string", "minLength": 1 },
@@ -583,7 +583,7 @@ AUTHORIZED_PRODUCERS = (
     "Quantum-L9/l9-ci-debt-lsp",
     "Quantum-L9/l9-assurance",
     "Quantum-L9/l9-harness",
-    "Quantum-L9/PR_Repair",
+    "Quantum-L9/l9-pr-repair",
 )
 
 MAX_LOOP_GENERATION = 8
