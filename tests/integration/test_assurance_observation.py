@@ -325,3 +325,103 @@ def test_projection_attributes_the_running_sdk_not_the_bundle() -> None:
     )
     assert payload["producer"]["version"] == __version__
     assert payload["artifacts"][0]["sdkVersion"] == "1.2.3"
+
+
+def test_summary_category_counts_must_sum_to_finding_count() -> None:
+    """Counts without findings are unrepresentable, so refuse to build them.
+
+    Assurance requires the summary to describe the findings array on both
+    axes -- `findingCount == len(findings)` and
+    `findingCount == error + warning + informational`. The builder enforced
+    only the first, so `observation build --check-id l9.lint --error-count 7`
+    produced a well-formed observation that Assurance rejected on arrival with
+    EVIDENCE_SCHEMA_INVALID. The defect surfaced one repository away from the
+    caller that caused it; this keeps it here.
+    """
+    with pytest.raises(ValueError, match="must sum to finding_count"):
+        build_observation(
+            producer_version="2.0.0",
+            repository="Quantum-L9/example",
+            revision=REVISION,
+            check_id="l9.lint",
+            configuration_digest=DIGEST,
+            run_id="run-1",
+            attempt=1,
+            status="failed",
+            started_at=STARTED,
+            completed_at=COMPLETED,
+            error_count=7,
+        )
+
+
+def test_a_failed_outcome_with_zero_counts_is_representable() -> None:
+    """The guard must not remove the way a caller reports a plain failure.
+
+    A check with no per-finding detail reports its outcome through the
+    execution status, and Assurance evaluates that status: a `failed` l9.lint
+    observation yields `FAIL - L9.CI.LINT; l9.lint positively reported
+    failure`. If this shape were refused too, the guard would have taken the
+    signal with the defect.
+    """
+    observation = build_observation(
+        producer_version="2.0.0",
+        repository="Quantum-L9/example",
+        revision=REVISION,
+        check_id="l9.lint",
+        configuration_digest=DIGEST,
+        run_id="run-1",
+        attempt=1,
+        status="failed",
+        started_at=STARTED,
+        completed_at=COMPLETED,
+    )
+    assert observation["execution"]["status"] == "failed"
+    assert observation["summary"] == {
+        "findingCount": 0,
+        "errorCount": 0,
+        "warningCount": 0,
+        "informationalCount": 0,
+    }
+
+
+def test_counts_that_match_their_findings_are_accepted() -> None:
+    """The guard must not block a legitimate summary that does describe findings.
+
+    Severity vocabulary and count categories are deliberately different axes:
+    `critical`/`high` tally into errorCount, `medium`/`low` into warningCount,
+    `informational` into informationalCount -- the mapping
+    `project_mandatory_findings` applies.
+    """
+    findings = [
+        {
+            "findingId": "fn_1",
+            "ruleId": "L9-EXAMPLE",
+            "severity": "critical",
+            "message": "example",
+            "disposition": "open",
+        },
+        {
+            "findingId": "fn_2",
+            "ruleId": "L9-EXAMPLE",
+            "severity": "medium",
+            "message": "example",
+            "disposition": "open",
+        },
+    ]
+    observation = build_observation(
+        producer_version="2.0.0",
+        repository="Quantum-L9/example",
+        revision=REVISION,
+        check_id="l9.mandatory-findings",
+        configuration_digest=DIGEST,
+        run_id="run-1",
+        attempt=1,
+        status="passed",
+        started_at=STARTED,
+        completed_at=COMPLETED,
+        finding_count=2,
+        error_count=1,
+        warning_count=1,
+        findings=findings,
+    )
+    assert observation["summary"]["findingCount"] == 2
