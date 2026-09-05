@@ -12,6 +12,7 @@ already test) and asserts the metadata shape the provider actually reads.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -134,3 +135,67 @@ def test_constraint_operators_are_nested_under_patterns(rule_file: Path) -> None
             "and the rule over-matches. `semgrep --validate` will NOT catch "
             "this -- nest them under `patterns`."
         )
+
+
+# `l9.routing.gateclient-bypass-execute` is a `pattern-regex` rule, so it
+# searches raw file text with no syntactic context. It was authored as a bare
+# `/v1/execute|/execute`, which fired on every mention of the path anywhere in
+# a file -- a filename ending in execute.md, CLI help text about skipping a
+# paste step, an error string naming execute_via frontmatter, and docstrings
+# that merely describe the Gate-routed endpoint. All of them are prose, none is
+# a raw call, and the rule's own message is about raw calls bypassing
+# GateClient, so every fleet occurrence was a false positive.
+#
+# (This comment deliberately avoids spelling those examples as quoted literals:
+# a pattern-regex rule cannot tell a comment from code, so writing them out
+# would make this very block a finding. The exact strings live in
+# GATECLIENT_MUST_NOT_MATCH below, which is what the assertions read.)
+#
+# It now requires a string literal that ENDS at the path. These cases pin that
+# boundary so a future edit cannot quietly widen it back to a text search.
+GATECLIENT_RULE_ID = "l9.routing.gateclient-bypass-execute"
+# These four are the rule's own positive fixtures, so the routing rules match
+# them exactly as intended -- that is what the tests below assert. Suppressed by
+# id rather than reworded, because the strings have to stay byte-for-byte what
+# the rule is supposed to catch.
+GATECLIENT_MUST_MATCH = (
+    'requests.post("http://node:8000/v1/execute", json={})',  # nosemgrep: l9.routing.gateclient-bypass-execute,l9.routing.hardcoded-peer-node-url
+    'EXECUTE_PATH = "/v1/execute"',  # nosemgrep: l9.routing.gateclient-bypass-execute
+    'url = f"{base}/execute"',  # nosemgrep: l9.routing.gateclient-bypass-execute
+    "PATH = '/execute'",  # nosemgrep: l9.routing.gateclient-bypass-execute
+)
+GATECLIENT_MUST_NOT_MATCH = (
+    'FILES = ("references/execute.md",)',
+    'help_text = "Skip paste/execute; only copy lower Results grid"',
+    'err = "cursor-build render missing kind/execute_via frontmatter"',
+    '"""The converge action EIE owns (POST /v1/execute) validates the rows."""',
+    "# Route follow-up work through the Gate rather than POST /v1/execute.",
+)
+
+
+def _gateclient_pattern() -> str:
+    for rule_file in _rule_files():
+        for rule in _load_rules(rule_file):
+            if rule["id"] == GATECLIENT_RULE_ID:
+                pattern = rule.get("pattern-regex")
+                assert isinstance(pattern, str), (
+                    f"{GATECLIENT_RULE_ID} must keep a pattern-regex; if it is "
+                    "rewritten as an AST rule, port these cases to the new form"
+                )
+                return pattern
+    raise AssertionError(f"{GATECLIENT_RULE_ID} not found in the packaged ruleset")
+
+
+@pytest.mark.parametrize("source", GATECLIENT_MUST_MATCH)
+def test_gateclient_rule_still_catches_raw_execute_paths(source: str) -> None:
+    assert re.search(_gateclient_pattern(), source), (
+        f"{GATECLIENT_RULE_ID} no longer flags a raw /execute path: {source!r}"
+    )
+
+
+@pytest.mark.parametrize("source", GATECLIENT_MUST_NOT_MATCH)
+def test_gateclient_rule_ignores_prose_mentions_of_execute(source: str) -> None:
+    assert not re.search(_gateclient_pattern(), source), (
+        f"{GATECLIENT_RULE_ID} fires on prose, not a call: {source!r}. The "
+        "literal must end at the /execute path."
+    )

@@ -53,4 +53,16 @@ rules:
       mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
-    pattern-regex: '/v1/execute|/execute'
+    # The match must be a string literal that ENDS at the /execute path -- a
+    # request path, a routing constant, or an f-string building one. The
+    # previous form was a bare `/v1/execute|/execute` text search over the whole
+    # file, which cannot tell a call from prose: it fired on the filename
+    # "references/execute.md", on the help text "Skip paste/execute", on
+    # "kind/execute_via frontmatter", and on docstrings that merely DESCRIBE the
+    # Gate-routed endpoint. Every occurrence across the fleet was a false
+    # positive, so the rule proved nothing about Gate_only_routing.
+    #
+    # Still caught: requests.post("http://node:8000/v1/execute", ...),
+    # EXECUTE_PATH = "/v1/execute", and f"{base}/execute". Direct dispatch by
+    # any path is separately covered by AST-ROUTING-001/002.
+    pattern-regex: '["''][^"'']*/(v1/)?execute["'']'
