@@ -17,12 +17,20 @@ rules:
       mode: shadow
       contract: forbidden_logging_fields
       autofix_safe: false
-    pattern-either:
-      - pattern: logger.$LEVEL(..., $SECRET, ...)
-      - pattern: logging.$LEVEL(..., $SECRET, ...)
-    metavariable-regex:
-      metavariable: $SECRET
-      regex: (?i).*(api_key|token|password|secret|raw_response|llm_response).*
+    # `metavariable-regex` only constrains a match when it is an item of a
+    # `patterns` list. As a sibling of `pattern-either` it is silently dropped
+    # (the config still validates), which left this rule matching EVERY logger
+    # call carrying at least one argument -- including `logging.getLogger(...)`.
+    patterns:
+      - pattern-either:
+          - pattern: logger.$LEVEL(..., $SECRET, ...)
+          - pattern: logging.$LEVEL(..., $SECRET, ...)
+      - metavariable-regex:
+          metavariable: $LEVEL
+          regex: ^(debug|info|warning|error|exception|critical|log)$
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: (?i).*(api_key|token|password|secret|raw_response|llm_response).*
 
   - id: l9.logging.forbidden-secret-keyword
     languages: [python]
