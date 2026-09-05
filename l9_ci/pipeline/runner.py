@@ -61,7 +61,7 @@ def execute_and_normalize(
     request: ProviderExecutionRequest,
     context: ProviderNormalizationContext,
 ) -> ProviderNormalizationResult:
-    """Run detect/configure/execute/import/validate/normalize, failing closed."""
+    """Run detect, configure, execute, import, validate and normalize, failing closed."""
     if not provider.detect(request.repository_root):
         return _failed(
             provider,

@@ -84,6 +84,10 @@ def test_projected_log_conforms_to_subset_schema() -> None:
 def test_schema_forbids_region_snippet_source_disclosure() -> None:
     log = _projected_log()
     region = log["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["region"]
+    # Test data, not a credential: this is the secret-looking source line the
+    # SARIF schema must refuse to carry. The assertion below is what proves
+    # the disclosure guard works, so the literal has to look like a leak.
+    # nosemgrep: l9.baseline.python.hardcoded-credential
     region["snippet"] = {"text": "secret = 'super-secret-value'"}
     errors = list(Draft202012Validator(SCHEMA).iter_errors(log))
     assert errors, "schema must reject a region.snippet (source-line disclosure)"

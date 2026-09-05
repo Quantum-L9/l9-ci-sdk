@@ -89,3 +89,48 @@ def test_every_rule_declares_a_staged_rollout_mode() -> None:
                 f"{rule_file.name}:{rule['id']}: metadata.mode must be one of "
                 f"{sorted(allowed_modes)}, got {mode!r}"
             )
+
+
+# Semgrep's rule schema divides operators into two groups: the pattern
+# operators that may stand alone at rule top level (`pattern`, `patterns`,
+# `pattern-either`, `pattern-regex`) and the *constraint* operators below,
+# which -- per
+# https://docs.semgrep.dev/writing-rules/rule-syntax -- "must be nested
+# underneath a `patterns` field". A constraint written as a sibling of
+# `pattern-either` is not a schema error: `semgrep --validate` reports the
+# config valid and then silently drops the constraint, so the rule matches
+# everything its bare pattern matches.
+#
+# That defect shipped in two packaged rules and produced 79 false positives
+# across the fleet: `l9.logging.forbidden-secret-field` flagged every logger
+# call with an argument (`logging.getLogger(__name__)` included) because its
+# $SECRET regex never applied, and
+# `l9.handler.missing-transportpacket-return` would have flagged compliant
+# `-> TransportPacket` handlers for the same reason.
+SEMGREP_PATTERNS_ONLY_OPERATORS = frozenset(
+    {
+        "focus-metavariable",
+        "metavariable-analysis",
+        "metavariable-comparison",
+        "metavariable-pattern",
+        "metavariable-regex",
+        "metavariable-type",
+        "pattern-inside",
+        "pattern-not",
+        "pattern-not-inside",
+        "pattern-not-regex",
+    }
+)
+
+
+@pytest.mark.parametrize("rule_file", _rule_files(), ids=lambda p: p.name)
+def test_constraint_operators_are_nested_under_patterns(rule_file: Path) -> None:
+    for rule in _load_rules(rule_file):
+        misplaced = sorted(SEMGREP_PATTERNS_ONLY_OPERATORS & set(rule))
+        assert not misplaced, (
+            f"{rule_file.name}:{rule['id']}: {misplaced} sit at rule top level. "
+            "Semgrep only honours these as items of a `patterns` list; as a "
+            "sibling of `pattern`/`pattern-either` they are silently dropped "
+            "and the rule over-matches. `semgrep --validate` will NOT catch "
+            "this -- nest them under `patterns`."
+        )
