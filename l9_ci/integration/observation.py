@@ -189,6 +189,27 @@ def build_observation(
         raise ValueError("observation summary counts must be non-negative integers")
     if finding_count != len(findings):
         raise ValueError("finding_count must equal the number of findings")
+    # The summary describes the findings array; it is not a free-standing set
+    # of tallies. Assurance enforces both halves of that
+    # (`$.summary category counts do not sum to findingCount`), so an
+    # observation that satisfies only the first is built happily here and
+    # rejected as EVIDENCE_SCHEMA_INVALID on arrival -- the failure surfaces in
+    # the consumer, one repository away from the caller that caused it.
+    #
+    # `project_mandatory_findings` has always satisfied both, because it
+    # derives every count from the bundle. The generic builder is the path that
+    # can violate it: `observation build --check-id l9.lint --error-count 7`
+    # passes no findings, so the categories total 7 against a findingCount of
+    # 0. Fail here instead, where the caller can act on it.
+    if finding_count != error_count + warning_count + informational_count:
+        raise ValueError(
+            "observation summary category counts must sum to finding_count "
+            f"(finding_count={finding_count}, error_count={error_count}, "
+            f"warning_count={warning_count}, "
+            f"informational_count={informational_count}); "
+            "supply the findings these counts describe, or report the outcome "
+            "with the execution status and zero counts"
+        )
 
     owner, name = _parse_repository(repository)
     normalized_revision = _validate_revision(revision)
