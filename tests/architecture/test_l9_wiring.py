@@ -52,7 +52,8 @@ def _load_action_pins_module():  # type: ignore[no-untyped-def]
     spec = importlib.util.spec_from_file_location(
         "l9_lint_check_action_pins", REPO_ROOT / "lint" / "check_action_pins.py"
     )
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
