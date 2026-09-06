@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 340
+Files: 341
 
 ## Contents
 
@@ -314,6 +314,7 @@ Files: 340
 - `tests/integration/test_limits.py`
 - `tests/integration/test_redaction.py`
 - `tests/integration/test_sarif_projection.py`
+- `tests/integration/test_sdk_validation_observation.py`
 - `tests/integration/test_versioning.py`
 - `tests/pipeline/test_lifecycle.py`
 - `tests/pipeline/test_runner.py`
