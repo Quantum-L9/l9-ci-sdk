@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib as _hashlib
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from l9_ci.artifacts import canonical_json_bytes, load_and_validate_bundle
 from l9_ci.cli import ExitCode, OutputFormat
@@ -14,6 +14,11 @@ from l9_ci.integration import (
     build_observation,
     project_mandatory_findings_observation,
     validate_redaction,
+)
+from l9_ci.repository.git import inspect_git_repository, is_git_repository
+from l9_ci.repository.manifest import (
+    DEFAULT_MANIFEST_PATH,
+    build_repository_manifest,
 )
 
 
@@ -51,6 +56,18 @@ def register_observation_commands(
     _add_common_execution_arguments(sdk_validation)
     sdk_validation.add_argument("--input", required=True, type=Path)
     sdk_validation.set_defaults(handler=handle_project_sdk_validation)
+
+    # No --status, same reason. Note there is no --input either: the input is
+    # the repository, and the projector reads it rather than being handed a
+    # summary of it.
+    metadata = commands.add_parser("project-repository-metadata")
+    _add_common_execution_arguments(metadata)
+    metadata.add_argument("--repository-root", type=Path, default=Path("."))
+    metadata.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST_PATH)
+    metadata.add_argument("--tracked-only", action="store_true")
+    metadata.add_argument("--exclude-path", action="append")
+    metadata.add_argument("--exclude-dir", action="append")
+    metadata.set_defaults(handler=handle_project_repository_metadata)
 
 
 def _add_common_execution_arguments(parser: argparse.ArgumentParser) -> None:
@@ -152,6 +169,35 @@ def handle_project_sdk_validation(args: argparse.Namespace) -> int:
     # Conflating the two would make a workflow step that emits a real failure
     # look like a broken step, and the natural fix for a broken step is to stop
     # emitting -- which is how a control loses its evidence.
+    return int(ExitCode.SUCCESS)
+
+
+def handle_project_repository_metadata(args: argparse.Namespace) -> int:
+    try:
+        if not args.revision:
+            raise ValueError(
+                "--revision is required for observation project-repository-metadata"
+            )
+        payload = project_repository_metadata_observation(
+            repository_root=args.repository_root,
+            repository=args.repository,
+            revision=args.revision,
+            configuration_digest=args.configuration_digest,
+            run_id=args.run_id,
+            attempt=args.attempt,
+            started_at=args.started_at,
+            completed_at=args.completed_at,
+            manifest_path=args.manifest,
+            include_untracked=not args.tracked_only,
+            excluded_paths=args.exclude_path or (),
+            excluded_directories=args.exclude_dir or (),
+            mode=args.mode,
+        )
+        _write_output(args.output, payload)
+    except Exception as exc:
+        return emit_error(exc, output_format=OutputFormat(args.format))
+    print(args.output)
+    # As with sdk-validation: a `failed` verdict is a successful projection.
     return int(ExitCode.SUCCESS)
 
 
@@ -297,3 +343,141 @@ def _validated_input_digest(
         return _hashlib.sha256(bundle_path.read_bytes()).hexdigest()
     except OSError:
         return None
+
+
+def project_repository_metadata_observation(
+    *,
+    repository_root: Path,
+    repository: str,
+    revision: str,
+    configuration_digest: str,
+    run_id: str,
+    attempt: int,
+    started_at: str,
+    completed_at: str,
+    manifest_path: Path = DEFAULT_MANIFEST_PATH,
+    include_untracked: bool = True,
+    excluded_paths: Sequence[str] = (),
+    excluded_directories: Sequence[str] = (),
+    mode: str | None = None,
+) -> dict[str, Any]:
+    """Project the tracked manifest's reconciliation into `l9.repository-metadata`.
+
+    Like the sdk-validation projector, this runs the check and takes no status
+    argument. The verdict is `passed` when the manifest committed to the
+    repository matches what `build_repository_manifest` derives from repository
+    truth right now, and `failed` when it has drifted -- the same comparison
+    `l9-ci manifest check` makes, and the same one that turns its exit code
+    into GATE_FAILURE.
+
+    It deliberately does not call `write_repository_manifest`, which is what
+    `manifest check` uses: that function *writes* the reconciled manifest as a
+    side effect. A producer of evidence must not mutate the repository it is
+    describing, so the comparison is done here against the file on disk and
+    nothing is written.
+
+    The subject binding is observed rather than accepted. `inspect_git_repository`
+    reads the real HEAD, and `revision` is cross-checked against it; a mismatch
+    raises, because an observation naming one revision while measuring another
+    describes neither. A root that is not a git repository raises for the same
+    reason -- there is no revision to bind to, and binding to the caller's word
+    is the caller-asserted evidence this projector exists to avoid.
+
+    A dirty tree also raises. The control declares
+    `subjectBinding.exactRevision`, and a manifest compared against modified
+    files is not a statement about the committed revision. In practice this
+    means emitting the observation *before* any step that writes generated
+    files -- including `manifest check` itself, which would dirty the very file
+    under comparison.
+    """
+    root = Path(repository_root).resolve()
+    if not revision.strip():
+        raise ValueError(
+            "revision is required to bind a repository-metadata observation"
+        )
+    if not is_git_repository(root):
+        raise ValueError(
+            f"{root} is not a git repository, so no revision can be observed; "
+            "an observation bound to an unverified revision would be an "
+            "assertion rather than evidence"
+        )
+
+    state = inspect_git_repository(root)
+    if state.revision != revision:
+        raise ValueError(
+            "revision does not match the repository HEAD "
+            f"({state.revision}); the observation would name one revision "
+            "while describing another"
+        )
+    if state.dirty:
+        raise ValueError(
+            "the working tree is dirty, so a manifest comparison does not "
+            "describe the committed revision; emit this observation before "
+            "any step that writes generated files"
+        )
+
+    output = manifest_path if manifest_path.is_absolute() else root / manifest_path
+    try:
+        manifest = build_repository_manifest(
+            root,
+            manifest_path=output,
+            include_untracked=include_untracked,
+            excluded_paths=excluded_paths,
+            excluded_directories=excluded_directories,
+        )
+        rendered = manifest.render_markdown()
+        tracked = output.read_text(encoding="utf-8") if output.exists() else None
+        reconciled = tracked == rendered
+    except (ValueError, OSError):
+        # Same narrow families as the sdk-validation projector, and for the
+        # same reason: a defect in this SDK must surface as one rather than
+        # being reported as a repository whose metadata is invalid.
+        reconciled = False
+        rendered = None
+
+    artifacts: list[dict[str, Any]] = [
+        {
+            "name": "repository-manifest",
+            "digest": {
+                "algorithm": "sha256",
+                # The digest addresses what repository truth says the manifest
+                # should be, not what is committed. On a pass they are equal;
+                # on a failure this is the value that would make it pass, which
+                # is the useful half for whoever reads the evidence.
+                "value": (
+                    _hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+                    if rendered is not None
+                    else _hashlib.sha256(b"").hexdigest()
+                ),
+            },
+            "mediaType": "text/markdown",
+            "path": _repository_relative(output, root),
+        }
+    ]
+
+    return build_observation(
+        producer_version=_package_version(),
+        repository=repository,
+        revision=revision,
+        check_id="l9.repository-metadata",
+        configuration_digest=configuration_digest,
+        run_id=run_id,
+        attempt=attempt,
+        status="passed" if reconciled else "failed",
+        started_at=started_at,
+        completed_at=completed_at,
+        artifacts=artifacts,
+        mode=mode,
+    )
+
+
+def _repository_relative(path: Path, root: Path) -> str:
+    """The manifest's path as the repository sees it, never as this host does.
+
+    An absolute path would put the runner's directory layout into a canonical
+    artifact, which the SDK's redaction rules forbid outright.
+    """
+    try:
+        return path.resolve().relative_to(root).as_posix()
+    except ValueError:
+        return path.name
