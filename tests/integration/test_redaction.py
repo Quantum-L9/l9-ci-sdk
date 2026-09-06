@@ -23,6 +23,9 @@ def test_absolute_path_is_rejected() -> None:
 def test_source_lines_are_rejected() -> None:
     result = validate_redaction(
         {
+            # Test data, not a credential: the secret-looking source line the
+            # redaction validator must reject.
+            # nosemgrep: l9.baseline.python.hardcoded-credential
             "lines": "secret = 'value'",
         }
     )

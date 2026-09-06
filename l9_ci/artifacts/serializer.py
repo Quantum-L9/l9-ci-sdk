@@ -90,6 +90,10 @@ def write_bundle_atomic(bundle: FindingBundle, destination: Path) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary_path, destination)
-    except Exception:
+    finally:
+        # A successful os.replace has already moved the temporary file, so
+        # this is a no-op on the happy path. Cleaning up in `finally` rather
+        # than `except Exception` also removes the partial write when the
+        # process is interrupted (KeyboardInterrupt/SystemExit derive from
+        # BaseException and would otherwise leak a .tmp beside the artifact).
         temporary_path.unlink(missing_ok=True)
-        raise

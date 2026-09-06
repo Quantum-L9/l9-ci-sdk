@@ -94,6 +94,7 @@ Files: 341
 - `docs/adr/0010-yaml-governance-static-checks.md`
 - `docs/adr/0011-biome-static-checks.md`
 - `docs/adr/0014-deterministic-governance-evidence-layer.md`
+- `docs/adr/0015-packaged-rule-precision.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
