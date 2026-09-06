@@ -32,21 +32,27 @@ PYTHONPATH=. python -m l9_ci providers detect --root .
 | Semgrep execution failure | Validate ruleset and raw JSON path | Re-run without swallowing execution errors |
 | Bundle validation failure | Inspect schema and semantic diagnostics | Fix producer or report; never coerce PASS |
 | Unresolved identity in strict mode | Add approved identity mapping or L9-authored rule metadata | Keep advisory until explicit resolution exists |
-| Core publication failure | Check artifact upload, governance digest, Core pin | Re-dispatch the matching profile |
+| Core publication failure | Check artifact upload and governance digest in the `Analyze (central Core)` run | Re-dispatch the matching profile from Core `org-ci.yml` |
 
-## Profile smoke tests
+## Organization CI (Core)
 
-Each `l9-analysis*.yml` caller supports `workflow_dispatch`. Use the caller that
-matches the intended profile: `pr_fast`, `merge`, `nightly`, `release`, or
-`supply_chain`.
+Organization L9 analysis of this repository is executed by the GitHub
+organization required-workflow ruleset from `Quantum-L9/l9-ci-core` `main`
+`.github/workflows/org-ci.yml` (required check `Analyze (central Core)`).
+This repository holds no Core caller, no Core SHA, and no SDK SHA; there is no
+Core pin to update here. `pull_request` and `merge_group` runs are automatic.
+Profile smoke tests for `nightly`, `release`, or `supply_chain` are dispatched
+from Core's `org-ci.yml` `workflow_dispatch` (`event` input), not from a
+workflow in this tree. See `docs/adr/0016-organization-managed-l9-ci.md`.
 
 ## Core pin update
 
-1. Resolve and review the target `l9-ci-core` commit.
-2. Update every literal `uses: Quantum-L9/l9-ci-core/...@<sha>` together.
-3. Run all five profile callers with `workflow_dispatch`.
-4. Verify artifact manifest, bundle validation, agent payload, and published check.
-5. Roll back all callers to the prior SHA if any profile regresses.
+Not applicable. A Core change reaches this repository on its next governed
+`pull_request` or `merge_group` evaluation with no edit here. Rollback of a
+bad Core change happens in Core (`.l9/release-plane.yaml` there), never by
+restoring a consumer pin. The SDK revision Core provisions is selected by
+Core's `.l9/sdk-compatibility.yaml`; promoting a new SDK revision is a
+governed Core change, not an SDK-side edit.
 
 ## Evidence and manifest recovery
 

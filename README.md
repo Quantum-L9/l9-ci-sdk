@@ -85,7 +85,7 @@ interpreter (see `AGENTS.md` §10).
 
 | Surface | Workflows | Role |
 |---|---|---|
-| Core-driven self-analysis | `l9-analysis*.yml` | Pins `l9-ci-core` by immutable SHA; advisory dogfood today |
+| Organization CI (Core) | none in this tree | Run by the GitHub organization required-workflow ruleset from `Quantum-L9/l9-ci-core` `main` `org-ci.yml`; no Core or SDK pin here (ADR-0016) |
 | Self-CI (no Core) | `l9-self-ci.yml` | Classifier / rule-modes gate (`engine: ci-debt`) |
 | YAML governance | `l9-yaml-governance.yml` + dogfood | Reusable yamllint / governance JSON / Action pins / actionlint / zizmor |
 | Biome static checks | `l9-biome-scan.yml` + dogfood | JSON/JS/TS formatter+linter ownership (`biome.json`) |

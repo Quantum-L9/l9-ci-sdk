@@ -388,7 +388,7 @@ jobs:
     needs: classify
     if: needs.classify.outputs.semgrep_relevant == 'true'
     env:
-      # Exact pin (not a range), mirroring the l9-analysis*.yml workflows: a
+      # Exact pin (not a range), mirroring Core's central Semgrep pin: a
       # semgrep minor/patch bump can add or remove findings, which must be a
       # reviewed, deliberate change -- never an incidental side effect.
       L9_SEMGREP_VERSION: '1.171.0'

@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 341
+Files: 337
 
 ## Contents
 
@@ -29,14 +29,9 @@ Files: 341
 - `.github/scripts/render_ci_summary.py`
 - `.github/scripts/update_marker_comment.py`
 - `.github/workflows/ci.yml`
-- `.github/workflows/l9-analysis-merge.yml`
-- `.github/workflows/l9-analysis-release.yml`
-- `.github/workflows/l9-analysis-supply-chain.yml`
-- `.github/workflows/l9-analysis.yml`
 - `.github/workflows/l9-biome-scan-dogfood.yml`
 - `.github/workflows/l9-biome-scan.yml`
 - `.github/workflows/l9-manifest-reconcile.yml`
-- `.github/workflows/l9-nightly.yml`
 - `.github/workflows/l9-self-ci.yml`
 - `.github/workflows/l9-yaml-governance-dogfood.yml`
 - `.github/workflows/l9-yaml-governance.yml`
@@ -95,6 +90,7 @@ Files: 341
 - `docs/adr/0011-biome-static-checks.md`
 - `docs/adr/0014-deterministic-governance-evidence-layer.md`
 - `docs/adr/0015-packaged-rule-precision.md`
+- `docs/adr/0016-organization-managed-l9-ci.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`

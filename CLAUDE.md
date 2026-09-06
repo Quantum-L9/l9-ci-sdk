@@ -33,7 +33,9 @@ updated: 2026-07-27
 - Retain secrets or absolute source paths in canonical artifacts.
 - Fabricate test fixtures, counts, validation results, or manifest freshness.
 - Hand-edit generated evidence files.
-- Change the Core SHA in only one profile caller.
+- Add a Core caller workflow, an `L9_CORE_REF`/`L9_SDK_REF` pin, or any
+  `uses: Quantum-L9/l9-ci-core/...` reference; organization CI is run by the
+  GitHub organization required-workflow ruleset from Core `main` (ADR-0016).
 
 ## Live CI facts
 
@@ -41,7 +43,9 @@ updated: 2026-07-27
 - New-secret scanning is the only default hard-blocking job.
 - The final gate is rule-mode aware.
 - Ruff, mypy, validation, Semgrep, audit, and SBOM are advisory.
-- Five Core analysis profile callers are advisory/non-strict.
+- Organization analysis (`Analyze (central Core)`) is run by the org ruleset
+  from `Quantum-L9/l9-ci-core` `main` `org-ci.yml`; no Core caller, Core
+  SHA, or SDK SHA lives in this tree.
 - Pre-commit has two hooks: `ruff --fix` and `ruff-format`.
 
 ## References
