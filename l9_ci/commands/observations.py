@@ -219,7 +219,21 @@ def project_sdk_validation_observation(
     try:
         bundle = load_and_validate_bundle(bundle_path)
         validate_redaction(bundle.to_dict()).require_valid()
-    except Exception:  # noqa: BLE001 - any rejection is a failed validation
+    except (ValueError, OSError):
+        # Only the two families that mean "this bundle is not valid":
+        # ValueError from every validator on the path -- raw summary,
+        # compatibility, schema, semantics, redaction -- with
+        # json.JSONDecodeError arriving as a subclass of it, and OSError for a
+        # file that cannot be read.
+        #
+        # This was `except Exception`, which code scanning flagged and was
+        # right to. Under it a defect in this SDK -- an AttributeError, a
+        # TypeError from a refactor -- would have been reported as `failed`:
+        # an observation asserting that someone's revision fails validation
+        # when in truth the validator crashed. Emitting evidence that blames
+        # the wrong party is worse than crashing, and this projector exists to
+        # stop unfounded verdicts. Anything outside these two families is a
+        # bug here and must surface as one.
         passed = False
 
     if bundle is not None and bundle.snapshot.revision != revision:

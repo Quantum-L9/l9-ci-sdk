@@ -318,3 +318,44 @@ class TestTheObservationIsWellFormed:
         observation["execution"]["status"] = "failed"
         with pytest.raises(ValueError, match="does not match the content address"):
             validate_observation(observation)
+
+
+class TestOnlyValidationFailuresBecomeFailedObservations:
+    """Code scanning flagged the original `except Exception` here, correctly.
+
+    A defect in the SDK must not be reported as someone's bundle failing
+    validation. An observation that blames the wrong party is worse than a
+    crash, because it is admissible evidence.
+    """
+
+    def test_an_internal_defect_propagates_rather_than_becoming_failed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from l9_ci.commands import observations
+
+        def exploding_validator(_path: Path) -> object:
+            raise AttributeError("a refactor broke the validator")
+
+        monkeypatch.setattr(
+            observations, "load_and_validate_bundle", exploding_validator
+        )
+        with pytest.raises(AttributeError, match="a refactor broke the validator"):
+            project_sdk_validation_observation(
+                _write_valid(tmp_path), revision=REVISION, **COMMON
+            )
+
+    def test_a_validation_rejection_still_becomes_failed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from l9_ci.commands import observations
+
+        def rejecting_validator(_path: Path) -> object:
+            raise ValueError("artifact validation failed")
+
+        monkeypatch.setattr(
+            observations, "load_and_validate_bundle", rejecting_validator
+        )
+        observation = project_sdk_validation_observation(
+            _write_valid(tmp_path), revision=REVISION, **COMMON
+        )
+        assert observation["execution"]["status"] == "failed"
