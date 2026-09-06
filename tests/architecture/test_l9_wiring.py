@@ -8,8 +8,8 @@ workflows honest and make sure the consumer-owned Core wiring the migration
 removed cannot quietly regrow:
 
 * no workflow references ``Quantum-L9/l9-ci-core``, ``L9_CORE_REF``, or
-  ``L9_SDK_REF``, and no ``l9-analysis*.yml`` / ``l9-nightly.yml`` caller
-  returns (any of these re-creates a consumer-owned Core revision);
+  ``L9_SDK_REF``, and no ``l9-analysis*`` / ``l9-nightly`` caller returns
+  (any of these re-creates a consumer-owned Core revision);
 * every external action reference is pinned to an immutable commit SHA
   (covers ci.yml too, so the AUD-008 pinning cannot regress);
 * external references come only from an explicit vendor allow-list (no rogue
@@ -19,6 +19,12 @@ removed cannot quietly regrow:
   explicitly bounded per workflow);
 * governance files parse as JSON.
 
+Workflow discovery is extension-complete: GitHub runs both ``*.yml`` and
+``*.yaml`` under ``.github/workflows``, so a guard that globbed only ``*.yml``
+could be evaded by a ``.yaml`` caller. Discovery and ``uses:`` parsing reuse
+``lint/check_action_pins.py`` (the yaml-governance action-pin checker) so the
+two do not drift into subtly different grammars.
+
 Originally proposed as a standalone workflow + unittest module in PR #16;
 folded into the canonical architecture suite so the invariants run under the
 same self-validation gate (ci.yml) as every other architecture test, instead
@@ -27,6 +33,7 @@ of adding a second, separately-maintained checker.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 from pathlib import Path
@@ -37,9 +44,25 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = REPO_ROOT / ".github" / "workflows"
 GOVERNANCE = REPO_ROOT / ".github" / "governance"
-ALL_WORKFLOWS = sorted(WORKFLOWS.glob("*.yml"))
 
-_USES = re.compile(r"^\s*uses:\s*(?P<ref>\S+)")
+WORKFLOW_EXTENSIONS = (".yml", ".yaml")
+
+
+def _load_action_pins_module():  # type: ignore[no-untyped-def]
+    spec = importlib.util.spec_from_file_location(
+        "l9_lint_check_action_pins", REPO_ROOT / "lint" / "check_action_pins.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_ACTION_PINS = _load_action_pins_module()
+# Canonical `uses:` grammar shared with the action-pin checker: optional list
+# dash, optional quotes, ref up to whitespace/quote/comment.
+_USES = _ACTION_PINS.USES
+_LOCAL_PREFIXES: tuple[str, ...] = tuple(_ACTION_PINS.LOCAL_PREFIXES)
 _SHA_PIN = re.compile(r"@[0-9a-fA-F]{40}$")
 _WRITE_SCOPE = re.compile(
     r"(?m)^\s+(actions|checks|contents|deployments|discussions|"
@@ -55,9 +78,21 @@ _ORG_CI_OWNERSHIP_MARKERS = (
     "L9_CORE_REF",
     "L9_SDK_REF",
 )
-# Filenames of the removed Core callers. Behaviour, not the filename, decides
+# Stems of the removed Core callers. Behaviour, not the filename, decides
 # ownership, but a returning caller under its old name is the likeliest shape.
-_REMOVED_CALLER_GLOBS = ("l9-analysis*.yml", "l9-nightly.yml")
+_REMOVED_CALLER_STEMS = re.compile(r"^(l9-analysis.*|l9-nightly)$")
+
+
+def workflow_files(root: Path) -> list[Path]:
+    """Every workflow GitHub would run under ``root``: ``*.yml`` and ``*.yaml``."""
+    return sorted(
+        path
+        for path in root.iterdir()
+        if path.is_file() and path.suffix in WORKFLOW_EXTENSIONS
+    )
+
+
+ALL_WORKFLOWS = workflow_files(WORKFLOWS)
 
 
 def _uses_refs(path: Path) -> Iterator[tuple[int, str]]:
@@ -65,8 +100,40 @@ def _uses_refs(path: Path) -> Iterator[tuple[int, str]]:
         match = _USES.match(line)
         if not match:
             continue
-        ref = match.group("ref").split("#", 1)[0].strip()
-        yield number, ref
+        yield number, match.group(1)
+
+
+def _is_local(ref: str) -> bool:
+    return ref.startswith(_LOCAL_PREFIXES)
+
+
+def test_workflow_discovery_is_extension_complete(tmp_path: Path) -> None:
+    (tmp_path / "a.yml").write_text("name: a\n", encoding="utf-8")
+    (tmp_path / "b.yaml").write_text("name: b\n", encoding="utf-8")
+    (tmp_path / "notes.md").write_text("ignored\n", encoding="utf-8")
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "c.yml").write_text("name: c\n", encoding="utf-8")
+    assert [path.name for path in workflow_files(tmp_path)] == ["a.yml", "b.yaml"]
+
+
+def test_uses_grammar_matches_step_and_job_forms() -> None:
+    # Step form (list item), job form (mapping value), quoted, and commented.
+    cases = {
+        "      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567  # v4": (
+            "actions/checkout@0123456789abcdef0123456789abcdef01234567"
+        ),
+        "    uses: ./.github/workflows/l9-biome-scan.yml": (
+            "./.github/workflows/l9-biome-scan.yml"
+        ),
+        "  - uses: 'pypa/gh-action-pypi-publish@0123456789abcdef0123456789abcdef01234567'": (
+            "pypa/gh-action-pypi-publish@0123456789abcdef0123456789abcdef01234567"
+        ),
+    }
+    for line, expected in cases.items():
+        match = _USES.match(line)
+        assert match is not None, line
+        assert match.group(1) == expected
+    assert _USES.match("      # uses: not/a-ref@v1") is None
 
 
 def test_workflows_exist() -> None:
@@ -75,9 +142,7 @@ def test_workflows_exist() -> None:
 
 def test_no_core_caller_workflow_returns() -> None:
     returned = sorted(
-        path.name
-        for pattern in _REMOVED_CALLER_GLOBS
-        for path in WORKFLOWS.glob(pattern)
+        path.name for path in ALL_WORKFLOWS if _REMOVED_CALLER_STEMS.match(path.stem)
     )
     assert returned == [], (
         f"Core caller workflows must not return (org ruleset runs Core main "
@@ -119,7 +184,7 @@ def test_every_action_reference_is_sha_pinned() -> None:
         f"{workflow.name}:{number}:{ref}"
         for workflow in ALL_WORKFLOWS
         for number, ref in _uses_refs(workflow)
-        if not ref.startswith("./") and not _SHA_PIN.search(ref)
+        if not _is_local(ref) and not _SHA_PIN.search(ref)
     ]
     assert offenders == [], f"unpinned refs (need @<40-hex sha>): {offenders}"
 
@@ -146,7 +211,7 @@ def test_external_references_are_allowlisted_vendors() -> None:
         f"{workflow.name}:{number}:{ref}"
         for workflow in ALL_WORKFLOWS
         for number, ref in _uses_refs(workflow)
-        if not ref.startswith("./")
+        if not _is_local(ref)
         and not any(
             ref.startswith(prefix) for prefix in _ALLOWED_EXTERNAL_ACTION_PREFIXES
         )
