@@ -47,8 +47,11 @@ PYTHONPATH=. python -m l9_ci manifest check --tracked-only --exclude-dir memory-
 
 Current tip: `make check` green (388 tests at Path A audit). Runtime-captured
 Semgrep fixture is present and exercised by
-`tests/providers/semgrep/test_runtime_fixture.py`. Thin Core analysis callers
-pin `analyze-semgrep.yml@c3f04e1…` and dogfood on `main`.
+`tests/providers/semgrep/test_runtime_fixture.py`. Organization L9 analysis is
+run by the GitHub organization required-workflow ruleset from
+`Quantum-L9/l9-ci-core` `main` `org-ci.yml`; this tree holds no Core caller or
+Core/SDK pin (ADR-0016), and `tests/architecture/test_l9_wiring.py` fails if
+one returns.
 
 ## Freshness rule
 

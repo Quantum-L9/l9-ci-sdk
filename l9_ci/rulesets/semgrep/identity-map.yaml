@@ -13,8 +13,8 @@ metadata:
 # p/bandit, p/javascript, p/typescript, p/expressjs, p/eslint-plugin-security.
 #
 # This map only resolves identity for THIRD-PARTY registry rules (e.g. the
-# `p/python` / `p/security-audit` configs the downstream l9-analysis*.yml
-# workflows run). L9-authored rules under l9_ci/rulesets/semgrep/ already
+# `p/python` / `p/security-audit` configs that Core's central org-ci.yml
+# runs through `l9-ci semgrep run`). L9-authored rules under l9_ci/rulesets/semgrep/ already
 # carry trusted `metadata.l9.canonical_rule_id` and never need an entry here
 # -- resolve_rule_identity() gives trusted metadata priority over this map.
 rules:

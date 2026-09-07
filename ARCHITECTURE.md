@@ -65,19 +65,19 @@ PR/push/dispatch
      -> validate, lint, typecheck, semgrep, audit, supply_chain (advisory)
      -> pr_pipeline_gate (rule-mode aware)
 
-profile trigger
-  -> l9-analysis*.yml
-     -> resolve governance from pinned l9-ci-core
-     -> Semgrep JSON report
-     -> provision immutable SDK
-     -> normalize and validate bundle
-     -> project agent payload
-     -> route and manifest artifacts
-     -> publish analysis check through l9-ci-core
+pull_request / merge_group (GitHub organization required-workflow ruleset)
+  -> Quantum-L9/l9-ci-core main .github/workflows/org-ci.yml (not in this tree)
+     -> resolve central governance
+     -> provision the SDK revision Core selects (.l9/sdk-compatibility.yaml in Core)
+     -> l9-ci semgrep run -> normalize and validate bundle
+     -> l9-ci gate evaluate -> project agent payload and SARIF
+     -> route, manifest, upload artifacts; required check "Analyze (central Core)"
 ```
 
-All five profile callers pin Core to commit
-`f7a4ee8c1f4e4413cb3645d088cafa3e9c798235`.
+This repository holds no Core caller, Core SHA, or SDK SHA (ADR-0016). Core
+analyzes this repository with the SDK revision Core has admitted, not with the
+tree under review; the SDK's own in-tree dogfood is the `semgrep` job of
+`l9-self-ci.yml`.
 
 ## Non-goals
 

@@ -45,9 +45,10 @@ updated: 2026-07-31
    `requirements.txt` (Core `provision-sdk`). Issue #9 is **closed**.
 3. First-party Actions are SHA-pinned; `lint/check_action_pins.py` enforces
    consistency. Issue #5 is **closed**.
-4. The organization contributing template prefers `@v1` for thin callers, while
-   this repository's deployed profile callers deliberately pin Core by commit
-   SHA. The repository-specific immutable pin is the live authority.
+4. This repository holds no Core caller and no Core or SDK pin: organization
+   analysis is run by the GitHub organization required-workflow ruleset from
+   `Quantum-L9/l9-ci-core` `main` `org-ci.yml` (ADR-0016). The organization
+   contributing template's `@v1` guidance for thin callers does not apply here.
 5. The architecture spec revision is `1.1.0`, while the SDK runtime and
    integration contract version are `1.0.0`. These are distinct axes and must
    remain explicitly labeled.

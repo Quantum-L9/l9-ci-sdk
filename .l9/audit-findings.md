@@ -20,7 +20,7 @@ Evidence map SSOT: `docs/release/evidence-map.yaml` (AUD-008 sealed 2026-07-31 v
 - [x] **AUD-005** `BLOCKER` - The SDK must have one canonical, test-enforced public API boundary.
   - Evidence: SDK S1 (`0c487747b0fcd172edaefe9e843dac818de8fc12`) public API manifest plus v1 compatibility alias
 - [x] **AUD-006** `NON-BLOCKER` - The SDK must not own or distribute GitHub Actions workflow orchestration assigned to l9-ci-core.
-  - Evidence: Core C3 (`c3f04e1268364e3623fc57f963937e2a0665e0e0`) and SDK S3 (`4c7fbb785dac5b65cc74263c4b28afa6fa95959b`) thin callers
+  - Evidence: Core C3 (`c3f04e1268364e3623fc57f963937e2a0665e0e0`) and SDK S3 (`4c7fbb785dac5b65cc74263c4b28afa6fa95959b`) thin callers; superseded by ADR-0016, which removes the callers entirely (organization analysis runs from Core `main` `org-ci.yml` via the org ruleset) and guards against their return in `tests/architecture/test_l9_wiring.py`
 - [x] **AUD-007** `BLOCKER` - Validation evidence and repository inventory must be bound to the immutable commit being released.
   - Evidence: SDK S3 (`4c7fbb785dac5b65cc74263c4b28afa6fa95959b`) and validation artifact https://github.com/Quantum-L9/l9-ci-sdk/actions/runs/30640182197/artifacts/8797085061
 - [x] **AUD-008** `BLOCKER` - Required unit, lint, format, and architecture gates must run continuously on the commit under review.

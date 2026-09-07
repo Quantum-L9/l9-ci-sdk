@@ -1,18 +1,29 @@
-"""Guardrails over this repo's l9-ci-core workflow wiring (ported from PR #16).
+"""Guardrails over this repo's GitHub Actions wiring (ported from PR #16).
 
-These tests keep the L9 analysis callers, the self-validation workflow, and
-governance honest so a careless edit cannot silently drift the repo out of
-correctness with respect to l9-ci-core:
+Organization L9 analysis of this repository is executed by the GitHub
+organization required-workflow ruleset from ``Quantum-L9/l9-ci-core`` ``main``
+``.github/workflows/org-ci.yml`` (ADR-0016). Nothing in this tree selects a
+Core or SDK revision, so these tests keep the remaining repository-owned
+workflows honest and make sure the consumer-owned Core wiring the migration
+removed cannot quietly regrow:
 
-* every Core / external action reference is pinned to an immutable commit SHA
+* no workflow references ``Quantum-L9/l9-ci-core``, ``L9_CORE_REF``, or
+  ``L9_SDK_REF``, and no ``l9-analysis*`` / ``l9-nightly`` caller returns
+  (any of these re-creates a consumer-owned Core revision);
+* every external action reference is pinned to an immutable commit SHA
   (covers ci.yml too, so the AUD-008 pinning cannot regress);
-* non-actions references point only at l9-ci-core (no rogue third-party org);
-* least-privilege permissions (``contents: read``; thin Core analysis callers
-  may grant ``security-events: write`` only so the reusable kernel can publish
-  its SDK-owned SARIF projection; other write scopes stay explicitly bounded);
-* each caller is a thin reusable-workflow stub that hands its profile /
-  matrix id to the Core-owned analyze-semgrep kernel (v2 handoff shape);
-* governance files parse as JSON and declare the profiles the callers use.
+* external references come only from an explicit vendor allow-list (no rogue
+  third-party org); this repository's own reusable workflows are called by
+  local ``./`` path, never by an SDK SHA;
+* least-privilege permissions (``contents: read``; write scopes stay
+  explicitly bounded per workflow);
+* governance files parse as JSON.
+
+Workflow discovery is extension-complete: GitHub runs both ``*.yml`` and
+``*.yaml`` under ``.github/workflows``, so a guard that globbed only ``*.yml``
+could be evaded by a ``.yaml`` caller. Discovery and ``uses:`` parsing reuse
+``lint/check_action_pins.py`` (the yaml-governance action-pin checker) so the
+two do not drift into subtly different grammars.
 
 Originally proposed as a standalone workflow + unittest module in PR #16;
 folded into the canonical architecture suite so the invariants run under the
@@ -22,22 +33,37 @@ of adding a second, separately-maintained checker.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Iterator
 
 import pytest
-import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = REPO_ROOT / ".github" / "workflows"
 GOVERNANCE = REPO_ROOT / ".github" / "governance"
-CALLERS = sorted(WORKFLOWS.glob("l9-analysis*.yml"))
-ALL_WORKFLOWS = sorted(WORKFLOWS.glob("*.yml"))
 
-CORE_REPO = "Quantum-L9/l9-ci-core"
-_USES = re.compile(r"^\s*uses:\s*(?P<ref>\S+)")
+WORKFLOW_EXTENSIONS = (".yml", ".yaml")
+
+
+def _load_action_pins_module():  # type: ignore[no-untyped-def]
+    spec = importlib.util.spec_from_file_location(
+        "l9_lint_check_action_pins", REPO_ROOT / "lint" / "check_action_pins.py"
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_ACTION_PINS = _load_action_pins_module()
+# Canonical `uses:` grammar shared with the action-pin checker: optional list
+# dash, optional quotes, ref up to whitespace/quote/comment.
+_USES = _ACTION_PINS.USES
+_LOCAL_PREFIXES: tuple[str, ...] = tuple(_ACTION_PINS.LOCAL_PREFIXES)
 _SHA_PIN = re.compile(r"@[0-9a-fA-F]{40}$")
 _WRITE_SCOPE = re.compile(
     r"(?m)^\s+(actions|checks|contents|deployments|discussions|"
@@ -45,10 +71,29 @@ _WRITE_SCOPE = re.compile(
     r"repository-projects|security-events|statuses):\s+write"
 )
 
+# Consumer-owned organization CI ownership markers. Any of these in a workflow
+# means this repository is again selecting a Core or SDK revision for
+# organization CI, which the org ruleset owns (ADR-0016).
+_ORG_CI_OWNERSHIP_MARKERS = (
+    "Quantum-L9/l9-ci-core",
+    "L9_CORE_REF",
+    "L9_SDK_REF",
+)
+# Stems of the removed Core callers. Behaviour, not the filename, decides
+# ownership, but a returning caller under its old name is the likeliest shape.
+_REMOVED_CALLER_STEMS = re.compile(r"^(l9-analysis.*|l9-nightly)$")
 
-def _load(path: Path) -> dict[str, Any]:
-    data: dict[str, Any] = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return data
+
+def workflow_files(root: Path) -> list[Path]:
+    """Every workflow GitHub would run under ``root``: ``*.yml`` and ``*.yaml``."""
+    return sorted(
+        path
+        for path in root.iterdir()
+        if path.is_file() and path.suffix in WORKFLOW_EXTENSIONS
+    )
+
+
+ALL_WORKFLOWS = workflow_files(WORKFLOWS)
 
 
 def _uses_refs(path: Path) -> Iterator[tuple[int, str]]:
@@ -56,30 +101,98 @@ def _uses_refs(path: Path) -> Iterator[tuple[int, str]]:
         match = _USES.match(line)
         if not match:
             continue
-        ref = match.group("ref").split("#", 1)[0].strip()
-        yield number, ref
+        yield number, match.group(1)
 
 
-def test_analysis_callers_exist() -> None:
-    assert CALLERS, "expected .github/workflows/l9-analysis*.yml caller(s)"
+def _is_local(ref: str) -> bool:
+    return ref.startswith(_LOCAL_PREFIXES)
+
+
+def test_workflow_discovery_is_extension_complete(tmp_path: Path) -> None:
+    (tmp_path / "a.yml").write_text("name: a\n", encoding="utf-8")
+    (tmp_path / "b.yaml").write_text("name: b\n", encoding="utf-8")
+    (tmp_path / "notes.md").write_text("ignored\n", encoding="utf-8")
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "c.yml").write_text("name: c\n", encoding="utf-8")
+    assert [path.name for path in workflow_files(tmp_path)] == ["a.yml", "b.yaml"]
+
+
+def test_uses_grammar_matches_step_and_job_forms() -> None:
+    # Step form (list item), job form (mapping value), quoted, and commented.
+    cases = {
+        "      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567  # v4": (
+            "actions/checkout@0123456789abcdef0123456789abcdef01234567"
+        ),
+        "    uses: ./.github/workflows/l9-biome-scan.yml": (
+            "./.github/workflows/l9-biome-scan.yml"
+        ),
+        "  - uses: 'pypa/gh-action-pypi-publish@0123456789abcdef0123456789abcdef01234567'": (
+            "pypa/gh-action-pypi-publish@0123456789abcdef0123456789abcdef01234567"
+        ),
+    }
+    for line, expected in cases.items():
+        match = _USES.match(line)
+        assert match is not None, line
+        assert match.group(1) == expected
+    assert _USES.match("      # uses: not/a-ref@v1") is None
+
+
+def test_workflows_exist() -> None:
+    assert ALL_WORKFLOWS, "expected repository-owned workflows under .github/workflows"
+
+
+def test_no_core_caller_workflow_returns() -> None:
+    returned = sorted(
+        path.name for path in ALL_WORKFLOWS if _REMOVED_CALLER_STEMS.match(path.stem)
+    )
+    assert returned == [], (
+        f"Core caller workflows must not return (org ruleset runs Core main "
+        f"org-ci.yml directly; ADR-0016): {returned}"
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow", ALL_WORKFLOWS, ids=[path.name for path in ALL_WORKFLOWS]
+)
+def test_no_consumer_owned_core_or_sdk_revision(workflow: Path) -> None:
+    # Prose in comments may name Core (provenance notes); only executable
+    # lines can select a revision, so comment lines are excluded.
+    text = "\n".join(
+        line
+        for line in workflow.read_text(encoding="utf-8").splitlines()
+        if not line.lstrip().startswith("#")
+    )
+    offenders = [marker for marker in _ORG_CI_OWNERSHIP_MARKERS if marker in text]
+    assert offenders == [], (
+        f"{workflow.name} selects a Core/SDK revision for organization CI "
+        f"({offenders}); the GitHub org ruleset owns that (ADR-0016)"
+    )
+    sdk_pins = [
+        f"{number}:{ref}"
+        for number, ref in _uses_refs(workflow)
+        if ref.startswith("Quantum-L9/l9-ci-sdk/")
+    ]
+    assert sdk_pins == [], (
+        f"{workflow.name} pins this repository's own reusable workflow by SDK "
+        f"SHA; dogfood callers use a local ./ path: {sdk_pins}"
+    )
 
 
 def test_every_action_reference_is_sha_pinned() -> None:
-    # Applies to ALL workflows (including ci.yml), not only the analysis
-    # callers: a mutable tag anywhere is a supply-chain hole (AUD-008).
+    # Applies to ALL workflows (including ci.yml): a mutable tag anywhere is a
+    # supply-chain hole (AUD-008).
     offenders = [
         f"{workflow.name}:{number}:{ref}"
         for workflow in ALL_WORKFLOWS
         for number, ref in _uses_refs(workflow)
-        if not ref.startswith("./") and not _SHA_PIN.search(ref)
+        if not _is_local(ref) and not _SHA_PIN.search(ref)
     ]
     assert offenders == [], f"unpinned refs (need @<40-hex sha>): {offenders}"
 
 
-# Known non-Core action vendors used by this repo (still SHA-pinned).
+# Known action vendors used by this repo (still SHA-pinned).
 _ALLOWED_EXTERNAL_ACTION_PREFIXES = (
     "actions/",
-    f"{CORE_REPO}/",
     "pypa/gh-action-pypi-publish@",
 )
 
@@ -94,17 +207,17 @@ _ALLOWED_WRITE_SCOPES = {
 _REAL_YAML_GOVERNANCE = frozenset({"rule-modes.selfci.yaml", "l9-ci-shared-spec.yaml"})
 
 
-def test_non_action_references_target_core_only() -> None:
+def test_external_references_are_allowlisted_vendors() -> None:
     offenders = [
         f"{workflow.name}:{number}:{ref}"
         for workflow in ALL_WORKFLOWS
         for number, ref in _uses_refs(workflow)
-        if not ref.startswith("./")
+        if not _is_local(ref)
         and not any(
             ref.startswith(prefix) for prefix in _ALLOWED_EXTERNAL_ACTION_PREFIXES
         )
     ]
-    assert offenders == [], f"non-Core, non-actions refs: {offenders}"
+    assert offenders == [], f"non-allowlisted external refs: {offenders}"
 
 
 @pytest.mark.parametrize(
@@ -117,58 +230,9 @@ def test_least_privilege_permissions(workflow: Path) -> None:
     )
     scopes = set(_WRITE_SCOPE.findall(text))
     allowed = {"checks"} | _ALLOWED_WRITE_SCOPES.get(workflow.name, set())
-    if workflow in CALLERS:
-        # Core's reusable analysis kernel publishes the SDK-owned SARIF
-        # projection. GitHub requires the caller to delegate this scope; the
-        # called workflow cannot elevate beyond the caller's permissions.
-        allowed.add("security-events")
     forbidden = scopes - allowed
     assert forbidden == set(), (
         f"{workflow.name} requests forbidden write scopes: {sorted(forbidden)}"
-    )
-
-
-def _caller_analysis_with(caller: Path) -> dict[str, Any]:
-    # v2 handoff shape: each caller is a thin stub whose single `analysis`
-    # job calls the Core-owned reusable analyze-semgrep kernel with the
-    # profile / matrix identity. All provider execution, gating, and
-    # publication live in l9-ci-core.
-    data = _load(caller)
-    jobs = data.get("jobs", {})
-    assert set(jobs) == {"analysis"}, (
-        f"{caller.name} must contain exactly one 'analysis' job (thin caller)"
-    )
-    uses = jobs["analysis"].get("uses", "")
-    assert uses.startswith(
-        f"{CORE_REPO}/.github/workflows/analyze-semgrep.yml@"
-    ) and _SHA_PIN.search(uses), (
-        f"{caller.name}: analysis job must call the Core analyze-semgrep "
-        f"kernel pinned to a 40-hex SHA, got {uses!r}"
-    )
-    with_block: dict[str, Any] = jobs["analysis"].get("with", {})
-    return with_block
-
-
-@pytest.mark.parametrize("caller", CALLERS, ids=[path.name for path in CALLERS])
-def test_caller_is_thin_kernel_stub(caller: Path) -> None:
-    with_block = _caller_analysis_with(caller)
-    assert with_block.get("profile"), f"{caller.name} missing with.profile"
-    assert with_block.get("matrix-id"), f"{caller.name} missing with.matrix-id"
-    # Provider execution must not leak back into the stub: no semgrep
-    # invocation, provisioning, or publish job may reappear here.
-    text = caller.read_text(encoding="utf-8")
-    for marker in ("semgrep run", "provision-sdk", "gate evaluate"):
-        assert marker not in text.replace("'l9-ci semgrep run'", "").replace(
-            "'l9-ci gate evaluate'", ""
-        ), f"{caller.name} re-implements kernel logic ({marker!r})"
-
-
-@pytest.mark.parametrize("caller", CALLERS, ids=[path.name for path in CALLERS])
-def test_caller_delegates_sarif_publish_permission(caller: Path) -> None:
-    permissions = _load(caller)["jobs"]["analysis"].get("permissions", {})
-    assert permissions.get("security-events") == "write", (
-        f"{caller.name} must grant security-events: write so Core's reusable "
-        "publish job can upload the SDK-owned SARIF projection"
     )
 
 
@@ -182,14 +246,3 @@ def test_governance_files_are_valid_json() -> None:
             json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as error:
             pytest.fail(f"{path.name} is not valid JSON: {error}")
-
-
-@pytest.mark.parametrize("caller", CALLERS, ids=[path.name for path in CALLERS])
-def test_caller_profiles_are_declared_in_governance(caller: Path) -> None:
-    profiles = json.loads(
-        (GOVERNANCE / "execution-profiles.yaml").read_text(encoding="utf-8")
-    )["profiles"]
-    profile = _caller_analysis_with(caller).get("profile")
-    assert profile in profiles, (
-        f"{caller.name} uses profile {profile!r} absent from execution-profiles.yaml"
-    )

@@ -1,4 +1,17 @@
-# L9 CI instantiation pack
+# L9 CI governance pack (SDK self-CI inputs)
+
+> **Not a copy-in template.** Organization L9 CI is executed by the GitHub
+> organization required-workflow ruleset from `Quantum-L9/l9-ci-core` `main`
+> `.github/workflows/org-ci.yml`, which resolves governance centrally
+> (`@core-defaults`). A governed repository copies neither a Core caller
+> workflow nor this pack, and selects no Core or SDK revision; it may add only
+> an optional `.l9/ci.json` (`owner`, `repo_class`, `waiver_refs`). See
+> `docs/adr/0016-organization-managed-l9-ci.md` and `.l9/ownership.yaml`
+> (`workflow_ownership`). The files here remain as the inputs of this
+> repository's own `l9-self-ci.yml` (classifier, rule modes, thresholds) and as
+> the reference shape of the Core governance schema. The copy instructions
+> below are retained as historical documentation of the pre-ruleset "v2"
+> instantiation model.
 
 Drop-in governance for a repository adopting l9-ci-core **v2**. Copy the six
 `*.yaml` files in this directory into your repo at **`.github/governance/`** —
@@ -8,8 +21,8 @@ This pack is **language-agnostic**: it works unchanged for **Python and
 Node.js/TypeScript** repos. `semgrep` is the single provider the pinned SDK
 normalizes, and semgrep scans Python, JavaScript, and TypeScript alike. The
 only per-language difference lives in the caller workflow's single
-`env.L9_LANGUAGE` value (`"python"` or `"typescript"` — see
-[`../l9-analysis.yml`](../l9-analysis.yml)), never in this pack. The SDK's
+`env.L9_LANGUAGE` value (`"python"` or `"typescript"`; the former
+`l9-analysis.yml` caller is no longer in this tree), never in this pack. The SDK's
 `l9-ci semgrep run --language "$L9_LANGUAGE"` command resolves both the
 matching community registry ruleset (`p/python` or `p/typescript`) and the
 SDK's own packaged L9 ruleset for that language internally — there is no
@@ -135,35 +148,28 @@ For a strict-TypeScript service (e.g. eslint + `tsc --noEmit` + `vitest run`):
    `eslint .`, `tsc --noEmit` (type soundness, honors `strict: true`, emits no
    JS), and `vitest run` (one-shot — never bare `vitest`, which is watch mode).
    Package manager is auto-detected from the lockfile.
-3. Copy `l9-analysis.yml` and set `env.L9_LANGUAGE: "typescript"` — this
-   selects both the `p/typescript` community registry ruleset and the SDK's
-   packaged TypeScript L9 ruleset via `l9-ci semgrep run --language
-   typescript`; there is no separate `--config` list to edit.
+3. (Historical) Copy `l9-analysis.yml` and set `env.L9_LANGUAGE: "typescript"`.
+   Under the current model there is no caller to copy: Core's `org-ci.yml`
+   detects the language through the SDK and selects both the `p/typescript`
+   community registry ruleset and the SDK's packaged TypeScript L9 ruleset
+   via `l9-ci semgrep run --language typescript`; there is no separate
+   `--config` list to edit.
 4. Keep your existing `tsconfig.json`, `.eslintrc*`, and `vitest.config.ts` as
    the source of truth — the templates invoke your tools, they do not replace
    your configs.
 5. Mark `ESLint`, `tsc --noEmit`, and `Vitest` as required checks in branch
    protection; roll semgrep out `shadow → advisory → blocking`.
 
-## Wiring
+## Wiring (current model)
 
-1. Copy this directory's six files to `.github/governance/`.
-2. Copy [`../l9-analysis.yml`](../l9-analysis.yml) to
-   `.github/workflows/l9-analysis.yml` and set `env.L9_LANGUAGE` to `"python"`
-   or `"typescript"` — the single per-language line (see table above).
-3. (Optional) copy the matching lint/test template for your language:
-   [`../l9-lint-test.yml`](../l9-lint-test.yml) (Python) or
-   [`../l9-lint-test-node.yml`](../l9-lint-test-node.yml) (Node/TypeScript).
+There is nothing to wire. A repository targeted by the organization ruleset
+gets `Analyze (central Core)` on every `pull_request` and `merge_group` from
+`Quantum-L9/l9-ci-core` `main` `org-ci.yml`, with governance resolved from
+Core's central defaults. Do not copy this directory, do not add an
+`l9-analysis.yml` caller, and do not pin a Core or SDK SHA or the `v2` tag;
+a Core change reaches every governed repository with no consumer edit.
+Repository-owned lint/test workflows remain the repository's own.
 
-Pin Core to the same immutable commit referenced throughout
-[`../l9-analysis.yml`](../l9-analysis.yml) (currently
-`f7a4ee8c1f4e4413cb3645d088cafa3e9c798235`, or the `v2` tag once published) —
-do not let this doc's pin drift from the workflow's; the workflow is the
-source of truth.
-
-**Known limitation:** the commit Core is currently pinned to predates the
-SDK's `l9-ci semgrep run` command that `l9-analysis*.yml` now invokes, so
-the semgrep step will fail on any repo (including this one) until Core's
-`provision-sdk`/`invoke-sdk` actions are updated to a newer SDK revision
-that supports it. The workflow template is written for that target state;
-it is not yet runnable end-to-end against the current Core pin.
+The historical "v2" wiring (copy this pack plus a Core-pinned
+`l9-analysis.yml` caller) is superseded; see
+`docs/adr/0016-organization-managed-l9-ci.md`.
