@@ -1,9 +1,12 @@
-"""Structure-validation tests for the L9 Biome static-check capability.
+"""Structure tests for the SDK's own Biome toolchain (ADR 0017).
 
-Biome itself is an external binary/npm package (no bundled Python checker),
-so these tests validate the *shape* of the checked-in artifacts: biome.json,
-the reusable workflow, and the dogfood caller. They do not invoke the Biome
-CLI (that is covered by CI running `biome ci` directly).
+Biome is this repository's dev toolchain only. Consumers get Biome from Core's
+``org-ci.yml``, so this repository must offer no reusable Biome workflow or
+caller template. These tests pin that boundary, the shape of the SDK self-CI
+job, and a drift guard: the four in-repo copies of the Biome version
+(self-CI ``BIOME_VERSION``, the pre-commit hook's ``additional_dependencies``,
+``biome.json`` ``$schema``, and the ``npx`` lines in the Biome doc) must agree.
+They do not invoke the Biome CLI (CI runs ``biome ci`` directly).
 
 Run: pytest tests/biome -q
 """
@@ -11,26 +14,58 @@ Run: pytest tests/biome -q
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
+from typing import Any
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+WORKFLOWS = ROOT / ".github" / "workflows"
 BIOME_JSON = ROOT / "biome.json"
-REUSABLE_WORKFLOW = ROOT / ".github" / "workflows" / "l9-biome-scan.yml"
-DOGFOOD_WORKFLOW = ROOT / ".github" / "workflows" / "l9-biome-scan-dogfood.yml"
+SELF_CI_WORKFLOW = WORKFLOWS / "l9-biome-scan-dogfood.yml"
+REMOVED_REUSABLE = WORKFLOWS / "l9-biome-scan.yml"
 CALLER_TEMPLATE = ROOT / "docs" / "templates" / "l9-biome-scan-caller.yml"
+BIOME_DOC = ROOT / "docs" / "architecture" / "biome.md"
+PRECOMMIT = ROOT / ".pre-commit-config.yaml"
+
+SCHEMA_VERSION = re.compile(r"/schemas/([0-9]+\.[0-9]+\.[0-9]+)/schema\.json$")
+NPX_VERSION = re.compile(r"@biomejs/biome@([0-9]+\.[0-9]+\.[0-9]+)")
+EXACT_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
 
-def load_yaml(path: Path) -> dict:
+def load_yaml(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as handle:
-        return yaml.safe_load(handle)
+        loaded = yaml.safe_load(handle)
+    assert isinstance(loaded, dict), f"{path} is not a YAML mapping"
+    return loaded
+
+
+def triggers(doc: dict[str, Any]) -> Any:
+    # PyYAML parses the bare `on:` key as boolean True; GitHub Actions still
+    # reads it as the literal `on` trigger key.
+    return doc.get("on", doc.get(True))
+
+
+def workflow_files() -> list[Path]:
+    return sorted([*WORKFLOWS.glob("*.yml"), *WORKFLOWS.glob("*.yaml")])
+
+
+def biome_hook() -> dict[str, Any]:
+    precommit = load_yaml(PRECOMMIT)
+    local_repo = next(repo for repo in precommit["repos"] if repo["repo"] == "local")
+    hook: dict[str, Any] = next(
+        h for h in local_repo["hooks"] if h["id"] == "biome-check"
+    )
+    return hook
+
+
+# --- biome.json ---------------------------------------------------------------
 
 
 def test_biome_json_exists_and_is_valid_json() -> None:
     assert BIOME_JSON.is_file(), "biome.json must live at the repository root"
-    with BIOME_JSON.open(encoding="utf-8") as handle:
-        payload = json.load(handle)
+    payload = json.loads(BIOME_JSON.read_text(encoding="utf-8"))
     assert isinstance(payload, dict)
 
 
@@ -50,61 +85,96 @@ def test_biome_json_excludes_test_fixture_directories() -> None:
     assert "!tests/compatibility/fixtures" in includes
 
 
-def test_reusable_workflow_is_workflow_call_with_read_only_permissions() -> None:
-    doc = load_yaml(REUSABLE_WORKFLOW)
-    # PyYAML parses the bare `on:` key as boolean True; GitHub Actions still
-    # reads it as the literal `on` trigger key.
-    triggers = doc.get("on", doc.get(True))
-    assert "workflow_call" in triggers
+# --- no consumer-facing Biome surface (ADR 0017) --------------------------------
+
+
+def test_no_workflow_offers_a_reusable_biome_job() -> None:
+    offenders = []
+    for path in workflow_files():
+        doc = load_yaml(path)
+        on = triggers(doc)
+        callable_workflow = isinstance(on, dict) and "workflow_call" in on
+        callable_workflow = callable_workflow or on == "workflow_call"
+        if callable_workflow and "biome" in path.read_text(encoding="utf-8").lower():
+            offenders.append(path.name)
+    assert offenders == [], (
+        "consumers get Biome from Core org-ci.yml; the SDK must not host a "
+        f"workflow_call Biome workflow (ADR 0017): {offenders}"
+    )
+
+
+def test_removed_reusable_and_caller_template_stay_removed() -> None:
+    assert not REMOVED_REUSABLE.exists()
+    assert not CALLER_TEMPLATE.exists()
+
+
+# --- SDK self-CI job -------------------------------------------------------------
+
+
+def test_self_ci_runs_on_this_repository_only() -> None:
+    doc = load_yaml(SELF_CI_WORKFLOW)
+    on = triggers(doc)
+    assert set(on) == {"pull_request", "push", "workflow_dispatch"}
+    assert on["push"]["branches"] == ["main"]
+
+
+def test_self_ci_is_read_only_everywhere() -> None:
+    doc = load_yaml(SELF_CI_WORKFLOW)
     assert doc["permissions"] == {"contents": "read"}
+    for name, job in doc["jobs"].items():
+        assert job.get("permissions") == {"contents": "read"}, name
 
 
-def test_reusable_workflow_enforce_biome_input_defaults_to_false() -> None:
-    doc = load_yaml(REUSABLE_WORKFLOW)
-    triggers = doc.get("on", doc.get(True))
-    inputs = triggers["workflow_call"]["inputs"]
-    assert inputs["enforce-biome"]["type"] == "boolean"
-    assert inputs["enforce-biome"]["default"] is False
-    assert inputs["scan-path"]["default"] == "."
-
-
-def test_reusable_workflow_has_no_external_actions() -> None:
-    doc = load_yaml(REUSABLE_WORKFLOW)
-    for job in doc["jobs"].values():
+def test_self_ci_has_no_external_or_reusable_actions() -> None:
+    doc = load_yaml(SELF_CI_WORKFLOW)
+    for name, job in doc["jobs"].items():
+        assert "uses" not in job, f"{name} delegates to a reusable workflow"
         for step in job.get("steps", []):
-            assert "uses" not in step, f"unexpected external action: {step}"
+            assert "uses" not in step, f"unexpected action in {name}: {step}"
 
 
-def test_reusable_workflow_pins_biome_version_and_checksum() -> None:
-    doc = load_yaml(REUSABLE_WORKFLOW)
-    env = doc["env"]
-    assert env["BIOME_VERSION"] == "2.5.5"
+def test_self_ci_pins_an_exact_version_and_checksum() -> None:
+    env = load_yaml(SELF_CI_WORKFLOW)["env"]
+    assert EXACT_VERSION.match(env["BIOME_VERSION"])
     checksum = env["BIOME_LINUX_X64_SHA256"]
-    assert len(checksum) == 64
-    assert all(c in "0123456789abcdef" for c in checksum)
+    assert re.fullmatch(r"[0-9a-f]{64}", checksum)
+    text = SELF_CI_WORKFLOW.read_text(encoding="utf-8")
+    assert "sha256sum --check" in text
+    assert text.index("sha256sum --check") < text.index("chmod +x biome")
 
 
-def test_dogfood_workflow_calls_local_reusable_workflow() -> None:
-    doc = load_yaml(DOGFOOD_WORKFLOW)
-    job = doc["jobs"]["biome-scan"]
-    assert job["uses"] == "./.github/workflows/l9-biome-scan.yml"
-    assert job["with"]["enforce-biome"] is False
-    assert doc["permissions"] == {"contents": "read"}
-
-
-def test_caller_template_pins_placeholder_sdk_sha_and_is_advisory() -> None:
-    doc = load_yaml(CALLER_TEMPLATE)
-    job = doc["jobs"]["biome-scan"]
-    uses = job["uses"]
-    assert uses.startswith("Quantum-L9/l9-ci-sdk/.github/workflows/l9-biome-scan.yml@")
-    sha = uses.rsplit("@", 1)[1]
-    assert len(sha) == 40
-    assert job["with"]["enforce-biome"] is False
+def test_self_ci_is_advisory() -> None:
+    env = load_yaml(SELF_CI_WORKFLOW)["env"]
+    assert env["ENFORCE_BIOME"] == "false"
 
 
 def test_precommit_config_registers_biome_check_hook() -> None:
-    precommit = load_yaml(ROOT / ".pre-commit-config.yaml")
-    local_repo = next(repo for repo in precommit["repos"] if repo["repo"] == "local")
-    hook = next(h for h in local_repo["hooks"] if h["id"] == "biome-check")
+    hook = biome_hook()
     assert hook["language"] == "node"
-    assert hook["additional_dependencies"] == ["@biomejs/biome@2.5.5"]
+    assert len(hook["additional_dependencies"]) == 1
+
+
+# --- drift guard ---------------------------------------------------------------
+
+
+def test_every_in_repo_biome_version_agrees() -> None:
+    workflow = load_yaml(SELF_CI_WORKFLOW)["env"]["BIOME_VERSION"]
+
+    (dependency,) = biome_hook()["additional_dependencies"]
+    hook_match = NPX_VERSION.fullmatch(f"{dependency}".replace("'", ""))
+    assert hook_match, f"unexpected hook dependency: {dependency}"
+
+    schema = json.loads(BIOME_JSON.read_text(encoding="utf-8"))["$schema"]
+    schema_match = SCHEMA_VERSION.search(schema)
+    assert schema_match, f"biome.json $schema unreadable: {schema}"
+
+    doc_versions = set(NPX_VERSION.findall(BIOME_DOC.read_text(encoding="utf-8")))
+    assert doc_versions, "docs/architecture/biome.md shows no npx version"
+
+    found = {
+        "self-CI BIOME_VERSION": workflow,
+        "pre-commit additional_dependencies": hook_match.group(1),
+        "biome.json $schema": schema_match.group(1),
+        **{f"biome.md npx ({v})": v for v in sorted(doc_versions)},
+    }
+    assert len(set(found.values())) == 1, f"Biome version drift: {found}"
