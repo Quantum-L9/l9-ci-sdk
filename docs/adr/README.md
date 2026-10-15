@@ -6,7 +6,7 @@ layer: docs
 owner: platform
 status: active
 version: 1.0.0
-updated: 2026-07-27
+updated: 2026-10-15
 /L9_META -->
 # Architecture Decision Record Index
 
@@ -20,8 +20,10 @@ updated: 2026-07-27
 | [0006](0006-gate-evaluation.md) | Gate evaluation | Accepted |
 | [0007](0007-repository-snapshot-identity.md) | Repository snapshot identity | Accepted |
 | [0008](0008-agent-payload-is-a-projection.md) | Agent payload is a projection | Accepted |
+| [0011](0011-biome-static-checks.md) | Biome static checks | Superseded by [0017](0017-sdk-cedes-org-tool-version-selection.md) |
 | [0015](0015-packaged-rule-precision.md) | A packaged rule must constrain what it claims to match | Accepted |
 | [0016](0016-organization-managed-l9-ci.md) | Organization L9 CI is centrally required; the SDK owns no Core or SDK revision | Accepted |
+| [0017](0017-sdk-cedes-org-tool-version-selection.md) | The SDK cedes organization tool-version selection to Core | Accepted |
 
 ## Ledger rules
 

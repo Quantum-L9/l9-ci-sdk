@@ -3,7 +3,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0017](0017-sdk-cedes-org-tool-version-selection.md)
 
 ## Context
 
