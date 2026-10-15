@@ -388,9 +388,10 @@ jobs:
     needs: classify
     if: needs.classify.outputs.semgrep_relevant == 'true'
     env:
-      # Exact pin (not a range), mirroring Core's central Semgrep pin: a
-      # semgrep minor/patch bump can add or remove findings, which must be a
-      # reviewed, deliberate change -- never an incidental side effect.
+      # SDK self-CI scope only; must satisfy DEFAULT_SEMGREP_VERSION_POLICY
+      # (tests/architecture/test_toolchain_pin_alignment.py); organization
+      # Semgrep selection is Core's (ADR 0017). Exact, so a semgrep bump that
+      # adds or removes findings is a reviewed change, never incidental.
       L9_SEMGREP_VERSION: '1.171.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1

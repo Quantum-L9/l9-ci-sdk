@@ -1,7 +1,20 @@
 ---
-# Dogfood caller for L9 Biome Static Checks in this repository.
-# Invokes the local reusable workflow (avoids chicken/egg SDK SHA pin).
-name: L9 Biome Static Checks Dogfood
+# L9 Biome Static Checks — SDK self-CI only (ADR 0017).
+#
+# SDK repo toolchain, not an org pin; org owner is Core toolchain-lock.json.
+# Consumers get Biome from Core's org-ci.yml (install-biome + run-biome-check),
+# never from this repository: there is no workflow_call surface here.
+#
+# BIOME_VERSION must equal biome.json `$schema`, the pre-commit `biome-check`
+# additional_dependencies, and the docs/architecture/biome.md npx lines
+# (tests/biome enforces it). It tracks Core's lock because Core's
+# toolchain-alignment check runs on this repository too.
+#
+# Single gate, read-only, zero external GitHub Actions:
+#   biome ci - format + lint (recommended rules) + import-organization check
+#              for JSON/JS/TS assets (checksum-verified biome-linux-x64 binary;
+#              no npm/node/setup-node required in CI)
+name: L9 Biome Static Checks (SDK self-CI)
 
 on:
   pull_request:
@@ -17,13 +30,59 @@ concurrency:
   group: l9-biome-scan-dogfood-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  BIOME_VERSION: '2.5.8'
+  BIOME_LINUX_X64_SHA256: '17abac7ef72e7a1aaccd89892f7e2e62c9919d27473defe772be04ad78400ac2'
+  # First activation: advisory only (full scan, annotate, do not fail).
+  # Promote after a clean window per .github/governance/promotion-policy.yaml.
+  ENFORCE_BIOME: 'false'
+
 jobs:
-  biome-scan:
-    uses: ./.github/workflows/l9-biome-scan.yml
+  biome:
+    name: biome ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
-    with:
-      scan-path: '.'
-      # First activation: advisory only (full scan, annotate, do not fail).
-      # Promote after a clean window per .github/governance/promotion-policy.yaml.
-      enforce-biome: false
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch -q --depth=1 origin "${REVISION}"
+          git checkout -q --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+
+      - name: Install Biome (checksum-verified binary)
+        run: |
+          set -euo pipefail
+          url="https://github.com/biomejs/biome/releases/download/@biomejs/biome@${BIOME_VERSION}/biome-linux-x64"
+          curl -fsSL --retry 3 -o biome "${url}"
+          echo "${BIOME_LINUX_X64_SHA256}  biome" | sha256sum --check --status
+          chmod +x biome
+          ./biome --version
+
+      - name: Run biome ci
+        run: |
+          set -uo pipefail
+          if [ ! -f "biome.json" ]; then
+            echo "::error::missing biome.json at repo root"
+            exit 1
+          fi
+          set +e
+          ./biome ci --colors=off .
+          code=$?
+          set -e
+          if [ "${code}" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "${ENFORCE_BIOME}" = "true" ]; then
+            exit "${code}"
+          fi
+          echo "::warning::biome findings are advisory in SDK self-CI (exit ${code})"
+          exit 0

@@ -1,30 +1,33 @@
 ---
 # Biome Static Checks
 
-SDK-owned static checks (format, recommended lint rules, import
-organization) for JSON/JS/TS assets, enforcing the Biome formatter ownership
-already declared in `AGENTS.md`. See [ADR 0011](../adr/0011-biome-static-checks.md).
+Biome is this repository's own JSON/JS/TS dev toolchain (format, recommended
+lint rules, import organization), enforcing the Biome formatter ownership
+declared in `AGENTS.md`. It is SDK self-CI only. See
+[ADR 0017](../adr/0017-sdk-cedes-org-tool-version-selection.md), which
+supersedes [ADR 0011](../adr/0011-biome-static-checks.md).
 
 ## Layout
 
 | Path | Role |
 |---|---|
 | `biome.json` | Repo-root config (same convention as `ruff.toml`) |
-| `.github/workflows/l9-biome-scan.yml` | Reusable `workflow_call` |
-| `.github/workflows/l9-biome-scan-dogfood.yml` | This repo's dogfood caller |
+| `.github/workflows/l9-biome-scan-dogfood.yml` | SDK self-CI job (advisory, `contents: read`, checksum-verified binary) |
 | `.pre-commit-config.yaml` (`biome-check`) | Local autofix hook |
-| `docs/templates/l9-biome-scan-caller.yml` | Downstream caller template |
-| `tests/biome/` | Structure-validation tests |
+| `tests/biome/` | Structure tests and the version drift guard |
 
 `biome.json` lives at the repository root (same convention as `ruff.toml`),
 **not** under `.github/`.
 
-## Reusable inputs
+## Version
 
-| Input | Default | Notes |
-|---|---|---|
-| `scan-path` | `.` | Path argument passed to `biome ci` |
-| `enforce-biome` | `false` | Advisory until promoted |
+The Biome version appears in four places that must move together:
+`biome.json` `$schema`, the `biome-check` hook's `additional_dependencies`,
+`BIOME_VERSION` in the self-CI workflow, and the `npx` lines below.
+`tests/biome` fails if they differ. The value tracks Core's
+`install-consumer-ci/toolchain-lock.json` `biome` key because Core's
+toolchain-alignment check runs on this repository too; it is a repository
+toolchain pin, not an organization pin.
 
 ## Scope
 
@@ -45,8 +48,8 @@ pytest tests/biome -q
 Raw expansion (debugging only — do not diverge flags from the hook config):
 
 ```bash
-npx --yes @biomejs/biome@2.5.5 ci .
-npx --yes @biomejs/biome@2.5.5 check --write .
+npx --yes @biomejs/biome@2.5.8 ci .
+npx --yes @biomejs/biome@2.5.8 check --write .
 ```
 
 If this capability is combined with the YAML-governance root `Makefile`
@@ -54,16 +57,14 @@ If this capability is combined with the YAML-governance root `Makefile`
 runs `pytest tests/biome` alongside the existing `yaml-test` target — do not
 introduce a second, divergent Makefile.
 
-## Downstream adoption
+## Consumers → Core org-ci (ADR 0017)
 
-1. Copy `biome.json` from this repository into the consumer root.
-2. Copy `docs/templates/l9-biome-scan-caller.yml` to
-   `.github/workflows/l9-biome-scan.yml`.
-3. Replace the zeroed SDK SHA with a full 40-character commit that contains
-   this capability.
-4. Adjust `files.includes` in `biome.json` for the consumer's JSON/JS/TS
-   footprint.
-5. Keep `permissions: contents: read`.
+This repository offers no reusable Biome workflow and no caller template.
+Consumer repositories get the Biome check from Core's organization workflow
+(`Quantum-L9/l9-ci-core` `org-ci.yml`: `install-biome` then
+`run-biome-check`), with the version taken from Core's toolchain lock. A
+consumer still owns its `biome.json`.
 
-Do **not** pin `Quantum-L9/.github` or `Quantum-L9/l9-ci-core` for this
-capability — same hosting rule as YAML governance (ADR 0010).
+Existing callers pinned to `l9-biome-scan.yml@<sha>` keep resolving because
+the SHA is immutable, but they get no updates. Remove such a caller only
+after Core's `org-ci` Biome step is live for that repository.
