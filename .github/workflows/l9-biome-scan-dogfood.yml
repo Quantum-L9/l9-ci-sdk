@@ -3,7 +3,7 @@
 #
 # SDK repo toolchain, not an org pin; org owner is Core toolchain-lock.json.
 # Consumers get Biome from Core's org-ci.yml (install-biome + run-biome-check),
-# never from this repository: there is no workflow_call surface here.
+# never from this repository: no workflow here is callable by other repos.
 #
 # BIOME_VERSION must equal biome.json `$schema`, the pre-commit `biome-check`
 # additional_dependencies, and the docs/architecture/biome.md npx lines
