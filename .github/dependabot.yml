@@ -1,10 +1,16 @@
 version: 2
 updates:
-  # Python deps: Dependabot's `uv` ecosystem understands pyproject.toml (PEP 621)
-  # + uv.lock together and keeps them in sync in a single PR. Note: this repo's
-  # requirements.txt / requirements-ci.txt pins (used for pip-based install paths
-  # in l9-ci-core's provisioning venv and CI) are a separate, deliberate mirror
-  # of these same versions and are not tracked by this ecosystem entry.
+  # Python deps: Dependabot's `uv` ecosystem updates pyproject.toml (PEP 621)
+  # and uv.lock together in one PR. Observed (#97, bc67819): the same PR also
+  # updated requirements-ci.txt, so the CI mirror moves with the lock.
+  # requirements.txt holds the runtime pins Core hash-admits
+  # (l9-ci-core .l9/sdk-compatibility.yaml `requirements_sha256`); any change
+  # to its bytes, by Dependabot or a person, needs a matching Core admission
+  # PR before Core can provision that SDK revision.
+  # No `pre-commit` entry: Dependabot documents resolving hook `rev:` values
+  # from git tags but not `additional_dependencies` (the biome-check pin), so
+  # it could bump one copy of a version and not the other. tests/biome and
+  # tests/architecture/test_toolchain_pin_alignment.py bind those copies.
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
