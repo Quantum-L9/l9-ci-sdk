@@ -1,6 +1,9 @@
 # ADR 0017: The SDK Cedes Organization Tool-Version Selection to Core
 ## Status
-Accepted. Supersedes [ADR 0011](0011-biome-static-checks.md).
+Accepted. Supersedes [ADR 0011](0011-biome-static-checks.md). Amends
+[ADR 0016](0016-organization-managed-l9-ci.md): its Decision bullet listing the
+`l9-biome-scan` reusable among retained repository-owned CI no longer holds.
+Everything else in ADR 0016 stands.
 ## Context
 ADR 0011 made this repository the host of a consumer-facing reusable workflow,
 `.github/workflows/l9-biome-scan.yml`, that selected an exact Biome version
@@ -51,6 +54,11 @@ alone, and `AGENTS.md` forbids introducing a second provider opportunistically.
 - **(d) Biome findings normalization is not built.** If it is ever needed it
   is a new provider (SPI, the release-policy `experimental` bar) with its own
   ADR.
+- **(e) ADR 0016 amended.** ADR 0016 recorded "the `l9-yaml-governance`
+  and `l9-biome-scan` reusables with their dogfood callers" as unchanged
+  repository-owned CI. For Biome that is replaced by (a) and (b): the
+  reusable is removed and only the self-CI job remains. The
+  `l9-yaml-governance` reusable is unaffected by this ADR.
 ## Consequences
 - Immutable caller pins (`l9-biome-scan.yml@f546f122…`) keep resolving,
   because a commit SHA never changes; they receive no further updates. `main`
