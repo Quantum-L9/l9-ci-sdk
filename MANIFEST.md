@@ -30,7 +30,6 @@ Files: 339
 - `.github/scripts/update_marker_comment.py`
 - `.github/workflows/ci.yml`
 - `.github/workflows/l9-biome-scan-dogfood.yml`
-- `.github/workflows/l9-biome-scan.yml`
 - `.github/workflows/l9-manifest-reconcile.yml`
 - `.github/workflows/l9-self-ci.yml`
 - `.github/workflows/l9-yaml-governance-dogfood.yml`
@@ -91,6 +90,7 @@ Files: 339
 - `docs/adr/0014-deterministic-governance-evidence-layer.md`
 - `docs/adr/0015-packaged-rule-precision.md`
 - `docs/adr/0016-organization-managed-l9-ci.md`
+- `docs/adr/0017-sdk-cedes-org-tool-version-selection.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -128,7 +128,6 @@ Files: 339
 - `docs/release/v1.0.0-unblocking-plan.md`
 - `docs/source/phase-4.md`
 - `docs/source/sdk-spec.md`
-- `docs/templates/l9-biome-scan-caller.yml`
 - `docs/templates/l9-yaml-governance-caller.yml`
 - `l9_ci/__init__.py`
 - `l9_ci/__main__.py`
@@ -258,6 +257,7 @@ Files: 339
 - `tests/architecture/test_l9_wiring.py`
 - `tests/architecture/test_public_api.py`
 - `tests/architecture/test_schema_inventory.py`
+- `tests/architecture/test_toolchain_pin_alignment.py`
 - `tests/architecture/test_version_alignment.py`
 - `tests/baseline/__init__.py`
 - `tests/baseline/test_baseline_kernel.py`
