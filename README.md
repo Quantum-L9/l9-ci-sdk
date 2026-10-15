@@ -88,11 +88,12 @@ interpreter (see `AGENTS.md` §10).
 | Organization CI (Core) | none in this tree | Run by the GitHub organization required-workflow ruleset from `Quantum-L9/l9-ci-core` `main` `org-ci.yml`; no Core or SDK pin here (ADR-0016) |
 | Self-CI (no Core) | `l9-self-ci.yml` | Classifier / rule-modes gate (`engine: ci-debt`) |
 | YAML governance | `l9-yaml-governance.yml` + dogfood | Reusable yamllint / governance JSON / Action pins / actionlint / zizmor |
-| Biome static checks | `l9-biome-scan.yml` + dogfood | JSON/JS/TS formatter+linter ownership (`biome.json`) |
+| Biome static checks | `l9-biome-scan-dogfood.yml` | SDK self-CI only (advisory); consumers get Biome from Core `org-ci.yml` (ADR 0017) |
 | Manifest reconcile | `l9-manifest-reconcile.yml` | Keeps root `MANIFEST.md` aligned with tracked truth |
 
-YAML governance configs: root [`lint/`](lint/). Biome config: root
-[`biome.json`](biome.json). Downstream callers pin immutable SDK SHAs.
+YAML governance configs: root [`lint/`](lint/); downstream YAML-governance
+callers pin immutable SDK SHAs. Biome config: root [`biome.json`](biome.json)
+(this repository's own toolchain).
 Details: [`docs/architecture/yaml-governance.md`](docs/architecture/yaml-governance.md),
 [`docs/architecture/biome.md`](docs/architecture/biome.md),
 [`docs/architecture/repository-manifest.md`](docs/architecture/repository-manifest.md).
