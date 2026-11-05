@@ -31,13 +31,13 @@ updated: 2026-07-31
 - Diff-scoped gitleaks for new secrets
 - Semgrep provider report import and normalized artifact validation
 - Rule-mode-aware final gate
-- Biome / YAML governance / action-pin / zizmor hooks (local `make check`)
+- Biome / YAML governance / action-pin / zizmor hooks (local `make check-full`)
 
 ## Local regeneration
 
 ```bash
 make bootstrap   # once per clone
-make check       # hooks + mypy + pytest (fail-closed local gate)
+make check-full  # hooks + mypy + pytest (fail-closed local gate)
 PYTHONPATH=. python -m l9_ci providers list
 PYTHONPATH=. python -m l9_ci providers detect --root .
 PYTHONPATH=. python -m l9_ci manifest check --tracked-only --exclude-dir memory-bank
@@ -45,7 +45,7 @@ PYTHONPATH=. python -m l9_ci manifest check --tracked-only --exclude-dir memory-
 
 ## Baseline result
 
-Current tip: `make check` green (388 tests at Path A audit). Runtime-captured
+Current tip: `make check` (now `make check-full`) green (388 tests at Path A audit). Runtime-captured
 Semgrep fixture is present and exercised by
 `tests/providers/semgrep/test_runtime_fixture.py`. Organization L9 analysis is
 run by the GitHub organization required-workflow ruleset from

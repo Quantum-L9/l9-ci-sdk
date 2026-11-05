@@ -21,16 +21,75 @@ rules:
     # `patterns` list. As a sibling of `pattern-either` it is silently dropped
     # (the config still validates), which left this rule matching EVERY logger
     # call carrying at least one argument -- including `logging.getLogger(...)`.
+    #
+    # $SECRET binds any argument EXPRESSION, string literals included, so a
+    # regex over its whole text fired on message prose: "Failed to decode JWT
+    # claims from token", "Tenant not in token allowed_tenants; request
+    # refused", and an implicitly concatenated "L9_API_KEY is not set ..."
+    # warning -- none of which logs a value. The secret-like name must now sit
+    # in a code position inside the argument (see the metavariable-pattern
+    # below). Searching INSIDE the argument keeps every real leak shape the
+    # whole-text regex caught -- "x %s" % api_key, "x {}".format(token),
+    # str(creds["password"]) -- and adds keyword values (extra={...}), which
+    # the positional-only form never matched. Secret references inside an
+    # f-string are AST-LOGGING-003's, so they are excluded here to keep one
+    # finding per leak.
     patterns:
       - pattern-either:
           - pattern: logger.$LEVEL(..., $SECRET, ...)
           - pattern: logging.$LEVEL(..., $SECRET, ...)
+          - pattern: logger.$LEVEL(..., $KWARG=$SECRET, ...)
+          - pattern: logging.$LEVEL(..., $KWARG=$SECRET, ...)
       - metavariable-regex:
           metavariable: $LEVEL
           regex: ^(debug|info|warning|error|exception|critical|log)$
-      - metavariable-regex:
+      - metavariable-pattern:
           metavariable: $SECRET
-          regex: (?i).*(api_key|token|password|secret|raw_response|llm_response).*
+          patterns:
+            - pattern-not-inside: f"..."
+            # A secret-like name in a CODE position: a bare identifier
+            # (api_key, get_token), an attribute (self.token,
+            # client.get_token), a subscript key (creds["password"],
+            # os.environ["API_KEY"]), a dict-literal key (extra={"secret": s}),
+            # a keyword passed to a nested call (dict(token=t)), or a
+            # name-shaped literal handed to a nested call (os.getenv("TOKEN")).
+            # Prose in a message literal is none of these, which is the point.
+            - pattern-either:
+                - patterns:
+                    - pattern: $NAME
+                    - metavariable-regex:
+                        metavariable: $NAME
+                        regex: ^[A-Za-z_][A-Za-z0-9_]*$
+                    - metavariable-regex:
+                        metavariable: $NAME
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: $OBJ.$ATTR
+                    - metavariable-regex:
+                        metavariable: $ATTR
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: $OBJ[$KEY]
+                    - metavariable-regex:
+                        metavariable: $KEY
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: '{..., $KEY: $VAL, ...}'
+                    - metavariable-regex:
+                        metavariable: $KEY
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: $FUNC(..., $KW=$VAL, ...)
+                    - metavariable-regex:
+                        metavariable: $KW
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: $FUNC(..., $ARG, ...)
+                    # Name-shaped literal only (no whitespace): an env-var or
+                    # key name, never a sentence such as _("Invalid token").
+                    - metavariable-regex:
+                        metavariable: $ARG
+                        regex: ^[rRbBuU]*["'][A-Za-z0-9_.:/-]*(?i:api_key|token|password|secret|raw_response|llm_response)[A-Za-z0-9_.:/-]*["']$
 
   - id: l9.logging.forbidden-secret-keyword
     languages: [python]
@@ -42,7 +101,20 @@ rules:
       mode: shadow
       contract: forbidden_logging_fields
       autofix_safe: false
-    pattern-regex: '(logger|logging)\.(debug|info|warning|error|exception|critical)\(.*(api_key|token|password|secret|raw_response|llm_response)\s*='
+    # Was a single-line `pattern-regex` ending in `(api_key|token|...)\s*=`,
+    # which also fired on message prose such as "refresh token=%s" and missed
+    # every call wrapped across lines. The keyword NAME is now matched as a
+    # keyword argument of the logger call itself.
+    patterns:
+      - pattern-either:
+          - pattern: logger.$LEVEL(..., $KWARG=$VALUE, ...)
+          - pattern: logging.$LEVEL(..., $KWARG=$VALUE, ...)
+      - metavariable-regex:
+          metavariable: $LEVEL
+          regex: ^(debug|info|warning|error|exception|critical|log)$
+      - metavariable-regex:
+          metavariable: $KWARG
+          regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
 
   - id: l9.logging.f-string-secret
     languages: [python]
@@ -54,4 +126,64 @@ rules:
       mode: shadow
       contract: forbidden_logging_fields
       autofix_safe: false
-    pattern-regex: '(logger|logging)\.(debug|info|warning|error|exception|critical)\(f["''].*(api_key|token|password|secret|raw_response|llm_response).*'
+    # Was a `pattern-regex` over the raw line after `(f"`, so it fired on the
+    # f-string's PROSE ("Refreshing token for {user}") exactly like
+    # AST-LOGGING-001 did, and only saw an f-string in first position on one
+    # line. It now requires the secret-like name in an interpolated
+    # expression of an f-string anywhere in the logger arguments.
+    patterns:
+      - pattern-either:
+          - pattern: logger.$LEVEL(..., $SECRET, ...)
+          - pattern: logging.$LEVEL(..., $SECRET, ...)
+          - pattern: logger.$LEVEL(..., $KWARG=$SECRET, ...)
+          - pattern: logging.$LEVEL(..., $KWARG=$SECRET, ...)
+      - metavariable-regex:
+          metavariable: $LEVEL
+          regex: ^(debug|info|warning|error|exception|critical|log)$
+      - metavariable-pattern:
+          metavariable: $SECRET
+          patterns:
+            - pattern-inside: f"..."
+            # A secret-like name in a CODE position: a bare identifier
+            # (api_key, get_token), an attribute (self.token,
+            # client.get_token), a subscript key (creds["password"],
+            # os.environ["API_KEY"]), a dict-literal key (extra={"secret": s}),
+            # a keyword passed to a nested call (dict(token=t)), or a
+            # name-shaped literal handed to a nested call (os.getenv("TOKEN")).
+            # Prose in a message literal is none of these, which is the point.
+            - pattern-either:
+                - patterns:
+                    - pattern: $NAME
+                    - metavariable-regex:
+                        metavariable: $NAME
+                        regex: ^[A-Za-z_][A-Za-z0-9_]*$
+                    - metavariable-regex:
+                        metavariable: $NAME
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: $OBJ.$ATTR
+                    - metavariable-regex:
+                        metavariable: $ATTR
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: $OBJ[$KEY]
+                    - metavariable-regex:
+                        metavariable: $KEY
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: '{..., $KEY: $VAL, ...}'
+                    - metavariable-regex:
+                        metavariable: $KEY
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: $FUNC(..., $KW=$VAL, ...)
+                    - metavariable-regex:
+                        metavariable: $KW
+                        regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                - patterns:
+                    - pattern: $FUNC(..., $ARG, ...)
+                    # Name-shaped literal only (no whitespace): an env-var or
+                    # key name, never a sentence such as _("Invalid token").
+                    - metavariable-regex:
+                        metavariable: $ARG
+                        regex: ^[rRbBuU]*["'][A-Za-z0-9_.:/-]*(?i:api_key|token|password|secret|raw_response|llm_response)[A-Za-z0-9_.:/-]*["']$

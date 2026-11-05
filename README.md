@@ -64,14 +64,19 @@ Exit codes and contract details: [`docs/architecture/cli-contract.md`](docs/arch
 ## Local gate (fail-closed)
 
 Mechanical checks SSOT: [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
-Orchestration: [`Makefile`](Makefile).
+Orchestration: [`Repo.mk`](Repo.mk), included by the generated Core make-v1
+facade [`Makefile`](Makefile) (do not edit it; see AGENTS.md §13).
 
 ```bash
 make bootstrap   # .venv + deps + install pre-commit/pre-push hooks + doctor
 make fmt         # intentional autofix (commit results)
-make check       # hooks → clean tree → mypy → pytest
-make push        # check, then git push
+make check-full  # hooks → clean tree → mypy → pytest (the pre-V2 `make check`)
+make push        # check-full, then git push
 ```
+
+Core's organization CI runs the portable phases `make setup`, `make validate`,
+`make check` (ruff check + ruff format --check + mypy, no autofix) and
+`make test` (pytest) in that order.
 
 Do not bypass with `git push --no-verify`. Prefer `make push`.
 Local zizmor is fail-closed even when dogfood CI is advisory.

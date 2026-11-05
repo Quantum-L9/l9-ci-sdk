@@ -1,8 +1,8 @@
 # Pre-commit hooks — mechanical enforcement before commit and push.
 # Install both hook types (also: make install-hooks / make bootstrap):
 #   pre-commit install --hook-type pre-commit --hook-type pre-push
-# Run manually: pre-commit run --all-files   (or: make hooks / make check)
-# Ship path: make push  (raw git push still hits the pre-push make-check gate)
+# Run manually: pre-commit run --all-files   (or: make hooks / make check-full)
+# Ship path: make push  (raw git push still hits the pre-push make check-full gate)
 
 default_install_hook_types: [pre-commit, pre-push]
 
@@ -67,10 +67,12 @@ repos:
         files: ^\.github/(workflows|actions)/.*\.ya?ml$
 
       # Fail-closed push gate: raw `git push` cannot skip .pre-commit-config.yaml.
-      # `make push` sets L9_MAKE_PUSH=1 after `make check` to avoid a double run.
+      # `make push` sets L9_MAKE_PUSH=1 after `make check-full` to avoid a double run.
+      # check-full is the pre-V2 `make check`; `make check` is now the make-v1
+      # facade's static phase (ruff + ruff format --check + mypy) only.
       - id: l9-make-check
-        name: make check (push gate)
-        entry: bash -c 'if [ "${L9_MAKE_PUSH:-}" = "1" ]; then exit 0; fi; make check'
+        name: make check-full (push gate)
+        entry: bash -c 'if [ "${L9_MAKE_PUSH:-}" = "1" ]; then exit 0; fi; make check-full'
         language: system
         pass_filenames: false
         always_run: true

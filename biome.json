@@ -14,7 +14,8 @@
       "**/*.ts",
       "**/*.tsx",
       "!tests/fixtures",
-      "!tests/compatibility/fixtures"
+      "!tests/compatibility/fixtures",
+      "!**/.l9"
     ]
   },
   "formatter": {

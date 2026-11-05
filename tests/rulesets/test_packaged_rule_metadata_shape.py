@@ -12,7 +12,6 @@ already test) and asserts the metadata shape the provider actually reads.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -137,65 +136,97 @@ def test_constraint_operators_are_nested_under_patterns(rule_file: Path) -> None
         )
 
 
-# `l9.routing.gateclient-bypass-execute` is a `pattern-regex` rule, so it
-# searches raw file text with no syntactic context. It was authored as a bare
-# `/v1/execute|/execute`, which fired on every mention of the path anywhere in
-# a file -- a filename ending in execute.md, CLI help text about skipping a
-# paste step, an error string naming execute_via frontmatter, and docstrings
-# that merely describe the Gate-routed endpoint. All of them are prose, none is
-# a raw call, and the rule's own message is about raw calls bypassing
-# GateClient, so every fleet occurrence was a false positive.
+# `l9.routing.gateclient-bypass-execute` (AST-ROUTING-004) and the three
+# `l9.logging.*` rules (AST-LOGGING-001..003) were `pattern-regex` / whole-text
+# regex rules, and each shape produced fleet-wide false positives because a
+# regex over raw text cannot tell code from prose:
 #
-# (This comment deliberately avoids spelling those examples as quoted literals:
-# a pattern-regex rule cannot tell a comment from code, so writing them out
-# would make this very block a finding. The exact strings live in
-# GATECLIENT_MUST_NOT_MATCH below, which is what the assertions read.)
+#   * AST-ROUTING-004 fired first on every prose mention of the execute path,
+#     then -- once narrowed to a literal ending at the path -- on a node's own
+#     INGRESS: its route decorator and the constant it compares the inbound
+#     request path against (Cognitive.Engine.Graphs PR #409).
+#   * AST-LOGGING-001 bound string literals as $SECRET, so a message that
+#     merely names "token" or "API key" fired with no value logged (same PR).
 #
-# It now requires a string literal that ENDS at the path. These cases pin that
-# boundary so a future edit cannot quietly widen it back to a text search.
-GATECLIENT_RULE_ID = "l9.routing.gateclient-bypass-execute"
-# These four are the rule's own positive fixtures, so the routing rules match
-# them exactly as intended -- that is what the tests below assert. Suppressed by
-# id rather than reworded, because the strings have to stay byte-for-byte what
-# the rule is supposed to catch.
-GATECLIENT_MUST_MATCH = (
-    'requests.post("http://node:8000/v1/execute", json={})',  # nosemgrep: l9.routing.gateclient-bypass-execute,l9.routing.hardcoded-peer-node-url
-    'EXECUTE_PATH = "/v1/execute"',  # nosemgrep: l9.routing.gateclient-bypass-execute
-    'url = f"{base}/execute"',  # nosemgrep: l9.routing.gateclient-bypass-execute
-    "PATH = '/execute'",  # nosemgrep: l9.routing.gateclient-bypass-execute
-)
-GATECLIENT_MUST_NOT_MATCH = (
-    'FILES = ("references/execute.md",)',
-    'help_text = "Skip paste/execute; only copy lower Results grid"',
-    'err = "cursor-build render missing kind/execute_via frontmatter"',
-    '"""The converge action EIE owns (POST /v1/execute) validates the rows."""',
-    "# Route follow-up work through the Gate rather than POST /v1/execute.",
+# They are now structural rules (AST-ROUTING-004 is a taint rule over outbound
+# client calls). Their behaviour is pinned by the annotated Semgrep fixtures in
+# tests/fixtures/semgrep/rules/python/, run by
+# tests/rulesets/test_semgrep_rule_fixtures.py. The guards below need no
+# semgrep binary: they fail if any of these rules is turned back into a text
+# search, which is the regression that produced the false positives.
+#
+# (This comment deliberately avoids quoting execute-path literals: the SDK's
+# own self-CI scans this file.)
+STRUCTURAL_RULE_IDS = (
+    "l9.routing.gateclient-bypass-execute",
+    "l9.logging.forbidden-secret-field",
+    "l9.logging.forbidden-secret-keyword",
+    "l9.logging.f-string-secret",
 )
 
 
-def _gateclient_pattern() -> str:
+def _packaged_rule(rule_id: str) -> Mapping[str, Any]:
     for rule_file in _rule_files():
         for rule in _load_rules(rule_file):
-            if rule["id"] == GATECLIENT_RULE_ID:
-                pattern = rule.get("pattern-regex")
-                assert isinstance(pattern, str), (
-                    f"{GATECLIENT_RULE_ID} must keep a pattern-regex; if it is "
-                    "rewritten as an AST rule, port these cases to the new form"
-                )
-                return pattern
-    raise AssertionError(f"{GATECLIENT_RULE_ID} not found in the packaged ruleset")
+            if rule["id"] == rule_id:
+                return rule
+    raise AssertionError(f"{rule_id} not found in the packaged ruleset")
 
 
-@pytest.mark.parametrize("source", GATECLIENT_MUST_MATCH)
-def test_gateclient_rule_still_catches_raw_execute_paths(source: str) -> None:
-    assert re.search(_gateclient_pattern(), source), (
-        f"{GATECLIENT_RULE_ID} no longer flags a raw /execute path: {source!r}"
+def _contains_key(node: object, key: str) -> bool:
+    if isinstance(node, Mapping):
+        return key in node or any(_contains_key(v, key) for v in node.values())
+    if isinstance(node, list):
+        return any(_contains_key(item, key) for item in node)
+    return False
+
+
+@pytest.mark.parametrize("rule_id", STRUCTURAL_RULE_IDS)
+def test_precision_rules_are_not_text_searches(rule_id: str) -> None:
+    rule = _packaged_rule(rule_id)
+    assert not _contains_key(rule, "pattern-regex"), (
+        f"{rule_id} uses pattern-regex again. A text search cannot tell a call "
+        "from prose or an ingress from a dispatch; keep it structural and pin "
+        "new cases in tests/fixtures/semgrep/rules/python/."
     )
 
 
-@pytest.mark.parametrize("source", GATECLIENT_MUST_NOT_MATCH)
-def test_gateclient_rule_ignores_prose_mentions_of_execute(source: str) -> None:
-    assert not re.search(_gateclient_pattern(), source), (
-        f"{GATECLIENT_RULE_ID} fires on prose, not a call: {source!r}. The "
-        "literal must end at the /execute path."
+def test_gateclient_rule_is_an_outbound_taint_rule() -> None:
+    rule = _packaged_rule("l9.routing.gateclient-bypass-execute")
+    assert rule.get("mode") == "taint", (
+        "AST-ROUTING-004 must track an execute target INTO an outbound client "
+        "call; a search rule flags the node's own ingress constant and route."
+    )
+    assert rule.get("pattern-sources") and rule.get("pattern-sinks")
+
+
+@pytest.mark.parametrize(
+    "rule_id",
+    [
+        "l9.logging.forbidden-secret-field",
+        "l9.logging.f-string-secret",
+    ],
+)
+def test_secret_value_rules_search_inside_the_argument(rule_id: str) -> None:
+    """The secret-like name must be matched in a code position INSIDE the
+    argument (metavariable-pattern), not as a regex over the argument's whole
+    text -- which is what let message prose bind $SECRET."""
+    rule = _packaged_rule(rule_id)
+    patterns = rule.get("patterns")
+    assert isinstance(patterns, list)
+    secret_regexes = [
+        item["metavariable-regex"]
+        for item in patterns
+        if isinstance(item, Mapping)
+        and "metavariable-regex" in item
+        and item["metavariable-regex"].get("metavariable") == "$SECRET"
+    ]
+    assert not secret_regexes, (
+        f"{rule_id}: a metavariable-regex on $SECRET matches string-literal "
+        "prose; constrain $SECRET with metavariable-pattern instead"
+    )
+    assert any(
+        isinstance(item, Mapping)
+        and item.get("metavariable-pattern", {}).get("metavariable") == "$SECRET"
+        for item in patterns
     )

@@ -21,9 +21,10 @@ updated: 2026-10-15
 | [0007](0007-repository-snapshot-identity.md) | Repository snapshot identity | Accepted |
 | [0008](0008-agent-payload-is-a-projection.md) | Agent payload is a projection | Accepted |
 | [0011](0011-biome-static-checks.md) | Biome static checks | Superseded by [0017](0017-sdk-cedes-org-tool-version-selection.md) |
-| [0015](0015-packaged-rule-precision.md) | A packaged rule must constrain what it claims to match | Accepted |
+| [0015](0015-packaged-rule-precision.md) | A packaged rule must constrain what it claims to match | Accepted; routing and logging clauses amended by [0018](0018-rule-precision-by-code-position-and-dispatch.md) |
 | [0016](0016-organization-managed-l9-ci.md) | Organization L9 CI is centrally required; the SDK owns no Core or SDK revision | Accepted; Biome-reusable clause amended by [0017](0017-sdk-cedes-org-tool-version-selection.md) |
 | [0017](0017-sdk-cedes-org-tool-version-selection.md) | The SDK cedes organization tool-version selection to Core | Accepted |
+| [0018](0018-rule-precision-by-code-position-and-dispatch.md) | Logging and routing rules match code positions and outbound dispatch | Accepted |
 
 ## Ledger rules
 

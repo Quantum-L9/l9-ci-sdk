@@ -53,6 +53,30 @@ jobs:
         id: pytest_cov
         continue-on-error: true
         run: python -m pytest --cov=l9_ci --cov-branch
+      - name: semgrep rule fixtures
+        id: semgrep_rule_fixtures
+        continue-on-error: true
+        # Runs every packaged L9 Python rule against its annotated fixture in
+        # tests/fixtures/semgrep/rules/python/ (`ruleid` lines must be flagged,
+        # every other line must not). The pytest job has no semgrep binary, so
+        # tests/rulesets/test_semgrep_rule_fixtures.py skips there; this gate is
+        # what enforces the fixtures. The version is read from
+        # l9-self-ci.yml's L9_SEMGREP_VERSION so the SDK pins Semgrep once.
+        run: |
+          set -euo pipefail
+          SEMGREP_VERSION="$(python - <<'PY'
+          import yaml
+          jobs = yaml.safe_load(open(".github/workflows/l9-self-ci.yml", encoding="utf-8"))["jobs"]
+          pins = {j["env"]["L9_SEMGREP_VERSION"] for j in jobs.values() if "L9_SEMGREP_VERSION" in j.get("env", {})}
+          assert len(pins) == 1, pins
+          print(pins.pop())
+          PY
+          )"
+          python -m venv "$RUNNER_TEMP/semgrep"
+          "$RUNNER_TEMP/semgrep/bin/pip" install --quiet "semgrep==${SEMGREP_VERSION}"
+          "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
+            --config l9_ci/rulesets/semgrep/python \
+            tests/fixtures/semgrep/rules/python
       - name: critical gate evaluator 100% branch coverage
         id: gate_evaluator_cov
         continue-on-error: true
@@ -96,6 +120,7 @@ jobs:
           R_MYPY: ${{ steps.mypy.outcome }}
           R_PYTEST_COV: ${{ steps.pytest_cov.outcome }}
           R_GATE_EVAL_COV: ${{ steps.gate_evaluator_cov.outcome }}
+          R_SEMGREP_FIXTURES: ${{ steps.semgrep_rule_fixtures.outcome }}
           R_GEN_EVIDENCE: ${{ steps.gen_evidence.outcome }}
           R_MANIFEST: ${{ steps.manifest_check.outcome }}
         run: |
@@ -123,6 +148,7 @@ jobs:
           check "ruff format check" "$R_RUFF_FORMAT"
           check "mypy" "$R_MYPY"
           check "pytest + branch coverage" "$R_PYTEST_COV"
+          check "semgrep rule fixtures" "$R_SEMGREP_FIXTURES"
           check "critical gate evaluator 100% branch coverage" "$R_GATE_EVAL_COV"
           check "generate commit-bound validation evidence" "$R_GEN_EVIDENCE"
           check "tracked manifest must be current" "$R_MANIFEST"

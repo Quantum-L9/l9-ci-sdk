@@ -53,9 +53,11 @@ npx --yes @biomejs/biome@2.5.8 check --write .
 ```
 
 If this capability is combined with the YAML-governance root `Makefile`
-(`make hooks` / `make check` / `make push`), add a `biome-test` target that
+(`make hooks` / `make check-full` / `make push`), add a `biome-test` target in
+`Repo.mk` that
 runs `pytest tests/biome` alongside the existing `yaml-test` target — do not
-introduce a second, divergent Makefile.
+introduce a second, divergent Makefile (the root `Makefile` is the generated
+Core make-v1 facade and is never edited).
 
 ## Consumers → Core org-ci (ADR 0017)
 

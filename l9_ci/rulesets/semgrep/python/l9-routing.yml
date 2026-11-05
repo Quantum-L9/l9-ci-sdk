@@ -53,16 +53,65 @@ rules:
       mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
-    # The match must be a string literal that ENDS at the /execute path -- a
-    # request path, a routing constant, or an f-string building one. The
-    # previous form was a bare `/v1/execute|/execute` text search over the whole
-    # file, which cannot tell a call from prose: it fired on the filename
-    # "references/execute.md", on the help text "Skip paste/execute", on
-    # "kind/execute_via frontmatter", and on docstrings that merely DESCRIBE the
-    # Gate-routed endpoint. Every occurrence across the fleet was a false
-    # positive, so the rule proved nothing about Gate_only_routing.
+    # History. The first form was a bare `/v1/execute|/execute` text search
+    # over the whole file, which could not tell a call from prose: it fired on
+    # the filename "references/execute.md", on the help text "Skip
+    # paste/execute", on "kind/execute_via frontmatter", and on docstrings that
+    # merely DESCRIBE the Gate-routed endpoint. The second form required a
+    # string literal ending at the path, but was still a file-wide
+    # `pattern-regex`, so it fired on a node's own INGRESS: the FastAPI route
+    # definition of its single POST endpoint, and a module constant compared
+    # against the inbound `request.url.path` (Cognitive.Engine.Graphs PR #409,
+    # chassis/chassis_app.py and chassis/node_app.py). Neither dispatches
+    # anything, and Contract 1 REQUIRES every node to serve that path.
     #
-    # Still caught: requests.post("http://node:8000/v1/execute", ...),
-    # EXECUTE_PATH = "/v1/execute", and f"{base}/execute". Direct dispatch by
-    # any path is separately covered by AST-ROUTING-001/002.
-    pattern-regex: '["''][^"'']*/(v1/)?execute["'']'
+    # The rule is now a taint rule over OUTBOUND use. A /execute target is
+    #   * a string literal ending at the path ("http://node:8000/v1/execute",
+    #     "/execute"), including through a module constant
+    #     (EXECUTE_PATH = "/v1/execute"), concatenation, an f-string
+    #     (f"{base}/execute") or a local variable, or
+    #   * an identifier NAMED like an execute route (EXECUTE_PATH,
+    #     _EXECUTE_URL, ...), which covers a constant imported from another
+    #     module, where the defining literal is out of view;
+    # and it is reported only where it reaches the target of an HTTP client
+    # call: requests/httpx/any client object `.post/.put/.patch/.request/
+    # .send/.stream`, positionally or as `url=`. A route decorator on the
+    # receiving side (`@app.post("/v1/execute")`) is excluded, as is anything
+    # that never reaches such a call -- route tables (`add_api_route`), and
+    # comparisons against the inbound path.
+    #
+    # Trade-off, stated deliberately: a bare `EXECUTE_PATH = "/v1/execute"`
+    # assignment is no longer a finding by itself. That constant is exactly
+    # what an ingress needs to define, so flagging every one makes every node
+    # in the fleet fail on its own entry point; the constant is flagged where
+    # it is USED to dispatch instead, in the defining module through taint and
+    # in any importing module through its name. Direct dispatch by any path is
+    # separately covered by AST-ROUTING-001/002.
+    mode: taint
+    pattern-sources:
+      - pattern: '"=~/\\/(v1\\/)?execute$/"'
+      - patterns:
+          - pattern: $ROUTE
+          - metavariable-regex:
+              metavariable: $ROUTE
+              regex: (?i)^_*[a-z0-9_]*execute_(path|url|uri|endpoint|route)$
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $CLIENT.$METHOD($TARGET, ...)
+              - pattern: $CLIENT.$METHOD($VERB, $TARGET, ...)
+              - pattern: $CLIENT.$METHOD(..., url=$TARGET, ...)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(post|put|patch|request|send|stream)$
+          # The receiving side: `@app.post("/v1/execute")` declares an ingress
+          # route; it sends nothing. $CLIENT and $METHOD are the SAME
+          # metavariables as the call above, so this excludes the decorator
+          # call itself and nothing else -- a dispatch made from inside a
+          # decorated handler (`await self.client.post(...)`) binds a different
+          # $CLIENT and is still reported. `def` also matches `async def`.
+          - pattern-not-inside: |
+              @$CLIENT.$METHOD(...)
+              def $HANDLER(...):
+                  ...
+          - focus-metavariable: $TARGET
