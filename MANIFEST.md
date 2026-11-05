@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 339
+Files: 342
 
 ## Contents
 
@@ -291,6 +291,8 @@ Files: 339
 - `tests/fixtures/semgrep/report-errors.json`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
+- `tests/fixtures/semgrep/rules/python/l9-logging.py`
+- `tests/fixtures/semgrep/rules/python/l9-routing.py`
 - `tests/fixtures/semgrep/runtime/identity-map.yaml`
 - `tests/fixtures/semgrep/runtime/policy.yaml`
 - `tests/fixtures/semgrep/runtime/provenance.yaml`
@@ -339,6 +341,7 @@ Files: 339
 - `tests/repository/test_snapshot.py`
 - `tests/rulesets/test_packaged_rule_metadata_shape.py`
 - `tests/rulesets/test_packaging.py`
+- `tests/rulesets/test_semgrep_rule_fixtures.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`

@@ -13,3 +13,8 @@ memory-bank/
 # fixture capture itself is unaffected either way: its recorded command passes
 # --x-ignore-semgrepignore-files.
 tests/fixtures/semgrep/source/
+
+# Annotated rule-regression fixtures (scan INPUT for `semgrep --test`, run by
+# tests/rulesets/test_semgrep_rule_fixtures.py and the ci.yml "semgrep rule
+# fixtures" gate). Their ruleid lines are deliberate positives.
+tests/fixtures/semgrep/rules/
