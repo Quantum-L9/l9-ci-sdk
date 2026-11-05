@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 343
+Files: 345
 
 ## Contents
 
@@ -44,6 +44,7 @@ Files: 343
 - `.l9/ownership.yaml`
 - `.l9/public-api.yaml`
 - `.l9/release-policy.yaml`
+- `.l9/repo-workflow.json`
 - `.l9/roadmap.yaml`
 - `.l9/semgrep-identity-map.yaml`
 - `.l9/semgrep-policy.example.yaml`
@@ -66,6 +67,7 @@ Files: 343
 - `README.md`
 - `ROADMAP.md`
 - `RUNBOOK.md`
+- `Repo.mk`
 - `SECURITY.md`
 - `SUPPORT.md`
 - `TODO.md`

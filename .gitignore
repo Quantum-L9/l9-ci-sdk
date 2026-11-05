@@ -19,6 +19,15 @@ build/
 # Agent/session scratchpad only — never part of the SDK codebase inventory.
 /memory-bank/
 
+# Core organization CI stages its provisioned SDK checkout + venv and toolchain
+# evidence here before running the make-v1 phases in this workspace. Ignored so
+# `ruff check .` / `ruff format --check .` (which respect .gitignore) never
+# lint Core's staged runtime. The tracked contracts under .l9/ stay tracked.
+/.l9/runtime/
+
+# Scratch output of `make manifest-check` (removed by the recipe on exit).
+/.manifest-check.*
+
 # Commit-bound CI evidence (scripts/generate_validation_report.py), uploaded
 # as a workflow artifact each run (ci.yml) — regenerated per-commit, never
 # tracked, to avoid perpetual diff churn.

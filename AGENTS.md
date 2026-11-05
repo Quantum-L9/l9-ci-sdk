@@ -198,7 +198,7 @@ Before declaring work complete:
 ```bash
 make bootstrap   # once per clone
 make fmt         # only for intentional autofix
-make check
+make check-full  # the pre-V2 `make check`; see §13
 ```
 
 Also run the full pytest suite when changing contracts, observations, providers,
@@ -235,3 +235,34 @@ Keep changes on the assigned branch and push work that must survive.
 README is human-facing. Update it only when the task explicitly owns README
 realignment or a changed install/CLI path would otherwise make it materially false.
 `AGENTS.md`, `.l9/*`, architecture docs, and ADRs carry implementation law.
+
+## 13. Repository execution contract (Core V2, make-v1)
+
+Core lists this repository in `required` mode
+(`run-repository-verification/contract-policy.json`), so organization CI
+(`Analyze (central Core)`) admits only the V2 contract:
+
+- `.l9/repo-workflow.json` is the exact three-field declaration
+  (`l9.repo-execution/v2`, facade `make-v1`, phases setup, validate, check,
+  test). It carries no commands.
+- `Makefile` is the Core-owned make-v1 facade, byte-identical to
+  `l9-ci-core` `tools/l9_repo/facades/make-v1.mk`, and Core rejects any drift.
+  Never edit it. It owns `help`, `setup`, `validate`, `check` and `test`, sets
+  `.SHELLFLAGS := -eu -o pipefail -c` (so a recipe that reads a possibly unset
+  shell variable must write `$${VAR:-}`), and includes `Repo.mk`.
+- `Repo.mk` is repository-owned. It implements the four `.PHONY` leaves and
+  every local target; it must not define any of the five facade targets.
+
+| Phase | Leaf | Runs |
+|---|---|---|
+| `make setup` | `repo-setup` | `deps`: `.venv`, `requirements-ci.txt`, pre-commit |
+| `make validate` | `repo-validate` | governance JSON, action pins, yamllint (tracked files), `MANIFEST.md` currency (non-mutating) |
+| `make check` | `repo-check` | `ruff check .`, `ruff format --check .`, `mypy l9_ci` (no autofix) |
+| `make test` | `repo-test` | `pytest -q $(PYTEST_ARGS)` |
+
+Core runs them in that order on a plain runner and stops at the first failure.
+The pre-V2 `make check` (hooks, clean tree, mypy, pytest) is `make check-full`;
+`make gate`, `make ci`, `make push` and the pre-push hook run it. `make test`
+is unchanged; `make help` is the facade's and lists every `##` target. Core
+stages its SDK runtime under `.l9/runtime/`, which is gitignored for that
+reason; the rest of `.l9/` stays tracked.
