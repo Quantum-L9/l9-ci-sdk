@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 342
+Files: 343
 
 ## Contents
 
@@ -91,6 +91,7 @@ Files: 342
 - `docs/adr/0015-packaged-rule-precision.md`
 - `docs/adr/0016-organization-managed-l9-ci.md`
 - `docs/adr/0017-sdk-cedes-org-tool-version-selection.md`
+- `docs/adr/0018-rule-precision-by-code-position-and-dispatch.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`

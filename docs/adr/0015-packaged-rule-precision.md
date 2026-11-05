@@ -1,6 +1,7 @@
 # ADR 0015: A Packaged Rule Must Constrain What It Claims to Match
 ## Status
-Accepted
+Accepted. The routing and logging clauses are amended by
+[ADR-0018](0018-rule-precision-by-code-position-and-dispatch.md).
 ## Context
 ADR-0009 made the packaged Semgrep ruleset a public SDK contract: every
 downstream repository inherits these rules by upgrading the SDK, and does not
