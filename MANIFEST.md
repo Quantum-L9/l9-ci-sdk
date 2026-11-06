@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 345
+Files: 347
 
 ## Contents
 
@@ -224,6 +224,7 @@ Files: 345
 - `l9_ci/rulesets/semgrep/identity-map.yaml`
 - `l9_ci/rulesets/semgrep/profiles.yaml`
 - `l9_ci/rulesets/semgrep/python/l9-baseline-security.yml`
+- `l9_ci/rulesets/semgrep/python/l9-file-permissions.yml`
 - `l9_ci/rulesets/semgrep/python/l9-handler-signature.yml`
 - `l9_ci/rulesets/semgrep/python/l9-logging.yml`
 - `l9_ci/rulesets/semgrep/python/l9-routing.yml`
@@ -294,6 +295,7 @@ Files: 345
 - `tests/fixtures/semgrep/report-errors.json`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
+- `tests/fixtures/semgrep/rules/python/l9-file-permissions.py`
 - `tests/fixtures/semgrep/rules/python/l9-logging.py`
 - `tests/fixtures/semgrep/rules/python/l9-routing.py`
 - `tests/fixtures/semgrep/runtime/identity-map.yaml`
