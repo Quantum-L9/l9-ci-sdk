@@ -58,11 +58,154 @@ rules:
       mode: shadow
       contract: TransportPacket_only
       autofix_safe: false
-    patterns:
-      - pattern-either:
-          - pattern: requests.post($URL, json=$PAYLOAD, ...)
-          - pattern: httpx.post($URL, json=$PAYLOAD, ...)
-      - metavariable-pattern:
-          metavariable: $PAYLOAD
-          patterns:
-            - pattern-not: packet
+    # Was requests/httpx.post(..., json=<anything but `packet`>) to ANY URL,
+    # which reported a JSON body sent to a third-party API -- HubSpot's CRM
+    # search on Enrichment.Inference.Engine (12d8b351) -- as an execute
+    # contract. An execute contract is a body sent to an execution boundary,
+    # so the rule now uses AST-ROUTING-001/002's destination taint: it reports
+    # a non-`packet` json= body only when the target is, or is built from, an
+    # L9 node/peer/Gate destination or /execute route. It also covers put /
+    # patch / request / stream, url= keywords, and requests.Session /
+    # httpx.Client / AsyncClient instances created in scope.
+    mode: taint
+    pattern-sources:
+      # A destination literal: an internal service on the node port, a
+      # *.internal host, an /execute route, or a setting/env key named like
+      # an L9 destination (os.getenv("GATE_URL"), settings["ceg_url"]).
+      - patterns:
+          - pattern: '"$LIT"'
+          - metavariable-regex:
+              metavariable: $LIT
+              regex: (?i)^["']?(?:https?://[a-z0-9-]+:8000(?:/.*)?|https?://[a-z0-9.-]+\.internal(?:[:/].*)?|.*/(?:v1/)?execute|_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr))["']?$
+      # An identifier or attribute NAMED like an L9 node/peer/Gate destination
+      # (GATE_URL, settings.ceg_base_url, self._peer_node_url).
+      - patterns:
+          - pattern: $DEST
+          - metavariable-regex:
+              metavariable: $DEST
+              regex: (?i)^_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr)$
+      - patterns:
+          - pattern: $OBJ.$DEST
+          - metavariable-regex:
+              metavariable: $DEST
+              regex: (?i)^_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr)$
+      # An identifier named like an execute route (AST-ROUTING-004's source),
+      # which covers a constant imported from another module.
+      - patterns:
+          - pattern: $ROUTE
+          - metavariable-regex:
+              metavariable: $ROUTE
+              regex: (?i)^_*[a-z0-9_]*execute_(path|url|uri|endpoint|route)$
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: requests.$METHOD($TARGET, ..., json=$PAYLOAD)
+              - pattern: requests.$METHOD(..., url=$TARGET, ..., json=$PAYLOAD)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $S = requests.$CLS(...)
+                          ...
+                      - pattern-inside: |
+                          with requests.$CLS(...) as $S:
+                            ...
+                      - pattern-inside: |
+                          async with requests.$CLS(...) as $S:
+                            ...
+                  - metavariable-regex:
+                      metavariable: $CLS
+                      regex: ^(Session)$
+                  - pattern-either:
+                      - pattern: $S.$METHOD($TARGET, ..., json=$PAYLOAD)
+                      - pattern: $S.$METHOD(..., url=$TARGET, ..., json=$PAYLOAD)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(post|put|patch|stream)$
+          # A TransportPacket boundary object is the only allowed body.
+          - metavariable-regex:
+              metavariable: $PAYLOAD
+              regex: ^(?!packet$)
+          - focus-metavariable: $TARGET
+      # request()/stream() take the HTTP verb first.
+      - patterns:
+          - pattern-either:
+              - pattern: requests.$METHOD($VERB, $TARGET, ..., json=$PAYLOAD)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $S = requests.$CLS(...)
+                          ...
+                      - pattern-inside: |
+                          with requests.$CLS(...) as $S:
+                            ...
+                      - pattern-inside: |
+                          async with requests.$CLS(...) as $S:
+                            ...
+                  - metavariable-regex:
+                      metavariable: $CLS
+                      regex: ^(Session)$
+                  - pattern: $S.$METHOD($VERB, $TARGET, ..., json=$PAYLOAD)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(request|stream)$
+          # A TransportPacket boundary object is the only allowed body.
+          - metavariable-regex:
+              metavariable: $PAYLOAD
+              regex: ^(?!packet$)
+          - focus-metavariable: $TARGET
+      - patterns:
+          - pattern-either:
+              - pattern: httpx.$METHOD($TARGET, ..., json=$PAYLOAD)
+              - pattern: httpx.$METHOD(..., url=$TARGET, ..., json=$PAYLOAD)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $S = httpx.$CLS(...)
+                          ...
+                      - pattern-inside: |
+                          with httpx.$CLS(...) as $S:
+                            ...
+                      - pattern-inside: |
+                          async with httpx.$CLS(...) as $S:
+                            ...
+                  - metavariable-regex:
+                      metavariable: $CLS
+                      regex: ^(Client|AsyncClient)$
+                  - pattern-either:
+                      - pattern: $S.$METHOD($TARGET, ..., json=$PAYLOAD)
+                      - pattern: $S.$METHOD(..., url=$TARGET, ..., json=$PAYLOAD)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(post|put|patch|stream)$
+          # A TransportPacket boundary object is the only allowed body.
+          - metavariable-regex:
+              metavariable: $PAYLOAD
+              regex: ^(?!packet$)
+          - focus-metavariable: $TARGET
+      # request()/stream() take the HTTP verb first.
+      - patterns:
+          - pattern-either:
+              - pattern: httpx.$METHOD($VERB, $TARGET, ..., json=$PAYLOAD)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $S = httpx.$CLS(...)
+                          ...
+                      - pattern-inside: |
+                          with httpx.$CLS(...) as $S:
+                            ...
+                      - pattern-inside: |
+                          async with httpx.$CLS(...) as $S:
+                            ...
+                  - metavariable-regex:
+                      metavariable: $CLS
+                      regex: ^(Client|AsyncClient)$
+                  - pattern: $S.$METHOD($VERB, $TARGET, ..., json=$PAYLOAD)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(request|stream)$
+          # A TransportPacket boundary object is the only allowed body.
+          - metavariable-regex:
+              metavariable: $PAYLOAD
+              regex: ^(?!packet$)
+          - focus-metavariable: $TARGET
