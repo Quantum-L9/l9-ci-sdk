@@ -17,7 +17,97 @@ rules:
       mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
-    pattern: requests.post($URL, ...)
+    # Was `requests.post($URL, ...)`: every requests.post() in the repository, whatever
+    # it called. Enrichment.Inference.Engine (12d8b351) was blocked by its
+    # Salesforce OAuth token request and its HubSpot search call, neither of
+    # which is an L9 node. The rule is now a taint rule over the DESTINATION:
+    # it reports a requests call only when its target is, or is built from
+    # (concatenation, f-string, local variable, a nested call such as
+    # os.getenv("GATE_URL")), an L9 node/peer/Gate destination -- a literal
+    # service URL on the node port or a *.internal host, an /execute route,
+    # or a name or setting key shaped like <node|peer|gate|ceg|eie|...>_url /
+    # _endpoint / _host. It covers every dispatching verb (post, put, patch,
+    # request, stream), url= keywords, and requests.Session instances
+    # created in scope. Third-party HTTP, and GET reads, are not node
+    # dispatch. AST-ROUTING-004 still reports any client's /execute dispatch.
+    mode: taint
+    pattern-sources:
+      # A destination literal: an internal service on the node port, a
+      # *.internal host, an /execute route, or a setting/env key named like
+      # an L9 destination (os.getenv("GATE_URL"), settings["ceg_url"]).
+      - patterns:
+          - pattern: '"$LIT"'
+          - metavariable-regex:
+              metavariable: $LIT
+              regex: (?i)^["']?(?:https?://[a-z0-9-]+:8000(?:/.*)?|https?://[a-z0-9.-]+\.internal(?:[:/].*)?|.*/(?:v1/)?execute|_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr))["']?$
+      # An identifier or attribute NAMED like an L9 node/peer/Gate destination
+      # (GATE_URL, settings.ceg_base_url, self._peer_node_url).
+      - patterns:
+          - pattern: $DEST
+          - metavariable-regex:
+              metavariable: $DEST
+              regex: (?i)^_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr)$
+      - patterns:
+          - pattern: $OBJ.$DEST
+          - metavariable-regex:
+              metavariable: $DEST
+              regex: (?i)^_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr)$
+      # An identifier named like an execute route (AST-ROUTING-004's source),
+      # which covers a constant imported from another module.
+      - patterns:
+          - pattern: $ROUTE
+          - metavariable-regex:
+              metavariable: $ROUTE
+              regex: (?i)^_*[a-z0-9_]*execute_(path|url|uri|endpoint|route)$
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: requests.$METHOD($TARGET, ...)
+              - pattern: requests.$METHOD(..., url=$TARGET, ...)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $S = requests.$CLS(...)
+                          ...
+                      - pattern-inside: |
+                          with requests.$CLS(...) as $S:
+                            ...
+                      - pattern-inside: |
+                          async with requests.$CLS(...) as $S:
+                            ...
+                  - metavariable-regex:
+                      metavariable: $CLS
+                      regex: ^(Session)$
+                  - pattern-either:
+                      - pattern: $S.$METHOD($TARGET, ...)
+                      - pattern: $S.$METHOD(..., url=$TARGET, ...)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(post|put|patch|stream)$
+          - focus-metavariable: $TARGET
+      # request()/stream() take the HTTP verb first.
+      - patterns:
+          - pattern-either:
+              - pattern: requests.$METHOD($VERB, $TARGET, ...)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $S = requests.$CLS(...)
+                          ...
+                      - pattern-inside: |
+                          with requests.$CLS(...) as $S:
+                            ...
+                      - pattern-inside: |
+                          async with requests.$CLS(...) as $S:
+                            ...
+                  - metavariable-regex:
+                      metavariable: $CLS
+                      regex: ^(Session)$
+                  - pattern: $S.$METHOD($VERB, $TARGET, ...)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(request|stream)$
+          - focus-metavariable: $TARGET
 
   - id: l9.routing.httpx-direct-node-dispatch
     languages: [python]
@@ -29,7 +119,97 @@ rules:
       mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
-    pattern: httpx.post($URL, ...)
+    # Was `httpx.post($URL, ...)`: every httpx.post() in the repository, whatever
+    # it called. Enrichment.Inference.Engine (12d8b351) was blocked by its
+    # Salesforce OAuth token request and its HubSpot search call, neither of
+    # which is an L9 node. The rule is now a taint rule over the DESTINATION:
+    # it reports a httpx call only when its target is, or is built from
+    # (concatenation, f-string, local variable, a nested call such as
+    # os.getenv("GATE_URL")), an L9 node/peer/Gate destination -- a literal
+    # service URL on the node port or a *.internal host, an /execute route,
+    # or a name or setting key shaped like <node|peer|gate|ceg|eie|...>_url /
+    # _endpoint / _host. It covers every dispatching verb (post, put, patch,
+    # request, stream), url= keywords, and httpx.Client / AsyncClient instances
+    # created in scope. Third-party HTTP, and GET reads, are not node
+    # dispatch. AST-ROUTING-004 still reports any client's /execute dispatch.
+    mode: taint
+    pattern-sources:
+      # A destination literal: an internal service on the node port, a
+      # *.internal host, an /execute route, or a setting/env key named like
+      # an L9 destination (os.getenv("GATE_URL"), settings["ceg_url"]).
+      - patterns:
+          - pattern: '"$LIT"'
+          - metavariable-regex:
+              metavariable: $LIT
+              regex: (?i)^["']?(?:https?://[a-z0-9-]+:8000(?:/.*)?|https?://[a-z0-9.-]+\.internal(?:[:/].*)?|.*/(?:v1/)?execute|_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr))["']?$
+      # An identifier or attribute NAMED like an L9 node/peer/Gate destination
+      # (GATE_URL, settings.ceg_base_url, self._peer_node_url).
+      - patterns:
+          - pattern: $DEST
+          - metavariable-regex:
+              metavariable: $DEST
+              regex: (?i)^_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr)$
+      - patterns:
+          - pattern: $OBJ.$DEST
+          - metavariable-regex:
+              metavariable: $DEST
+              regex: (?i)^_*(?:[a-z0-9]+_)*(?:node|nodes|peer|peers|gate|ceg|eie|constellation|chassis|cognitive_engine|inference_engine|graph_engine)(?:_[a-z0-9]+)*_(?:url|urls|uri|endpoint|endpoints|host|address|addr)$
+      # An identifier named like an execute route (AST-ROUTING-004's source),
+      # which covers a constant imported from another module.
+      - patterns:
+          - pattern: $ROUTE
+          - metavariable-regex:
+              metavariable: $ROUTE
+              regex: (?i)^_*[a-z0-9_]*execute_(path|url|uri|endpoint|route)$
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: httpx.$METHOD($TARGET, ...)
+              - pattern: httpx.$METHOD(..., url=$TARGET, ...)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $S = httpx.$CLS(...)
+                          ...
+                      - pattern-inside: |
+                          with httpx.$CLS(...) as $S:
+                            ...
+                      - pattern-inside: |
+                          async with httpx.$CLS(...) as $S:
+                            ...
+                  - metavariable-regex:
+                      metavariable: $CLS
+                      regex: ^(Client|AsyncClient)$
+                  - pattern-either:
+                      - pattern: $S.$METHOD($TARGET, ...)
+                      - pattern: $S.$METHOD(..., url=$TARGET, ...)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(post|put|patch|stream)$
+          - focus-metavariable: $TARGET
+      # request()/stream() take the HTTP verb first.
+      - patterns:
+          - pattern-either:
+              - pattern: httpx.$METHOD($VERB, $TARGET, ...)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $S = httpx.$CLS(...)
+                          ...
+                      - pattern-inside: |
+                          with httpx.$CLS(...) as $S:
+                            ...
+                      - pattern-inside: |
+                          async with httpx.$CLS(...) as $S:
+                            ...
+                  - metavariable-regex:
+                      metavariable: $CLS
+                      regex: ^(Client|AsyncClient)$
+                  - pattern: $S.$METHOD($VERB, $TARGET, ...)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(request|stream)$
+          - focus-metavariable: $TARGET
 
   - id: l9.routing.hardcoded-peer-node-url
     languages: [python]
@@ -41,7 +221,10 @@ rules:
       mode: shadow
       contract: Gate_only_routing
       autofix_safe: false
-    pattern-regex: 'http://[a-z0-9-]+:8000|https://[a-z0-9-]+\\.internal'
+    # The `.internal` alternative was written `\\.` inside single quotes, which
+    # YAML keeps verbatim, so the regex demanded a literal backslash and never
+    # matched an https://<host>.internal URL. One backslash escapes the dot.
+    pattern-regex: 'http://[a-z0-9-]+:8000|https://[a-z0-9-]+\.internal'
 
   - id: l9.routing.gateclient-bypass-execute
     languages: [python]

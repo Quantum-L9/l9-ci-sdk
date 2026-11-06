@@ -105,3 +105,63 @@ async def via_send(client, base):
     req = client.build_request("POST", f"{base}/v1/execute")
     # ruleid: l9.routing.gateclient-bypass-execute
     return await client.send(req)
+
+
+# AST-ROUTING-001/002 report a requests/httpx dispatch only when its target is
+# an L9 node/peer/Gate destination. The two calls that blocked
+# Quantum-L9/Enrichment.Inference.Engine at 12d8b351 talk to third parties.
+def eie_12d8b351_third_party_http(token_url, body, url, headers):
+    # app/services/crm/salesforce_client.py: the Salesforce OAuth token request.
+    # ok: l9.routing.httpx-direct-node-dispatch
+    response = httpx.post(token_url, data=body, timeout=30)
+    # app/services/crm/hubspot_client.py: the HubSpot CRM search.
+    # ok: l9.routing.httpx-direct-node-dispatch
+    response = httpx.post(url, json=body, headers=headers, timeout=30)
+    # ok: l9.routing.requests-direct-node-dispatch
+    requests.post("https://api.hubapi.com/crm/v3/objects/search", json=body)
+    # Not an L9 gate, just a name that contains "gateway".
+    # ok: l9.routing.httpx-direct-node-dispatch
+    httpx.post(settings.api_gateway_url, json=body)
+    # A read is not dispatch.
+    # ok: l9.routing.httpx-direct-node-dispatch
+    httpx.get(settings.gate_url)
+    return response
+
+
+def node_dispatch_by_destination(settings, os, payload, base):
+    # A node call through a URL built from settings MUST be reported.
+    # ruleid: l9.routing.httpx-direct-node-dispatch
+    httpx.post(f"{settings.ceg_base_url}/v1/match", json=payload)
+    # ruleid: l9.routing.httpx-direct-node-dispatch, l9.routing.gateclient-bypass-execute
+    httpx.post(f"{settings.ceg_url}/v1/execute", json=payload)
+    # ruleid: l9.routing.requests-direct-node-dispatch
+    requests.post(settings.gate_url, json=payload)
+    # ruleid: l9.routing.requests-direct-node-dispatch
+    requests.put(os.environ["GATE_URL"] + "/v1/packets", json=payload)
+    # ruleid: l9.routing.httpx-direct-node-dispatch
+    httpx.patch(os.getenv("PEER_NODE_URL"), json=payload)
+    node = settings.peer_node_url
+    target = f"{node}/v1/match"
+    # ruleid: l9.routing.requests-direct-node-dispatch
+    requests.post(url=target, json=payload)
+    # ruleid: l9.routing.requests-direct-node-dispatch, l9.routing.hardcoded-peer-node-url
+    requests.request("POST", "http://ceg:8000/v1/match", json=payload)
+    # The .internal alternative of AST-ROUTING-003 now matches.
+    # ruleid: l9.routing.httpx-direct-node-dispatch, l9.routing.hardcoded-peer-node-url
+    httpx.post("https://ceg.internal/v1/match", json=payload)
+    # ruleid: l9.routing.httpx-direct-node-dispatch, l9.routing.gateclient-bypass-execute
+    httpx.request("POST", f"{base}{EXECUTE_PATH}", json=payload)
+
+
+async def node_dispatch_through_clients(settings, payload):
+    async with httpx.AsyncClient() as http:
+        # ruleid: l9.routing.httpx-direct-node-dispatch
+        await http.post(f"{settings.gate_url}/v1/packets", json=payload)
+        # ok: l9.routing.httpx-direct-node-dispatch
+        await http.post("https://hooks.example.com/notify", json=payload)
+    sync_client = httpx.Client()
+    # ruleid: l9.routing.httpx-direct-node-dispatch
+    sync_client.request("POST", settings.eie_url, json=payload)
+    with requests.Session() as s:
+        # ruleid: l9.routing.requests-direct-node-dispatch
+        s.post(settings.node_endpoint, json=payload)

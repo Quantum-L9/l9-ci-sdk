@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 347
+Files: 351
 
 ## Contents
 
@@ -94,6 +94,7 @@ Files: 347
 - `docs/adr/0016-organization-managed-l9-ci.md`
 - `docs/adr/0017-sdk-cedes-org-tool-version-selection.md`
 - `docs/adr/0018-rule-precision-by-code-position-and-dispatch.md`
+- `docs/adr/0019-rule-precision-saas-and-usage-counts.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -295,9 +296,12 @@ Files: 347
 - `tests/fixtures/semgrep/report-errors.json`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
+- `tests/fixtures/semgrep/rules/python/l9-baseline-security.py`
 - `tests/fixtures/semgrep/rules/python/l9-file-permissions.py`
+- `tests/fixtures/semgrep/rules/python/l9-handler-signature.py`
 - `tests/fixtures/semgrep/rules/python/l9-logging.py`
 - `tests/fixtures/semgrep/rules/python/l9-routing.py`
+- `tests/fixtures/semgrep/rules/python/l9-transport.py`
 - `tests/fixtures/semgrep/runtime/identity-map.yaml`
 - `tests/fixtures/semgrep/runtime/policy.yaml`
 - `tests/fixtures/semgrep/runtime/provenance.yaml`

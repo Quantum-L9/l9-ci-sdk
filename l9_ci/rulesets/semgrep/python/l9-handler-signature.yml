@@ -35,16 +35,71 @@ rules:
       mode: shadow
       contract: handler_signature
       autofix_safe: false
-    pattern-either:
-      - pattern: |
-          async def $F(payload: $T, ...) -> $RET:
-            ...
-      - pattern: |
-          async def $F(input: $T, ...) -> $RET:
-            ...
-      - pattern: |
-          async def $F(data: $T, ...) -> $RET:
-            ...
+    # Was any `async def` whose first parameter is payload/input/data, so it
+    # reported ordinary helpers: Enrichment.Inference.Engine (12d8b351) was
+    # blocked by a Perplexity HTTP client, query_perplexity(payload, api_key),
+    # and an inner concurrency helper, _call_variation(payload). Neither is a
+    # handler. The packet-slot shape is unchanged; the function must now also
+    # BE a handler, by one of:
+    #   * its name: handle, handler, handle_<x>, <x>_handler;
+    #   * a decorator named like a handler registration (@register_handler(...),
+    #     @router.handler(...));
+    #   * being passed to a register/handler call in the same module
+    #     (register_handler("enrich", enrich)).
+    # The plain `async def` pattern never matched a DECORATED function, so a
+    # decorated handler with a raw payload slot was invisible before; the
+    # decorated shapes are now matched explicitly. A handler registered only
+    # from another module, under a non-handler name, is out of view.
+    patterns:
+      - pattern-either:
+          # A handler by name, decorated or not.
+          - patterns:
+              - pattern-either:
+                  - pattern: |
+                      async def $F($P: $T, ...) -> $RET:
+                        ...
+                  - pattern: |
+                      @$DEC(...)
+                      async def $F($P: $T, ...) -> $RET:
+                        ...
+                  - pattern: |
+                      @$DEC
+                      async def $F($P: $T, ...) -> $RET:
+                        ...
+              - metavariable-regex:
+                  metavariable: $F
+                  regex: (?i)^_*(?:handle|handler)(?:_[a-z0-9_]*)?$|^_*[a-z0-9_]*_handler$
+          # A handler by registration decorator.
+          - patterns:
+              - pattern-either:
+                  - pattern: |
+                      @$DEC(...)
+                      async def $F($P: $T, ...) -> $RET:
+                        ...
+                  - pattern: |
+                      @$DEC
+                      async def $F($P: $T, ...) -> $RET:
+                        ...
+              - metavariable-regex:
+                  metavariable: $DEC
+                  regex: (?i)^(?:[a-z0-9_]+\.)*[a-z0-9_]*handler[a-z0-9_]*$
+          # A handler by registration in the same module.
+          - patterns:
+              - pattern-inside: |
+                  async def $F(...) -> $RET:
+                    ...
+                  ...
+                  $REG(..., $F, ...)
+              - pattern: |
+                  async def $F($P: $T, ...) -> $RET:
+                    ...
+              - metavariable-regex:
+                  metavariable: $REG
+                  regex: (?i)^(?:[a-z0-9_]+\.)*[a-z0-9_]*(?:register|handler)[a-z0-9_]*$
+      # The packet slot (first parameter) holds a raw payload/input dictionary.
+      - metavariable-regex:
+          metavariable: $P
+          regex: ^(payload|input|data)$
 
   - id: l9.handler.non-async-handler
     languages: [python]
