@@ -14,6 +14,7 @@
 import httpx
 import requests
 from l9_core.routes import EXECUTE_URL
+
 # ruleid: l9.transport.packet-envelope-import
 from l9_legacy.packets import PacketEnvelope
 
@@ -30,9 +31,13 @@ def boundary_bodies(settings, base, packet, task):
     # A TransportPacket boundary object is the allowed body.
     # ok: l9.transport.raw-execute-dict-contract
     httpx.post(f"{settings.ceg_url}/v1/execute", json=packet)
-    # An actual raw dict execute contract MUST be reported.
-    # ruleid: l9.transport.raw-execute-dict-contract
-    httpx.post(f"{settings.ceg_url}/v1/execute", json={"action": "match", "payload": task})
+    # An actual raw dict execute contract MUST be reported. The taint finding
+    # sits on the target expression, so the annotation is inside the call.
+    httpx.post(
+        # ruleid: l9.transport.raw-execute-dict-contract
+        f"{settings.ceg_url}/v1/execute",
+        json={"action": "match", "payload": task},
+    )
     # ruleid: l9.transport.raw-execute-dict-contract
     requests.post(base + EXECUTE_URL, json=task)
     # ruleid: l9.transport.raw-execute-dict-contract

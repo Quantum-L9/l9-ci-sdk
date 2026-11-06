@@ -22,9 +22,13 @@ TABLE_FROM_USER = input()
 
 def eie_12d8b351_migration_constants():
     # ok: l9.baseline.python.sql-string-format
-    op.execute(f"ALTER TABLE enrichment_results DROP CONSTRAINT IF EXISTS {_OLD_UNIQUE}")
+    op.execute(
+        f"ALTER TABLE enrichment_results DROP CONSTRAINT IF EXISTS {_OLD_UNIQUE}"
+    )
     # ok: l9.baseline.python.sql-string-format
-    op.execute(f"CREATE INDEX IF NOT EXISTS {_KEY_INDEX} ON enrichment_results (idempotency_key)")
+    op.execute(
+        f"CREATE INDEX IF NOT EXISTS {_KEY_INDEX} ON enrichment_results (idempotency_key)"
+    )
     # ok: l9.baseline.python.sql-string-format
     op.execute(
         f"ALTER TABLE enrichment_results ADD CONSTRAINT {_OLD_UNIQUE} UNIQUE (idempotency_key)"
@@ -65,7 +69,7 @@ def must_still_catch(cursor, user, request, query):
     # ruleid: l9.baseline.python.sql-string-format
     cursor.execute(f"DELETE FROM t WHERE id = {request.args['id']}", ())
     # ruleid: l9.baseline.python.sql-string-format
-    cursor.execute(f"SELECT * FROM t WHERE a = {user} " "AND b = 1")
+    cursor.execute(f"SELECT * FROM t WHERE a = {user} " "AND b = 1")  # fmt: skip
     # ruleid: l9.baseline.python.sql-string-format
     op.execute(f"DROP INDEX {_KEY_INDEX + user}")
     # The % and .format() forms are unchanged.
