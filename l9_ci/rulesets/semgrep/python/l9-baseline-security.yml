@@ -75,10 +75,38 @@ rules:
       mode: shadow
       category: security
       autofix_safe: false
+    # The f-string form was `$CURSOR.execute(f"...")`, which reported every
+    # f-string, including one whose only interpolations are module constants
+    # bound to string literals: the five findings that blocked
+    # Enrichment.Inference.Engine at 12d8b351 were all
+    # op.execute(f"ALTER TABLE ... DROP CONSTRAINT IF EXISTS {_OLD_UNIQUE}")
+    # in an Alembic migration, with _OLD_UNIQUE = "..." at module level.
+    #
+    # It now reports an f-string unless EVERY expression inside it is proven a
+    # string constant by Semgrep's own constant propagation. The proof is the
+    # value, never the name: an UPPER_CASE name bound to input(), a request
+    # field or anything else not provably literal is still reported, and so is
+    # any call (len(x)), attribute (user.name), conversion ({x!r}), format
+    # spec ({x:>10}) or self-documenting ({x=}) interpolation of a non-constant.
+    # Where the proof cannot be made, the finding stands. An f-string with no
+    # interpolation is a static string and is not dynamic SQL. The `%` and
+    # `.format()` forms are unchanged.
     pattern-either:
       - pattern: $CURSOR.execute($QUERY % (...))
       - pattern: $CURSOR.execute($QUERY.format(...))
-      - pattern: $CURSOR.execute(f"...")
+      - patterns:
+          - pattern: $CURSOR.execute($QUERY, ...)
+          - metavariable-pattern:
+              metavariable: $QUERY
+              patterns:
+                - pattern-inside: f"..."
+                # Any expression inside the f-string that is neither a
+                # constant string nor an f-string node (Semgrep models a
+                # conversion or format spec as a nested f-string) is a
+                # dynamic interpolation.
+                - pattern: $PART
+                - pattern-not: '"..."'
+                - pattern-not: f"..."
 
   - id: l9.baseline.python.hardcoded-credential
     languages: [python]
