@@ -116,3 +116,91 @@ def not_a_logger_call(token):
     logging.getLogger("token_service")
     # ok: l9.logging.forbidden-secret-field
     print("x %s", token)
+
+
+def eie_12d8b351_token_usage_counts(
+    synthesis, resp, total_tokens, elapsed, tokens_used, usage, response, cost_tracker
+):
+    # LLM usage figures, not credentials: the sixteen AST-LOGGING-001/002
+    # findings that blocked Quantum-L9/Enrichment.Inference.Engine at 12d8b351
+    # (enrichment_orchestrator.py, convergence/cost_tracker.py, openai_client.py,
+    # anthropic_client.py, result_store.py, simulation_bridge.py,
+    # convergence_controller.py). They must stay quiet.
+    # ok: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info(
+        "pipeline_completed",
+        fields_enriched=len(synthesis["fields"]),
+        confidence=resp.confidence,
+        tokens=total_tokens,
+        elapsed_ms=elapsed,
+    )
+    # ok: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.debug("cost_tracker.record", tokens=tokens_used)
+    # ok: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info(
+        "openai_call_success",
+        prompt_tokens=usage.get("prompt_tokens"),
+        completion_tokens=usage.get("completion_tokens"),
+    )
+    # ok: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info(
+        "anthropic_call_success",
+        input_tokens=usage.get("input_tokens"),
+        output_tokens=usage.get("output_tokens"),
+    )
+    # ok: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info("convergence_run_completed", total_tokens=total_tokens)
+    # ok: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info("sonar_entity_enriched", tokens_used=response.tokens_used)
+    # ok: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info("budget_exhausted", total_tokens=cost_tracker.total_tokens)
+    # ok: l9.logging.forbidden-secret-field
+    logger.info("usage %s/%s", usage["total_tokens"], cost_tracker.max_tokens)
+    # ok: l9.logging.forbidden-secret-keyword
+    logger.info("x", tokens=12)
+    # ok: l9.logging.forbidden-secret-keyword
+    logger.info("x", tokens=len(response.choices))
+    # ok: l9.logging.f-string-secret
+    logger.info(f"used {response.tokens_used} of {cost_tracker.token_budget}")
+    # ok: l9.logging.forbidden-secret-field
+    logger.info("tokenizer=%s", response.tokenizer)
+
+
+def credential_tokens_still_caught(
+    access_token, refresh_tokens, auth, user, session, cache, generated_tokens
+):
+    # A token-count exemption must never cover a credential.
+    # ruleid: l9.logging.forbidden-secret-field
+    logger.info("x %s", access_token)
+    # ruleid: l9.logging.forbidden-secret-field
+    logger.info("x %s", refresh_tokens)
+    # ruleid: l9.logging.forbidden-secret-field
+    logger.info("x %s", auth.access_token)
+    # ruleid: l9.logging.forbidden-secret-field
+    logger.info("x %s", session["refresh_token"])
+    # ruleid: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info("x", access_token=access_token)
+    # A credential qualifier voids the count form: the keyword NAME is
+    # reported (the value is a count attribute, so AST-LOGGING-001 is quiet).
+    # ruleid: l9.logging.forbidden-secret-keyword
+    logger.info("x", auth_tokens_used=auth.tokens_used)
+    # ruleid: l9.logging.forbidden-secret-field
+    logger.info("x %s", auth.refresh_tokens_count)
+    # Ambiguous qualifiers are not exempt.
+    # ruleid: l9.logging.forbidden-secret-field
+    logger.info("x %s", cache.cached_tokens)
+    # ruleid: l9.logging.forbidden-secret-field
+    logger.info("x %s", generated_tokens)
+    # ruleid: l9.logging.forbidden-secret-field
+    logger.info("x %s", os.getenv("GITHUB_ACCESS_TOKEN"))
+    # A bare `tokens=` keyword whose value is not a proven count is reported.
+    # ruleid: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info("x", tokens=refresh_tokens)
+    # ruleid: l9.logging.forbidden-secret-keyword
+    logger.info("x", tokens=user.credentials)
+    # ruleid: l9.logging.forbidden-secret-field, l9.logging.forbidden-secret-keyword
+    logger.info("x", tokens=user.tokens)
+    # ruleid: l9.logging.f-string-secret
+    logger.info(f"rotated {refresh_tokens}")
+    # ruleid: l9.logging.f-string-secret
+    logger.info(f"issued {auth.access_token}")
