@@ -34,6 +34,28 @@ rules:
     # the positional-only form never matched. Secret references inside an
     # f-string are AST-LOGGING-003's, so they are excluded here to keep one
     # finding per leak.
+    #
+    # Token COUNTS are not token VALUES. `token` also names LLM usage, and
+    # Enrichment.Inference.Engine (12d8b351) was blocked by sixteen AST-LOGGING
+    # 001/002 findings that each logged a usage figure: tokens=total_tokens,
+    # prompt_tokens=usage.get("prompt_tokens"), tokens_used=response.tokens_used,
+    # total_tokens=cost_tracker.total_tokens. Each secret-name condition
+    # (here, in AST-LOGGING-002 and in AST-LOGGING-003) therefore carries one
+    # more regex that drops a name in a token-count form:
+    #   * <qualifier>_tokens, plural only, for total, prompt, completion,
+    #     input, output, reasoning, max, num and n;
+    #   * tokens_used / _count / _total / _budget / _limit / _usage /
+    #     _per_<x>, token_count, tokencount;
+    #   * tokenize / tokenizer / tokenized / tokenization.
+    # The exemption is void when the name ALSO carries a credential qualifier
+    # (access, refresh, auth, bearer, session, oauth, jwt, csrf, id_token,
+    # api_token, client, private, signing, reset, verif..., invite, magic,
+    # personal, or any other secret word), so access_token, refresh_tokens,
+    # auth_tokens_used and api_key_tokens_total are still reported. Qualifiers
+    # that name a credential as plausibly as a count (cached_tokens,
+    # generated_tokens, used_tokens, input_token singular) are deliberately
+    # NOT exempt. tests/fixtures/semgrep/rules/python/l9-logging.py pins both
+    # directions.
     patterns:
       - pattern-either:
           - pattern: logger.$LEVEL(..., $SECRET, ...)
@@ -63,26 +85,41 @@ rules:
                     - metavariable-regex:
                         metavariable: $NAME
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $NAME
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: $OBJ.$ATTR
                     - metavariable-regex:
                         metavariable: $ATTR
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $ATTR
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: $OBJ[$KEY]
                     - metavariable-regex:
                         metavariable: $KEY
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $KEY
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: '{..., $KEY: $VAL, ...}'
                     - metavariable-regex:
                         metavariable: $KEY
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $KEY
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: $FUNC(..., $KW=$VAL, ...)
                     - metavariable-regex:
                         metavariable: $KW
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $KW
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: $FUNC(..., $ARG, ...)
                     # Name-shaped literal only (no whitespace): an env-var or
@@ -90,6 +127,9 @@ rules:
                     - metavariable-regex:
                         metavariable: $ARG
                         regex: ^[rRbBuU]*["'][A-Za-z0-9_.:/-]*(?i:api_key|token|password|secret|raw_response|llm_response)[A-Za-z0-9_.:/-]*["']$
+                    - metavariable-regex:
+                        metavariable: $ARG
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
 
   - id: l9.logging.forbidden-secret-keyword
     languages: [python]
@@ -115,6 +155,18 @@ rules:
       - metavariable-regex:
           metavariable: $KWARG
           regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+      - metavariable-regex:
+          metavariable: $KWARG
+          regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
+      # A bare `tokens=` keyword names a count as often as a credential, so
+      # it is exempt only when its VALUE is itself a proven count: an integer
+      # literal, len()/sum(), or a dotted name in a token-count form
+      # (tokens=total_tokens, tokens=response.tokens_used). tokens=refresh_tokens
+      # or tokens=user.tokens is still reported.
+      - metavariable-comparison:
+          comparison: >-
+            not (re.match("(?i)^_*tokens$", str($KWARG))
+            and re.match("(?i)^[0-9]+$|^(len|sum)[(]|^(?=([a-z_][a-z0-9_]*[.])*[a-z_][a-z0-9_]*$)(?!.*(api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9])", str($VALUE)))
 
   - id: l9.logging.f-string-secret
     languages: [python]
@@ -160,26 +212,41 @@ rules:
                     - metavariable-regex:
                         metavariable: $NAME
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $NAME
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: $OBJ.$ATTR
                     - metavariable-regex:
                         metavariable: $ATTR
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $ATTR
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: $OBJ[$KEY]
                     - metavariable-regex:
                         metavariable: $KEY
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $KEY
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: '{..., $KEY: $VAL, ...}'
                     - metavariable-regex:
                         metavariable: $KEY
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $KEY
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: $FUNC(..., $KW=$VAL, ...)
                     - metavariable-regex:
                         metavariable: $KW
                         regex: '(?i).*(api_key|token|password|secret|raw_response|llm_response).*'
+                    - metavariable-regex:
+                        metavariable: $KW
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
                 - patterns:
                     - pattern: $FUNC(..., $ARG, ...)
                     # Name-shaped literal only (no whitespace): an env-var or
@@ -187,3 +254,6 @@ rules:
                     - metavariable-regex:
                         metavariable: $ARG
                         regex: ^[rRbBuU]*["'][A-Za-z0-9_.:/-]*(?i:api_key|token|password|secret|raw_response|llm_response)[A-Za-z0-9_.:/-]*["']$
+                    - metavariable-regex:
+                        metavariable: $ARG
+                        regex: '(?i)^(?!(?!.*(?:api_key|password|secret|raw_response|llm_response|access|refresh|auth|bearer|session|oauth|jwt|csrf|id_token|api_token|client|private|signing|reset|verif|invite|magic|personal)).*(?:^|[^a-z0-9])(?:(?:total|prompt|completion|input|output|reasoning|max|num|n)_tokens|tokens?_(?:used|count|counts|total|totals|budget|limit|limits|usage|per_[a-z0-9]+)|token_?count|tokeni[sz](?:e|er|ers|ed|es|ing|ation))(?:$|[^a-z0-9]))'
