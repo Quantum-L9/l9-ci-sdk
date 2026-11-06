@@ -1,0 +1,97 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-ci-sdk-global-ruleset
+# layer: [ci, semgrep, baseline, python]
+# tags: [L9_TEMPLATE, baseline-security, file-permissions, shadow-mode, global-ruleset]
+# owner: platform
+# status: active
+# --- /L9_META ---
+#
+# L9-owned replacement for the community registry rule
+# python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
+# (p/python). That rule decides "permissive" by NUMERIC ORDER,
+# `$BITS >= 0o650`, not by permission bits, so it blocks the owner-only mode
+# 0o700 (448 > 424) -- Enrichment.Inference.Engine 12d8b351,
+# app/services/domain_spec_workflow.py, os.fchmod(stage_fd, 0o700) -- while it
+# passes 0o600 only because 384 happens to be smaller.
+#
+# Operator decision (2026-11-06): the security criterion is GROUP OR OTHER
+# WRITE permission, not execute. 0o750 and 0o755 are allowed; 0o660, 0o666,
+# 0o777 and every equivalent symbolic write grant are reported.
+#
+# Scope: calls that SET a file's permission bits -- os.chmod / os.lchmod /
+# os.fchmod (positional or mode=, any trailing dir_fd / follow_symlinks) and
+# <path>.chmod / <path>.lchmod (pathlib). Creation modes (os.mkdir,
+# os.makedirs, os.open) are masked by the process umask and are not in scope.
+#
+# A mode is reported when any of these holds and the part in question is not
+# cleared with `~` or used only as an `&` mask:
+#   * it evaluates to a number with 0o020 or 0o002 set: a literal in any base
+#     (0o666, 438, 0o100666), or a name Semgrep constant-propagates to one;
+#   * it ORs in a write-granting stat symbol: S_IWGRP, S_IWOTH, S_IRWXG,
+#     S_IRWXO, as stat.<name> or imported bare;
+#   * it ORs in a literal carrying such a bit (stat.S_IRWXU | 0o002).
+# So st.st_mode & ~stat.S_IWOTH (removing write) and st.st_mode & 0o777
+# (masking) stay quiet. A mode that cannot be evaluated (a parameter) is not
+# reported, exactly as the registry rule does not.
+#
+# Core keeps the registry rule fail-closed until this rule is proven active and
+# blocking in the required organization check; only then may Core's finding
+# policy classify the registry rule advisory.
+rules:
+  - id: l9.baseline.python.group-or-other-writable-file-mode
+    languages: [python]
+    severity: WARNING
+    message: >-
+      File mode `$MODE` grants group or other WRITE permission. Use an
+      owner-writable mode (for example 0o600, 0o644, 0o700, 0o750, 0o755).
+    metadata:
+      l9:
+        canonical_rule_id: L9-PYTHON-WRITABLE-FILE-MODE
+      mode: shadow
+      category: security
+      cwe:
+        - "CWE-732: Incorrect Permission Assignment for Critical Resource"
+      autofix_safe: false
+    patterns:
+      - pattern-either:
+          - pattern: os.$CHMOD($TARGET, $MODE, ...)
+          - pattern: os.$CHMOD($TARGET, ..., mode=$MODE, ...)
+          - pattern: $PATH.$CHMOD($MODE)
+          - pattern: $PATH.$CHMOD(mode=$MODE, ...)
+      - metavariable-regex:
+          metavariable: $CHMOD
+          regex: ^(chmod|lchmod|fchmod)$
+      - metavariable-pattern:
+          metavariable: $MODE
+          pattern-either:
+            # The mode, or a constant part of it, evaluates to a number with a
+            # group/other write bit.
+            - patterns:
+                - pattern: $WHOLE
+                - metavariable-comparison:
+                    metavariable: $WHOLE
+                    comparison: ($WHOLE & 0o022) != 0
+                - pattern-not-inside: ~$X
+                - pattern-not-inside: $X & $Y
+            # A write-granting stat symbol or literal the expression ADDS.
+            - patterns:
+                - pattern-either:
+                    - pattern: stat.S_IWGRP
+                    - pattern: stat.S_IWOTH
+                    - pattern: stat.S_IRWXG
+                    - pattern: stat.S_IRWXO
+                    - pattern: S_IWGRP
+                    - pattern: S_IWOTH
+                    - pattern: S_IRWXG
+                    - pattern: S_IRWXO
+                    - patterns:
+                        - pattern: $LIT
+                        - metavariable-regex:
+                            metavariable: $LIT
+                            regex: ^(0[oO]?[0-7]+|[0-9]+|0[xX][0-9a-fA-F]+)$
+                        - metavariable-comparison:
+                            metavariable: $LIT
+                            comparison: ($LIT & 0o022) != 0
+                - pattern-not-inside: ~$X
+                - pattern-not-inside: $X & $Y
