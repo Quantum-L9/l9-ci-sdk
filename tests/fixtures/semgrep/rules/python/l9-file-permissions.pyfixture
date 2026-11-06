@@ -12,17 +12,18 @@
 # registry rule blocked on Quantum-L9/Enrichment.Inference.Engine at 12d8b351.
 # Scan INPUT only, never imported, and listed in .semgrepignore.
 #
-# Bandit exception (narrow, by design): the nosec-B103 line markers sit only on
-# the world-writable ruleid lines bandit 1.9.4 reports at severity HIGH in the
-# Cursor-Governance publication gate (run_pr_security.sh), which scans every
-# changed .py file and reads no repository exclusion. Those lines ARE the
-# insecure modes this fixture exists to contain; rewriting them to dodge bandit
-# would equally dodge the rule under test. The marker names B103 only, so any
-# other bandit finding on these lines still reports. Removal trigger: the gate
-# learns to skip declared scan-input paths (this directory is already in
-# .semgrepignore), or the fixture moves out of bandit's scope.
-# ruff: noqa
-# type: ignore
+# Why .pyfixture, not .py: the ruleid lines ARE insecure file modes, on purpose.
+# As a .py file, the repository's CodeQL default setup (which has no path
+# configuration) and bandit both analysed it as product code and reported
+# every one of them (14 py/overly-permissive-file alerts on l9-ci-sdk#109).
+# Rewriting the lines to dodge those tools would equally dodge the rule under
+# test. CodeQL and bandit select Python by the .py extension; semgrep --test
+# pairs this file with l9-file-permissions.yml by stem and parses it with the
+# rule's own `languages: [python]`, so the rule is still exercised on every
+# line. Only this fixture changes extension: product code, and the other
+# fixtures, stay .py and in every scanner's scope.
+# tests/rulesets/test_semgrep_rule_fixtures.py fails if the rule stops being
+# checked here.
 import os
 import pathlib
 import stat
@@ -88,32 +89,32 @@ def numeric_write_grants_must_block(p, fd, path: pathlib.Path):
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
     os.chmod(p, 0o660)
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
-    os.chmod(p, 0o666)  # nosec B103
+    os.chmod(p, 0o666)
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
-    os.chmod(p, 0o777)  # nosec B103
+    os.chmod(p, 0o777)
     # Group write only.
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
     os.chmod(p, 0o620)
     # Other write only.
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
-    os.chmod(p, 0o602)  # nosec B103
+    os.chmod(p, 0o602)
     # A full st_mode value with the file-type bits.
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
-    os.chmod(p, 0o100666)  # nosec B103
+    os.chmod(p, 0o100666)
     # 0o666 in decimal.
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
-    os.chmod(p, 438)  # nosec B103
+    os.chmod(p, 438)
     # A module constant.
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
     os.chmod(p, MODE_WORLD_WRITABLE)
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
     os.chmod(p, mode=0o777)
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
-    os.chmod(p, 0o777, follow_symlinks=False)  # nosec B103
+    os.chmod(p, 0o777, follow_symlinks=False)
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
-    os.lchmod(p, 0o666)  # nosec B103
+    os.lchmod(p, 0o666)
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
-    os.fchmod(fd, 0o666)  # nosec B103
+    os.fchmod(fd, 0o666)
     # ruleid: l9.baseline.python.group-or-other-writable-file-mode
     path.chmod(0o777)
 

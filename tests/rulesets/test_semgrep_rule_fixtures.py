@@ -91,4 +91,13 @@ def test_packaged_python_rules_pass_their_fixtures() -> None:
         "l9.logging.forbidden-secret-keyword",
         "l9.logging.f-string-secret",
         "l9.routing.gateclient-bypass-execute",
+        "l9.baseline.python.group-or-other-writable-file-mode",
     } <= checked, f"fixtures did not exercise every pinned rule: {sorted(checked)}"
+
+
+def test_insecure_mode_fixture_is_outside_python_extension_scanners() -> None:
+    # Its ruleid lines are deliberate world-writable modes. As .py, CodeQL
+    # default setup and bandit analyse them as product code; .pyfixture keeps
+    # them semgrep --test input only. Only this one fixture is renamed.
+    assert (FIXTURE_DIR / "l9-file-permissions.pyfixture").is_file()
+    assert not (FIXTURE_DIR / "l9-file-permissions.py").exists()

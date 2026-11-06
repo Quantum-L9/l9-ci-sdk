@@ -297,7 +297,7 @@ Files: 351
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
 - `tests/fixtures/semgrep/rules/python/l9-baseline-security.py`
-- `tests/fixtures/semgrep/rules/python/l9-file-permissions.py`
+- `tests/fixtures/semgrep/rules/python/l9-file-permissions.pyfixture`
 - `tests/fixtures/semgrep/rules/python/l9-handler-signature.py`
 - `tests/fixtures/semgrep/rules/python/l9-logging.py`
 - `tests/fixtures/semgrep/rules/python/l9-routing.py`
