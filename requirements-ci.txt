@@ -21,18 +21,18 @@
 # dependencies] ci group.
 
 # Linter / formatter.
-ruff==0.16.5
+ruff==0.17.3
 
 # Static type checker + the stub packages that give mypy real signatures for
 # the SDK's untyped third-party imports. These stubs are the "mypy" half of the
 # gate: PyYAML and jsonschema ship no inline types, and referencing is typed via
 # its own py.typed (installed through requirements.txt above).
-mypy==2.3.1
+mypy==2.4.1
 types-PyYAML==6.0.12.20260724
 types-jsonschema==4.26.0.20260518
 
 # Test runner.
-pytest==9.1.1
+pytest==9.2.0
 
 # jsonschema date-time format validation: jsonschema treats "format" as an
 # annotation unless a FormatChecker is supplied AND the checker for the format
