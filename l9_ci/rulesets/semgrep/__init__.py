@@ -19,6 +19,25 @@ from typing import Any
 
 import yaml
 
+from .composition import (
+    RULEPACK_COMPOSITION_PROTOCOL,
+    RULEPACK_COMPOSITION_SCHEMA_VERSION,
+    RULEPACKS_SCHEMA,
+    ComposedFile,
+    ComposedPack,
+    RulepackComposition,
+    RulepackCompositionError,
+    RulepackDefinition,
+    compose_rulepack,
+    rulepack_definitions,
+    rulepacks_path,
+)
+from .harvest import (
+    HARVEST_DISPOSITIONS,
+    HARVEST_LEDGER_SCHEMA,
+    validate_harvest_ledger,
+)
+
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("python", "typescript")
 
 PROFILES_SCHEMA: str = "l9.semgrep-profiles/v1"
@@ -185,13 +204,27 @@ def resolve_profile(name: str) -> SemgrepProfile:
 
 
 __all__ = [
+    "HARVEST_DISPOSITIONS",
+    "HARVEST_LEDGER_SCHEMA",
     "PROFILES_SCHEMA",
+    "RULEPACKS_SCHEMA",
+    "RULEPACK_COMPOSITION_PROTOCOL",
+    "RULEPACK_COMPOSITION_SCHEMA_VERSION",
     "SUPPORTED_LANGUAGES",
+    "ComposedFile",
+    "ComposedPack",
+    "RulepackComposition",
+    "RulepackCompositionError",
+    "RulepackDefinition",
     "SemgrepProfile",
+    "compose_rulepack",
     "default_identity_map_path",
     "default_profile_name",
     "profile_names",
     "profiles_path",
     "resolve_profile",
+    "rulepack_definitions",
+    "rulepacks_path",
     "ruleset_dir",
+    "validate_harvest_ledger",
 ]

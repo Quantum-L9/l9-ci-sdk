@@ -1,0 +1,1842 @@
+---
+# Donor Semgrep rule harvest ledger (SDK ADR 0020, L9-CI-SDK-004).
+#
+# One row per donor rule: 8 (Enrichment.Inference.Engine) + 8
+# (Cognitive.Engine.Graphs) + 4 (Cursor-Governance) + 39 (IB-Odoo_19) = 59.
+#
+# Every "evidence" sentence records what the real semgrep executable
+# (metadata.semgrep_version) reported on metadata.observed_at for the donor
+# rule file at the exact head and blob in the row. Line numbers refer to the
+# fixture named beside them. Rules that stay at their owner are not in this
+# repository, so the SDK's own CI cannot re-run their evidence;
+# metadata.reproduce re-runs all of it from donor checkouts.
+#
+# Dispositions use the campaign's seven values. A row is evidence for a
+# decision the owner makes. It retires no rule anywhere.
+schema: l9.semgrep-harvest-ledger/v1
+metadata:
+  campaign: L9-CI-UNIFIED-LEVERAGE-2026-11-20-v1.7.1
+  lane: L1
+  observed_at: '2026-11-20'
+  semgrep_version: 1.171.0
+  reproduce: python scripts/harvest_donor_evidence.py --eie PATH --ceg PATH --cursor PATH --odoo
+    PATH
+  status: evidence; a disposition here admits nothing and retires nothing
+rows:
+- rule_id: no-datetime-utcnow
+  donor:
+    repository: Quantum-L9/Enrichment.Inference.Engine
+    ref: main
+    head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+    path: .semgrep/semgrep-rules.yaml
+    blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+  behavior: Flags every call to datetime.utcnow(). Pattern is identical in both donors.
+  scope: python; **/*.py; excludes tests/, scripts/, venv/, .venv/ and 'Current Work/' at the
+    repository root
+  disposition: promote_language
+  sdk_rule: l9.python.portable.datetime-utcnow
+  rationale: Portable Python correctness rule with one unambiguous pattern, identical in two independent
+    consumers. Carried as a shadow-mode derivative in the candidate python-portable pack; the
+    donors' path excludes are product settings and were not carried.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: authored
+      evidence: Donor rule flags line [157]; the SDK derivative flags line [157] (datetime.utcnow()).
+    known_good:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: authored
+      evidence: Neither rule flags datetime.now(UTC) or datetime.fromtimestamp(stamp, tz=UTC).
+        Enforced by semgrep --test on the ok annotations.
+    non_target:
+      kind: not_composed
+      evidence: l9.python.portable.datetime-utcnow is selected by the python language fact only.
+        tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: httpx-async-context-required
+  donor:
+    repository: Quantum-L9/Enrichment.Inference.Engine
+    ref: main
+    head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+    path: .semgrep/semgrep-rules.yaml
+    blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+  behavior: Flags an httpx.AsyncClient(...) assigned to a name outside 'async with httpx.AsyncClient(...)
+    as <name>'. Pattern is identical in both donors.
+  scope: python; **/*.py; excludes tests/, venv/, .venv/ and 'Current Work/' at the repository
+    root
+  disposition: promote_language
+  sdk_rule: l9.python.portable.httpx-async-client-without-context
+  rationale: Portable Python resource-handling rule, identical in two independent consumers. Carried
+    as a shadow-mode derivative in the candidate python-portable pack.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: authored
+      evidence: Donor rule flags line [175]; the SDK derivative flags line [175] (client = httpx.AsyncClient()).
+    known_good:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: authored
+      evidence: Neither rule flags the 'async with' form or a synchronous httpx.Client(). Enforced
+        by semgrep --test on the ok annotations.
+    non_target:
+      kind: not_composed
+      evidence: l9.python.portable.httpx-async-client-without-context is selected by the python
+        language fact only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only
+        composition carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: singleton-requires-lock
+  donor:
+    repository: Quantum-L9/Enrichment.Inference.Engine
+    ref: main
+    head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+    path: .semgrep/semgrep-rules.yaml
+    blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+  behavior: 'Flags every ''if X is None: X = factory()'' outside a ''with lock'' block, for any
+    simple name X. It does not match attribute targets.'
+  scope: python; **/*.py; excludes tests/, venv/, .venv/, 'Current Work/' at the repository root
+  disposition: defer_unknown
+  rationale: 'Same ID as the Cognitive.Engine.Graphs rule, different behaviour. On the shared
+    fixture it flags lines [106, 127, 140, 147] where the Cognitive.Engine.Graphs rule flags [106,
+    127, 134]: it flags known-good lines [140, 147] (a self attribute default and a local default
+    argument are not shared state) and misses known-bad line(s) [134] (a class attribute singleton).
+    Equivalence with the central derivative is disproven, so this rule is not consolidated and
+    stays at its owner.'
+  next_proof: Enrichment.Inference.Engine's owner decides whether its code relies on the broader
+    match. If it does not, adopting the central derivative is a parity change proven in that repository's
+    canary.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: Cognitive.Engine.Graphs donor fixture, blob 36fc93e1fa6ab12c289cab93ce4e2e10cb09806c
+      evidence: Flags the unlocked module global and cls attribute (lines [106, 127]).
+    known_good:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: Cognitive.Engine.Graphs donor fixture, same blob
+      evidence: 'Does not flag the locked global. It does flag lines [140, 147], which that fixture
+        marks ok: a recorded false positive, not a nontrigger.'
+    non_target: &id001
+      kind: not_composed
+      evidence: This rule is in no SDK pack, so the SDK delivers it to no repository. tests/rulesets/test_harvest_ledger.py
+        asserts that no composition carries the donor rule ID.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: float-requires-try-except
+  donor:
+    repository: Quantum-L9/Enrichment.Inference.Engine
+    ref: main
+    head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+    path: .semgrep/semgrep-rules.yaml
+    blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+  behavior: 'Pattern rule: flags every float(x) outside a try block, whatever x is.'
+  scope: python; **/*.py; excludes tests/, venv/, .venv/, 'Current Work/' at the repository root
+  disposition: defer_unknown
+  rationale: 'Same ID as the Cognitive.Engine.Graphs rule, different behaviour. On the shared
+    fixture it flags lines [30, 35, 40, 46, 52, 68, 77, 79, 81, 83, 90] where the taint rule flags
+    [30, 35, 40, 46, 52]: the extra lines [68, 77, 79, 81, 83, 90] are conversions of numpy and
+    math results, a literal and an int, which cannot raise ValueError. Equivalence with the central
+    derivative is disproven, so this rule is not consolidated and stays at its owner.'
+  next_proof: Enrichment.Inference.Engine's owner decides whether to adopt the taint form. Parity
+    is then proven in that repository's canary; until then the working check is preserved.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: Cognitive.Engine.Graphs donor fixture, blob 36fc93e1fa6ab12c289cab93ce4e2e10cb09806c
+      evidence: Flags all five untrusted-input conversions (lines [30, 35, 40, 46, 52]).
+    known_good:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: Cognitive.Engine.Graphs donor fixture, same blob
+      evidence: 'Does not flag a conversion inside try/except. It does flag lines [68, 77, 79,
+        81, 83, 90], which that fixture marks ok: recorded false positives, not nontriggers.'
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-eval
+  donor:
+    repository: Quantum-L9/Enrichment.Inference.Engine
+    ref: main
+    head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+    path: .semgrep/semgrep-rules.yaml
+    blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+  behavior: Flags eval(...) and not a method call such as frame.eval(...). Pattern is identical
+    in both donors.
+  scope: python; **/*.py; excludes tests/, scripts/, venv/, .venv/ and 'Current Work/' at the
+    repository root
+  disposition: already_satisfied
+  sdk_rule: l9.baseline.python.exec-eval-use
+  rationale: The SDK baseline rule flags the same known-bad line and leaves the same known-good
+    line alone. The baseline rule also covers exec(). Equivalence is shown on the cited witnesses;
+    retirement at the donor is a separate, canary-gated step.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Donor rule flags line [19]; l9.baseline.python.exec-eval-use flags line [19] (eval(expression)).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Neither rule flags line 24 (frame.eval('a + b')).
+    non_target:
+      kind: not_composed
+      evidence: l9.baseline.python.exec-eval-use is selected by the python language fact only.
+        tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-pickle-loads
+  donor:
+    repository: Quantum-L9/Enrichment.Inference.Engine
+    ref: main
+    head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+    path: .semgrep/semgrep-rules.yaml
+    blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+  behavior: Flags pickle.loads(...). Pattern is identical in both donors.
+  scope: python; **/*.py; excludes tests/, venv/, .venv/ and 'Current Work/' at the repository
+    root
+  disposition: already_satisfied
+  sdk_rule: l9.baseline.python.unsafe-deserialization
+  rationale: The SDK baseline rule flags the same known-bad line and leaves the same known-good
+    line alone. The baseline rule is broader (pickle.load, yaml.load). Equivalence is shown on
+    the cited witnesses; retirement at the donor is a separate, canary-gated step.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Donor rule flags line [29]; l9.baseline.python.unsafe-deserialization flags line
+        [29] (pickle.loads(blob)).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Neither rule flags line 34 (pickle.dumps(value)).
+    non_target:
+      kind: not_composed
+      evidence: l9.baseline.python.unsafe-deserialization is selected by the python language fact
+        only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-sql-fstring
+  donor:
+    repository: Quantum-L9/Enrichment.Inference.Engine
+    ref: main
+    head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+    path: .semgrep/semgrep-rules.yaml
+    blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+  behavior: Intended to flag an f-string that starts with SELECT, INSERT, UPDATE or DELETE and
+    interpolates a variable. Pattern is identical in both donors.
+  scope: python; **/*.py; excludes tests/, venv/, .venv/ and 'Current Work/' at the repository
+    root
+  disposition: defer_unknown
+  rationale: 'The intended behaviour is not reproduced: with Semgrep 1.171.0 the donor rule flags
+    neither known-bad line (39, an interpolated SELECT f-string; 44, an interpolated DELETE f-string
+    passed to execute). It reported no finding. The SDK baseline rule l9.baseline.python.sql-string-format
+    flags line 44 and not line 39, so neither rule is shown equivalent to the intent. A rule whose
+    known-bad trigger cannot be reproduced is not consolidated.'
+  next_proof: The owner supplies one line this rule flags under the Semgrep version its CI runs,
+    or repairs the pattern. Then compare with l9.baseline.python.sql-string-format on that line
+    and on line 39.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: NOT REPRODUCED. Lines 39 and 44 are marked bad; the donor rule flags neither.
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Does not flag line 49 (a constant parameterized query). This is not evidence of
+        precision while the rule flags nothing.
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-structlog-getchild
+  donor:
+    repository: Quantum-L9/Enrichment.Inference.Engine
+    ref: main
+    head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+    path: .semgrep/semgrep-rules.yaml
+    blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+  behavior: Flags every <expr>.getChild(...) call. Pattern is identical in both donors.
+  scope: python; **/*.py; excludes tests/, venv/, .venv/ and 'Current Work/' at the repository
+    root
+  disposition: defer_unknown
+  rationale: 'The rule cannot tell a structlog logger from a standard-library logger. It flags
+    lines [55, 61]: line 55 is the structlog call it exists for, and line 61 is logging.getLogger(''svc'').getChild(''worker''),
+    which is correct Python. Fleet-wide it would report valid code, so its precision outside these
+    two repositories is unproven.'
+  next_proof: A form that binds the receiver to structlog (for example a taint source on structlog.get_logger),
+    with a fixture where the standard-library call stays quiet.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Flags line 55 (structlog.get_logger('svc').getChild('worker')).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: 'NOT SATISFIED. Line 61 is marked good and the rule flags it: a recorded false
+        positive.'
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-datetime-utcnow
+  donor:
+    repository: Quantum-L9/Cognitive.Engine.Graphs
+    ref: main
+    head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+    path: .semgrep/semgrep-rules.yaml
+    blob: b770b980b741761194b6998e209b13042f49ad87
+  behavior: Flags every call to datetime.utcnow(). Pattern is identical in both donors.
+  scope: python; **/*.py; excludes **/tests/**, **/scripts/**, **/venv/**, **/.venv/**
+  disposition: promote_language
+  sdk_rule: l9.python.portable.datetime-utcnow
+  rationale: Portable Python correctness rule with one unambiguous pattern, identical in two independent
+    consumers. Carried as a shadow-mode derivative in the candidate python-portable pack; the
+    donors' path excludes are product settings and were not carried.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: authored
+      evidence: Donor rule flags line [157]; the SDK derivative flags line [157] (datetime.utcnow()).
+    known_good:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: authored
+      evidence: Neither rule flags datetime.now(UTC) or datetime.fromtimestamp(stamp, tz=UTC).
+        Enforced by semgrep --test on the ok annotations.
+    non_target:
+      kind: not_composed
+      evidence: l9.python.portable.datetime-utcnow is selected by the python language fact only.
+        tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: httpx-async-context-required
+  donor:
+    repository: Quantum-L9/Cognitive.Engine.Graphs
+    ref: main
+    head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+    path: .semgrep/semgrep-rules.yaml
+    blob: b770b980b741761194b6998e209b13042f49ad87
+  behavior: Flags an httpx.AsyncClient(...) assigned to a name outside 'async with httpx.AsyncClient(...)
+    as <name>'. Pattern is identical in both donors.
+  scope: python; **/*.py; excludes **/tests/**, **/venv/**, **/.venv/**
+  disposition: promote_language
+  sdk_rule: l9.python.portable.httpx-async-client-without-context
+  rationale: Portable Python resource-handling rule, identical in two independent consumers. Carried
+    as a shadow-mode derivative in the candidate python-portable pack.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: authored
+      evidence: Donor rule flags line [175]; the SDK derivative flags line [175] (client = httpx.AsyncClient()).
+    known_good:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: authored
+      evidence: Neither rule flags the 'async with' form or a synchronous httpx.Client(). Enforced
+        by semgrep --test on the ok annotations.
+    non_target:
+      kind: not_composed
+      evidence: l9.python.portable.httpx-async-client-without-context is selected by the python
+        language fact only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only
+        composition carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: singleton-requires-lock
+  donor:
+    repository: Quantum-L9/Cognitive.Engine.Graphs
+    ref: main
+    head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+    path: .semgrep/semgrep-rules.yaml
+    blob: b770b980b741761194b6998e209b13042f49ad87
+  behavior: 'Flags ''if X is None: X = factory()'' outside a ''with lock'' block only when X is
+    a module global rebound through ''global X'', or a class attribute on cls or on a capitalized
+    class name.'
+  scope: python; **/*.py; excludes **/tests/**, **/venv/**
+  disposition: promote_language
+  sdk_rule: l9.python.portable.singleton-init-without-lock
+  rationale: 'The precise form of this rule, with a donor fixture that pins both directions. Carried
+    unchanged as a shadow-mode derivative. Not equivalent to the Enrichment.Inference.Engine rule
+    of the same ID: see that row.'
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: donor fixture .semgrep/fixtures/semgrep-rules.py, blob 36fc93e1fa6ab12c289cab93ce4e2e10cb09806c,
+        rule IDs renamed
+      evidence: Donor rule flags lines [106, 127, 134]; the SDK derivative flags lines [106, 127,
+        134]. The two sets are equal.
+    known_good:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: donor fixture, same blob
+      evidence: Neither rule flags the locked global, the self.cache lazy default or the local
+        default argument. Enforced by semgrep --test on the three ok annotations.
+    non_target:
+      kind: not_composed
+      evidence: l9.python.portable.singleton-init-without-lock is selected by the python language
+        fact only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only
+        composition carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: float-requires-try-except
+  donor:
+    repository: Quantum-L9/Cognitive.Engine.Graphs
+    ref: main
+    head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+    path: .semgrep/semgrep-rules.yaml
+    blob: b770b980b741761194b6998e209b13042f49ad87
+  behavior: 'Taint rule: flags float(x) outside a try block only when x flows from os.environ,
+    os.getenv, sys.argv, input(), json.loads, yaml.safe_load or a parameter named payload/body/raw/request/params/query/form/data.
+    int(...) sanitizes.'
+  scope: python; **/*.py; excludes **/tests/**
+  disposition: promote_language
+  sdk_rule: l9.python.portable.float-of-untrusted-input-unguarded
+  rationale: 'The precise form of this rule, with a donor fixture that pins both directions. Carried
+    unchanged as a shadow-mode derivative. Not equivalent to the Enrichment.Inference.Engine rule
+    of the same ID: see that row.'
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: donor fixture .semgrep/fixtures/semgrep-rules.py, blob 36fc93e1fa6ab12c289cab93ce4e2e10cb09806c,
+        rule IDs renamed
+      evidence: Donor rule flags lines [30, 35, 40, 46, 52]; the SDK derivative flags lines [30,
+        35, 40, 46, 52]. The two sets are equal.
+    known_good:
+      fixture: tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py
+      source: donor fixture, same blob
+      evidence: Neither rule flags a guarded conversion, float(np.mean(...)), float('inf'), float(math.sqrt(a))
+        or float(int(...)). Enforced by semgrep --test on the seven ok annotations.
+    non_target:
+      kind: not_composed
+      evidence: l9.python.portable.float-of-untrusted-input-unguarded is selected by the python
+        language fact only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only
+        composition carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-eval
+  donor:
+    repository: Quantum-L9/Cognitive.Engine.Graphs
+    ref: main
+    head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+    path: .semgrep/semgrep-rules.yaml
+    blob: b770b980b741761194b6998e209b13042f49ad87
+  behavior: Flags eval(...) and not a method call such as frame.eval(...). Pattern is identical
+    in both donors.
+  scope: python; **/*.py; excludes **/tests/**, **/scripts/**, **/venv/**, **/.venv/**
+  disposition: already_satisfied
+  sdk_rule: l9.baseline.python.exec-eval-use
+  rationale: The SDK baseline rule flags the same known-bad line and leaves the same known-good
+    line alone. The baseline rule also covers exec(). Equivalence is shown on the cited witnesses;
+    retirement at the donor is a separate, canary-gated step.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Donor rule flags line [19]; l9.baseline.python.exec-eval-use flags line [19] (eval(expression)).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Neither rule flags line 24 (frame.eval('a + b')).
+    non_target:
+      kind: not_composed
+      evidence: l9.baseline.python.exec-eval-use is selected by the python language fact only.
+        tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-pickle-loads
+  donor:
+    repository: Quantum-L9/Cognitive.Engine.Graphs
+    ref: main
+    head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+    path: .semgrep/semgrep-rules.yaml
+    blob: b770b980b741761194b6998e209b13042f49ad87
+  behavior: Flags pickle.loads(...). Pattern is identical in both donors.
+  scope: python; **/*.py; excludes **/tests/**, **/venv/**, **/.venv/**
+  disposition: already_satisfied
+  sdk_rule: l9.baseline.python.unsafe-deserialization
+  rationale: The SDK baseline rule flags the same known-bad line and leaves the same known-good
+    line alone. The baseline rule is broader (pickle.load, yaml.load). Equivalence is shown on
+    the cited witnesses; retirement at the donor is a separate, canary-gated step.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Donor rule flags line [29]; l9.baseline.python.unsafe-deserialization flags line
+        [29] (pickle.loads(blob)).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Neither rule flags line 34 (pickle.dumps(value)).
+    non_target:
+      kind: not_composed
+      evidence: l9.baseline.python.unsafe-deserialization is selected by the python language fact
+        only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-sql-fstring
+  donor:
+    repository: Quantum-L9/Cognitive.Engine.Graphs
+    ref: main
+    head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+    path: .semgrep/semgrep-rules.yaml
+    blob: b770b980b741761194b6998e209b13042f49ad87
+  behavior: Intended to flag an f-string that starts with SELECT, INSERT, UPDATE or DELETE and
+    interpolates a variable. Pattern is identical in both donors.
+  scope: python; **/*.py; excludes **/tests/**, **/venv/**, **/.venv/**
+  disposition: defer_unknown
+  rationale: 'The intended behaviour is not reproduced: with Semgrep 1.171.0 the donor rule flags
+    neither known-bad line (39, an interpolated SELECT f-string; 44, an interpolated DELETE f-string
+    passed to execute). It reported no finding. The SDK baseline rule l9.baseline.python.sql-string-format
+    flags line 44 and not line 39, so neither rule is shown equivalent to the intent. A rule whose
+    known-bad trigger cannot be reproduced is not consolidated.'
+  next_proof: The owner supplies one line this rule flags under the Semgrep version its CI runs,
+    or repairs the pattern. Then compare with l9.baseline.python.sql-string-format on that line
+    and on line 39.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: NOT REPRODUCED. Lines 39 and 44 are marked bad; the donor rule flags neither.
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Does not flag line 49 (a constant parameterized query). This is not evidence of
+        precision while the rule flags nothing.
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: no-structlog-getchild
+  donor:
+    repository: Quantum-L9/Cognitive.Engine.Graphs
+    ref: main
+    head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+    path: .semgrep/semgrep-rules.yaml
+    blob: b770b980b741761194b6998e209b13042f49ad87
+  behavior: Flags every <expr>.getChild(...) call. Pattern is identical in both donors.
+  scope: python; **/*.py; excludes **/tests/**, **/venv/**, **/.venv/**
+  disposition: defer_unknown
+  rationale: 'The rule cannot tell a structlog logger from a standard-library logger. It flags
+    lines [55, 61]: line 55 is the structlog call it exists for, and line 61 is logging.getLogger(''svc'').getChild(''worker''),
+    which is correct Python. Fleet-wide it would report valid code, so its precision outside these
+    two repositories is unproven.'
+  next_proof: A form that binds the receiver to structlog (for example a taint source on structlog.get_logger),
+    with a fixture where the standard-library call stays quiet.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: Flags line 55 (structlog.get_logger('svc').getChild('worker')).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/python_overlap.py
+      source: authored
+      evidence: 'NOT SATISFIED. Line 61 is marked good and the rule flags it: a recorded false
+        positive.'
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: l9.memory-boundary-no-network-or-provider-transport
+  donor:
+    repository: Quantum-L9/Cursor-Governance
+    ref: main
+    head: 3f77cf67ece76ea50b1da5f9be70089c2b154a56
+    path: .semgrep/l9-pr.yml
+    blob: 8e7552457ddf4a0acd630bdae94141299a1172f4
+  behavior: Flags an import of a network, MCP, graphiti_core, neo4j or asyncio module in a memory-path
+    module (Cursor-Governance INV-03).
+  scope: python; paths.include ops/memory/, four named ops/graphiti/hydration files and environment/agents/adapters/claude-code/memory/;
+    excludes **/test_*.py and the named exception modules
+  disposition: retain_domain
+  rationale: The meaning is Cursor-Governance's memory transport and spawn boundary (its INV-03,
+    its module names, its exception list). It is not a language or framework rule and has no meaning
+    in another repository. It stays scoped and owned where it is.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Flags line(s) [19] of the memory-path copy (marked bad at line 15).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Does not flag the json.dumps line marked good.
+    non_target:
+      kind: path_scope
+      evidence: 'The same sample written as svc/sample.py is outside the rule''s paths.include
+        and produces no finding (none). The include is a path fragment, not a repository identity:
+        it matches ''ops/memory/'' anywhere in a path, so in another repository the rule is silent
+        only because no such path exists there.'
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: l9.memory-boundary-spawn-only-through-the-binding
+  donor:
+    repository: Quantum-L9/Cursor-Governance
+    ref: main
+    head: 3f77cf67ece76ea50b1da5f9be70089c2b154a56
+    path: .semgrep/l9-pr.yml
+    blob: 8e7552457ddf4a0acd630bdae94141299a1172f4
+  behavior: Flags a subprocess or os process launch in a memory-path module other than the six
+    named binding modules (INV-03).
+  scope: python; paths.include ops/memory/, four named ops/graphiti/hydration files and environment/agents/adapters/claude-code/memory/;
+    excludes **/test_*.py and the named exception modules
+  disposition: retain_domain
+  rationale: The meaning is Cursor-Governance's memory transport and spawn boundary (its INV-03,
+    its module names, its exception list). It is not a language or framework rule and has no meaning
+    in another repository. It stays scoped and owned where it is.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Flags line(s) [38, 43] of the memory-path copy (marked bad at line 34).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Does not flag the json.dumps line marked good.
+    non_target:
+      kind: path_scope
+      evidence: 'The same sample written as svc/sample.py is outside the rule''s paths.include
+        and produces no finding (none). The include is a path fragment, not a repository identity:
+        it matches ''ops/memory/'' anywhere in a path, so in another repository the rule is silent
+        only because no such path exists there.'
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: l9.memory-boundary-no-shell-string-spawn
+  donor:
+    repository: Quantum-L9/Cursor-Governance
+    ref: main
+    head: 3f77cf67ece76ea50b1da5f9be70089c2b154a56
+    path: .semgrep/l9-pr.yml
+    blob: 8e7552457ddf4a0acd630bdae94141299a1172f4
+  behavior: Flags subprocess.<f>(..., shell=True) and subprocess.<f>('<string>', ...) in a memory-path
+    module (INV-03).
+  scope: python; paths.include ops/memory/, ops/graphiti/hydration/ and environment/agents/adapters/claude-code/memory/;
+    excludes **/test_*.py
+  disposition: retain_domain
+  rationale: The meaning is Cursor-Governance's memory transport and spawn boundary (its INV-03,
+    its module names, its exception list). It is not a language or framework rule and has no meaning
+    in another repository. It stays scoped and owned where it is.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Flags line(s) [43] of the memory-path copy (marked bad at line 39).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Does not flag the json.dumps line marked good.
+    non_target:
+      kind: path_scope
+      evidence: 'The same sample written as svc/sample.py is outside the rule''s paths.include
+        and produces no finding (none). The include is a path fragment, not a repository identity:
+        it matches ''ops/memory/'' anywhere in a path, so in another repository the rule is silent
+        only because no such path exists there.'
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: l9.no-semgrep-app-token-in-child-env
+  donor:
+    repository: Quantum-L9/Cursor-Governance
+    ref: main
+    head: 3f77cf67ece76ea50b1da5f9be70089c2b154a56
+    path: .semgrep/l9-pr.yml
+    blob: 8e7552457ddf4a0acd630bdae94141299a1172f4
+  behavior: Flags a read of SEMGREP_APP_TOKEN through os.environ[...], os.environ.get(...) or
+    os.getenv(...), in any Python file.
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Behaviour is proven, applicability is not. The rule has no path scope and flags
+    the read wherever it appears (lines {''ops/memory/sample.py'': [24], ''svc/sample.py'': [24]}).
+    Its meaning is Cursor-Governance''s rule that a model-controlled process must not inherit
+    the Semgrep credential; a repository whose CI legitimately configures Semgrep from that variable
+    would be reported. Whether any other consumer has that trust model is unknown.'
+  next_proof: Cursor-Governance's owner states which process classes the rule protects. A second
+    consumer with the same local-scan trust model is identified before any language-level promotion.
+  witnesses:
+    known_bad:
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Flags line [24] (os.environ.get('SEMGREP_APP_TOKEN')).
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Does not flag os.environ.get('L9_MEMORY_NAMESPACE'), marked good.
+    non_target:
+      kind: not_composed
+      evidence: 'This rule is in no SDK pack. It is unscoped at the donor: it also flags the copy
+        written as svc/sample.py (line [24]), which is why it cannot become a fleet default without
+        a scope decision. tests/rulesets/test_harvest_ledger.py asserts that no composition carries
+        the donor rule ID.'
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-python-bare-except
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags a bare 'except:' clause.
+  scope: python; no path scope
+  disposition: already_satisfied
+  sdk_rule: l9.baseline.python.broad-except
+  rationale: The SDK baseline rule l9.baseline.python.broad-except flags the donor's own known-bad
+    line and produces no finding on the donor's negative fixture. It flags positive.py line [41].
+    Equivalence is shown on the cited witnesses; retirement at the donor is a separate, canary-gated
+    step.
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [41] of the donor's positive fixture.
+    known_good: &id002
+      fixture: .semgrep/tests/negative.py (blob 9b781039ed468b93f781ac3ab6e46ff42e6dadb4)
+      source: donor fixture, run in place at the donor head
+      evidence: Produces no finding on the donor's negative fixture.
+    non_target:
+      kind: not_composed
+      evidence: l9.baseline.python.broad-except is selected by the python language fact only.
+        tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-python-eval-exec
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags eval(...), exec(...) and compile(...).
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: Not equivalent to the SDK baseline. The donor rule flags positive.py lines [47, 48,
+    49] (eval, exec, compile); l9.baseline.python.exec-eval-use flags [47, 48] and misses compile().
+    The coverage gap is compile(...). The donor rule stays.
+  next_proof: Decide at the SDK whether compile(...) belongs in l9.baseline.python.exec-eval-use,
+    with its own known-bad and known-good fixture. That is a baseline change and needs its own
+    decision.
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [47, 48, 49] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-python-pickle-load
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags pickle.load(...) and pickle.loads(...).
+  scope: python; no path scope
+  disposition: already_satisfied
+  sdk_rule: l9.baseline.python.unsafe-deserialization
+  rationale: The SDK baseline rule l9.baseline.python.unsafe-deserialization flags the donor's
+    own known-bad line and produces no finding on the donor's negative fixture. It flags positive.py
+    lines [52, 53], which include the pickle line [52]. Equivalence is shown on the cited witnesses;
+    retirement at the donor is a separate, canary-gated step.
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [52] of the donor's positive fixture.
+    known_good: *id002
+    non_target:
+      kind: not_composed
+      evidence: l9.baseline.python.unsafe-deserialization is selected by the python language fact
+        only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-python-yaml-unsafe-load
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags yaml.load(...) unless Loader is SafeLoader.
+  scope: python; no path scope
+  disposition: already_satisfied
+  sdk_rule: l9.baseline.python.unsafe-deserialization
+  rationale: The SDK baseline rule l9.baseline.python.unsafe-deserialization flags the donor's
+    own known-bad line and produces no finding on the donor's negative fixture. It flags positive.py
+    lines [52, 53], which include the yaml.load line [53]; the negative fixture's yaml.safe_load
+    is not flagged. Equivalence is shown on the cited witnesses; retirement at the donor is a
+    separate, canary-gated step.
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [53] of the donor's positive fixture.
+    known_good: *id002
+    non_target:
+      kind: not_composed
+      evidence: l9.baseline.python.unsafe-deserialization is selected by the python language fact
+        only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-pipeline-v2-import
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags any import of plasticos_inference_engine.pipeline_v2 or pipeline_v2.
+  scope: python; no path scope
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. pipeline_v2 is a deferred PlasticOS module.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [56] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-pipeline-v2-string-activation
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags the text ''pipeline_v2'' anywhere in a Python file.'
+  scope: python; excludes ci/check_pipeline_v2_guard.py, the rule file, Markdown and reports/
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. pipeline_v2 is a deferred PlasticOS module.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [56] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-sql-fstring-execute
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags <cursor>.execute(f'...') including self.env.cr and self._cr.
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo cursor and request behaviour, proven in both directions by the donor''s own
+    fixtures. cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account
+    owner than the SDK, so the right to carry a derivative of this rule into the SDK is unresolved
+    (HARVEST.md: an unresolved sharing right is defer_unknown). It is also not already satisfied:
+    l9.baseline.python.sql-string-format flags positive.py lines [64, 65, 66, 96, 97, 117] and
+    negative.py line [66], which is a different line set from this rule''s [64].'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [64] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-sql-format-execute
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags <cursor>.execute('...'.format(...)).
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo cursor and request behaviour, proven in both directions by the donor''s own
+    fixtures. cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account
+    owner than the SDK, so the right to carry a derivative of this rule into the SDK is unresolved
+    (HARVEST.md: an unresolved sharing right is defer_unknown). It is also not already satisfied:
+    l9.baseline.python.sql-string-format flags positive.py lines [64, 65, 66, 96, 97, 117] and
+    negative.py line [66], which is a different line set from this rule''s [65].'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [65] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-sql-percent-format-execute
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags <cursor>.execute('...' % ...).
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo cursor and request behaviour, proven in both directions by the donor''s own
+    fixtures. cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account
+    owner than the SDK, so the right to carry a derivative of this rule into the SDK is unresolved
+    (HARVEST.md: an unresolved sharing right is defer_unknown). It is also not already satisfied:
+    l9.baseline.python.sql-string-format flags positive.py lines [64, 65, 66, 96, 97, 117] and
+    negative.py line [66], which is a different line set from this rule''s [66].'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [66] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-sql-string-concat-execute
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags <cursor>.execute('...' + ...).
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo cursor and request behaviour, proven in both directions by the donor''s own
+    fixtures. cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account
+    owner than the SDK, so the right to carry a derivative of this rule into the SDK is unresolved
+    (HARVEST.md: an unresolved sharing right is defer_unknown). It is also not already satisfied:
+    l9.baseline.python.sql-string-format flags positive.py lines [64, 65, 66, 96, 97, 117] and
+    negative.py line [66], which is a different line set from this rule''s [67].'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [67] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-raw-sql-review
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Review rule: flags self.env.cr.execute(x) and self._cr.execute(x) unless x is built
+    with SQL(...) or sql.SQL(...).'
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo cursor and request behaviour, proven in both directions by the donor''s own
+    fixtures. cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account
+    owner than the SDK, so the right to carry a derivative of this rule into the SDK is unresolved
+    (HARVEST.md: an unresolved sharing right is defer_unknown).'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [64, 65, 66, 67, 70, 89, 91, 93, 95, 96, 97, 100, 103, 107, 109,
+        120] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-sql-indirect-interpolation
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Flags interpolated SQL that reaches execute indirectly: a query variable assigned
+    from an f-string, .format, % or + and then executed, and execute(<name> % ...) or execute(<name>.format(...)).'
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo cursor and request behaviour, proven in both directions by the donor''s own
+    fixtures. cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account
+    owner than the SDK, so the right to carry a derivative of this rule into the SDK is unresolved
+    (HARVEST.md: an unresolved sharing right is defer_unknown). It is also not already satisfied:
+    l9.baseline.python.sql-string-format flags positive.py lines [64, 65, 66, 96, 97, 117] and
+    negative.py line [66], which is a different line set from this rule''s [88, 90, 92, 94, 96,
+    97, 117].'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [88, 90, 92, 94, 96, 97, 117] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-sql-request-query
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Flags request data used as the SQL text of execute: request.params, request.httprequest
+    args/form/values/data and get_json_data, directly or through a variable.'
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo cursor and request behaviour, proven in both directions by the donor''s own
+    fixtures. cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account
+    owner than the SDK, so the right to carry a derivative of this rule into the SDK is unresolved
+    (HARVEST.md: an unresolved sharing right is defer_unknown).'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [100, 101, 104, 118, 119] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-request-search-domain
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags a request payload used as the domain of search, search_count, search_read, read_group
+    or filtered_domain.
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo cursor and request behaviour, proven in both directions by the donor''s own
+    fixtures. cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account
+    owner than the SDK, so the right to carry a derivative of this rule into the SDK is unresolved
+    (HARVEST.md: an unresolved sharing right is defer_unknown).'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [104, 106, 113] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-odoo-api-one-multi
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags the removed decorators @api.one and @api.multi.
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo 19 framework convention, proven in both directions by the donor''s own fixtures.
+    cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account owner than
+    the SDK, so the right to carry a derivative of this rule into the SDK is unresolved (HARVEST.md:
+    an unresolved sharing right is defer_unknown).'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [27, 31] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-odoo-sql-constraints
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags '_sql_constraints = [...]', replaced in Odoo 19 by models.Constraint.
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo 19 framework convention, proven in both directions by the donor''s own fixtures.
+    cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account owner than
+    the SDK, so the right to carry a derivative of this rule into the SDK is unresolved (HARVEST.md:
+    an unresolved sharing right is defer_unknown).'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [23] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-odoo-env-get
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags self.env.get(...).
+  scope: python; excludes ci/, /tests/, plasticos_*/tests/, docs/**/tests/
+  disposition: defer_unknown
+  rationale: 'Odoo 19 framework convention, proven in both directions by the donor''s own fixtures.
+    cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account owner than
+    the SDK, so the right to carry a derivative of this rule into the SDK is unresolved (HARVEST.md:
+    an unresolved sharing right is defer_unknown).'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [61] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-odoo-depends-id
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags @api.depends('id').
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo 19 framework convention, proven in both directions by the donor''s own fixtures.
+    cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account owner than
+    the SDK, so the right to carry a derivative of this rule into the SDK is unresolved (HARVEST.md:
+    an unresolved sharing right is defer_unknown).'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [35] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-odoo-unprotected-env-ref
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Review rule: flags self.env.ref(x) without raise_if_not_found=False.'
+  scope: python; no path scope
+  disposition: defer_unknown
+  rationale: 'Odoo 19 framework convention, proven in both directions by the donor''s own fixtures.
+    cryptoxdog/IB-Odoo_19 carries no licence file and belongs to a different account owner than
+    the SDK, so the right to carry a derivative of this rule into the SDK is unresolved (HARVEST.md:
+    an unresolved sharing right is defer_unknown).'
+  next_proof: 'Target disposition once the sharing right is resolved: promote_framework (odoo),
+    selected by the inventory''s framework:odoo fact. The owner records the licence or an explicit
+    grant; then the SDK derivative is proven line-for-line against the donor''s positive and negative
+    fixtures.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [73] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-production-notimplemented
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: Flags 'raise NotImplementedError(...)' (the call form; a bare raise is allowed).
+  scope: python; excludes /tests/, plasticos_*/tests/, docs/**/tests/, **/test_*.py
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. It is the product''s zero-stub policy.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [76] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-production-todo-implement
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags TODO, FIXME, PLACEHOLDER, ''NOT IMPLEMENTED'' and ''stub'' markers.'
+  scope: python; paths.include plasticos_*/models, controllers and wizards
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. It is the product''s zero-stub policy on PlasticOS module paths.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [82] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/models/bad.py line(s) [24].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/models/good.py
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (no stub marker).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/models/bad.py
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-hardcoded-secret-assignment
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags an assignment of a quoted literal of 8 or more characters to a name
+    containing api_key, secret, token, password, passwd or pwd.'
+  scope: python; excludes /tests/, plasticos_*/tests/, docs/**/tests/, Markdown
+  disposition: already_satisfied
+  sdk_rule: l9.baseline.python.hardcoded-credential
+  rationale: The SDK baseline rule l9.baseline.python.hardcoded-credential flags the donor's own
+    known-bad line and produces no finding on the donor's negative fixture. It flags positive.py
+    line [79], the same line as the donor rule. The donor rule is a regex and the baseline rule
+    is an AST pattern, so they are compared on these witnesses only. Equivalence is shown on the
+    cited witnesses; retirement at the donor is a separate, canary-gated step.
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [79] of the donor's positive fixture.
+    known_good: *id002
+    non_target:
+      kind: not_composed
+      evidence: l9.baseline.python.hardcoded-credential is selected by the python language fact
+        only. tests/rulesets/test_rulepack_composition.py asserts that a typescript-only composition
+        carries no python rule.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-destructive-migration-sql-py
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags DROP TABLE, DROP COLUMN, ALTER TABLE ... SET NOT NULL and TRUNCATE TABLE
+    in a migration script.'
+  scope: python; paths.include plasticos_*/migrations/**/*.py
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. It enforces the product''s approval and rollback process for destructive migrations.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [123] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/migrations/bad.py line(s) [9].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/migrations/good.py
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (an additive ALTER TABLE).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.py
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-destructive-migration-sql-file
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: The same regex over SQL migration files.
+  scope: generic; paths.include plasticos_*/migrations/**/*.sql
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. It enforces the product''s approval and rollback process for destructive migrations.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [83] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/migrations/bad.sql line(s) [2].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/migrations/good.sql
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (an additive ALTER TABLE).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.sql
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-tree-tag
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags a <tree element (Odoo 19 uses <list>).'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [9] of the donor''s positive fixture. Also flags the authored in-scope
+        fixture: plasticos_demo/data/bad_cron.xml line(s) [6]; plasticos_demo/views/bad.xml line(s)
+        [6].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-tree-view-mode
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags view_mode=''...tree...'' written as an attribute.'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [16] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [14]; plasticos_demo/views/bad.xml
+        line(s) [14].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-attrs-states
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags attrs= and states= attributes.'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [10] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [7]; plasticos_demo/views/bad.xml
+        line(s) [7].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-qweb-t-esc
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags t-esc= (Odoo 19 uses t-out).'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [25] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [15]; plasticos_demo/views/bad.xml
+        line(s) [15].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-cron-numbercall
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags numbercall= on ir.cron.'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [17] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [18]; plasticos_demo/views/bad.xml
+        line(s) [18].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-groups-category-id
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags a category_id field inside a res.groups record.'
+  scope: generic; paths.include plasticos_*/security/**/*.xml and plasticos_*/data/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [36] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [20].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/data/good_cron.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/data/bad_cron.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-namespace-drift
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags a class named Plastos<Capital>, a misspelling of Plasticos.'
+  scope: python; paths.include plasticos_*/**/*.py
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. It is a PlasticOS naming rule.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [127] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/models/bad.py line(s) [13].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/models/good.py
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (class PlasticosDemo).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/models/bad.py
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-x-prefixed-field
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags a field assignment whose name starts with x_.'
+  scope: python; paths.include plasticos_*/**/*.py
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. It is a PlasticOS field-naming rule.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [84] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/models/bad.py line(s) [18].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/models/good.py
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (trucker_id).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/models/bad.py
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-decoration-secondary
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags decoration-secondary=.'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [46] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [6]; plasticos_demo/views/bad.xml
+        line(s) [6].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-search-string
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags string= on a <search> element.'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [55] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [25]; plasticos_demo/views/bad.xml
+        line(s) [25].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-group-by-string
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags string= on <group name=''group_by''>.'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [57] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [26]; plasticos_demo/views/bad.xml
+        line(s) [26].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-eval-nested-quotes
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags eval="...ref("...")..." with nested double quotes.'
+  scope: generic; paths.include plasticos_*/**/*.xml
+  disposition: defer_unknown
+  rationale: 'Odoo 19 XML convention. Two things are unproven. cryptoxdog/IB-Odoo_19 carries no
+    licence file and belongs to a different account owner than the SDK, so the right to carry
+    a derivative of this rule into the SDK is unresolved (HARVEST.md: an unresolved sharing right
+    is defer_unknown). And the rule is a regex over raw XML scoped to plasticos_* paths: the donor
+    has no known-good XML fixture, and its precision on another Odoo repository''s XML has not
+    been observed. The known-good witness cited here was written for this ledger.'
+  next_proof: 'The owner records the licence or an explicit grant and adds a known-good XML fixture
+    at the donor. Precision is then observed on a second Odoo repository before the path scope
+    is widened beyond plasticos_*. Target disposition after that: promote_framework (odoo).'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [64] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [31]; plasticos_demo/views/bad.xml
+        line(s) [31].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (the Odoo 19 form of the same
+        construct).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-xml-cron-model-ref-no-prefix
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags ref="model_plasticos... without a module prefix.'
+  scope: generic; paths.include plasticos_*/**/*cron.xml
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. The pattern contains the product''s own model prefix.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/odoo19.xml (blob 1e5b5e3ebd70ce6f8919a4c89e71faf29c21c3b5)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [77] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/data/bad_cron.xml line(s) [17].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/data/good_cron.xml
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (ref='plasticos_demo.model_plasticos_demo').
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/data/bad_cron.xml
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-custom-partner-boolean
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Regex: flags a Boolean field named is_customer, is_supplier, is_buyer, is_seller,
+    is_vendor or is_broker.'
+  scope: python; paths.include plasticos_*/**/*.py
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. It is the PlasticOS partner-model decision to use customer_rank and supplier_rank.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: 'Flags line(s) [85] of the donor''s positive fixture. Also flags the authored
+        in-scope fixture: plasticos_demo/models/bad.py line(s) [20].'
+    known_good:
+      fixture: tests/fixtures/semgrep/harvest/odoo/plasticos_demo/models/good.py
+      source: authored
+      evidence: Produces no finding on the in-scope known-good file (tracked_flag).
+    non_target:
+      kind: path_scope
+      evidence: The identical file at tests/fixtures/semgrep/harvest/odoo/other_addon/models/bad.py
+        is outside the rule's paths.include and produces no finding.
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).
+- rule_id: plasticos-commented-odoo-code
+  donor:
+    repository: cryptoxdog/IB-Odoo_19
+    ref: Staging
+    head: 341e45f450209417b9a9cc1d18328c1b77cfbe17
+    path: .semgrep/odoo-patterns.yml
+    blob: e92848dc676542855da3a374447bd20d9becd25c
+  behavior: 'Review regex: flags a comment line that starts with self., env., model., fields.
+    or vals[.'
+  scope: python; no path scope
+  disposition: retain_domain
+  rationale: 'PlasticOS product law: the rule encodes a decision, a name or a path that exists
+    only in this product. It stays owned and scoped at IB-Odoo_19 and is not Odoo 19 framework
+    behaviour. It is the product''s cleanup policy, and as a regex over comments it has no framework
+    meaning.'
+  witnesses:
+    known_bad:
+      fixture: .semgrep/tests/positive.py (blob 4940e5e021a0ce73aecc656ebf7ffd07a8aeb118)
+      source: donor fixture, run in place at the donor head
+      evidence: Flags line(s) [83] of the donor's positive fixture.
+    known_good: *id002
+    non_target: *id001
+  retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
+    CURSOR_CANARY_PASS (L9-CI-CORE-004).

@@ -5,15 +5,9 @@ SDK ADR 0020 (Proposed) binds ``L9-CI-SDK-001`` to ``L9-CI-SDK-005`` in
 every invariant has one positive (known-good) and one negative (known-bad)
 witness here, named by its ID.
 
-Two kinds of witness exist while ADR 0020 is being realized:
-
-* A witness whose behaviour the SDK already has runs as an ordinary test.
-* A witness that needs a capability a later change adds is marked
-  ``xfail(strict=True, raises=ImportError)`` and names the exact missing
-  symbol. It is executed, never skipped. ``strict`` makes it fail closed: the
-  moment the capability exists the marker itself fails the suite, so the
-  marker has to be removed and the assertions have to hold. ``raises`` keeps
-  it from hiding any other defect.
+Every witness is an ordinary test. While the capabilities were being built,
+the witnesses that needed one were strict ``xfail`` and named the missing
+symbol; each was converted in the change that added its capability.
 
 The contract test at the bottom keeps this file and the contract in step: an
 invariant ID without both witnesses, or a witness for an ID the contract does
@@ -31,7 +25,14 @@ from typing import Any
 import pytest
 import yaml
 
-from l9_ci.capabilities import detect_repository_capabilities
+from l9_ci.capabilities import (
+    AnalysisTarget,
+    CapabilityInventory,
+    CapabilityState,
+    build_capability_inventory,
+    detect_repository_capabilities,
+)
+from l9_ci.commands.providers import default_analysis_targets
 from l9_ci.contracts import (
     Coverage,
     CoverageStatus,
@@ -43,7 +44,13 @@ from l9_ci.gates import GATE_RESULT_PROTOCOL, GateStatus, evaluate_gate
 from l9_ci.integration import build_observation, validate_observation
 from l9_ci.providers import ProviderNormalizationContext
 from l9_ci.providers.semgrep import SemgrepProvider
-from l9_ci.rulesets.semgrep import ruleset_dir
+from l9_ci.rulesets.semgrep import (
+    RulepackComposition,
+    RulepackCompositionError,
+    compose_rulepack,
+    ruleset_dir,
+    validate_harvest_ledger,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = REPO_ROOT / ".l9" / "integration-contract.yaml"
@@ -57,16 +64,21 @@ ADR_INDEX = REPO_ROOT / "docs" / "adr" / "README.md"
 SEMGREP_FIXTURES = REPO_ROOT / "tests" / "fixtures" / "semgrep"
 RULE_FIXTURES = SEMGREP_FIXTURES / "rules" / "python"
 
+_TARGETS = default_analysis_targets(REPO_ROOT)
+
 INVARIANT_IDS = tuple(f"L9-CI-SDK-00{number}" for number in range(1, 6))
 
 
-def _missing(symbol: str, change: str) -> pytest.MarkDecorator:
-    """Fail-closed marker for a witness whose capability is not built yet."""
-    return pytest.mark.xfail(
-        strict=True,
-        raises=ImportError,
-        reason=f"missing capability: {symbol} ({change})",
-    )
+def _inventory(
+    root: Path,
+    targets: tuple[AnalysisTarget, ...],
+) -> CapabilityInventory:
+    return build_capability_inventory(root, targets=targets, SDK_version="2.0.0")
+
+
+def _compose(**selection: Any) -> RulepackComposition:
+    """Compose the way a caller does, with a fixed SDK version."""
+    return compose_rulepack(**selection, SDK_version="2.0.0")
 
 
 def _write(root: Path, relative: str, text: str = "") -> None:
@@ -120,19 +132,28 @@ def test_l9_ci_sdk_001_positive_mixed_repository_keeps_every_language(
     assert first == second
 
 
-@_missing("l9_ci.capabilities.build_capability_inventory", "PR 1b")
+def test_l9_ci_sdk_001_positive_odoo_recognizes_python_and_xml(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path, "addons/sale_ext/__manifest__.py", '{"name": "Sale Ext"}\n')
+    _write(tmp_path, "addons/sale_ext/models/sale.py", "x = 1\n")
+    _write(tmp_path, "addons/sale_ext/views/sale.xml", "<odoo/>\n")
+
+    inventory = _inventory(tmp_path, _TARGETS)
+
+    (odoo,) = inventory.frameworks
+    assert odoo.state is CapabilityState.APPLICABLE
+    assert dict(odoo.language_file_counts) == {"python": 2, "xml": 1}
+    assert {item.language for item in inventory.languages} == {"python", "xml"}
+
+
 def test_l9_ci_sdk_001_negative_malformed_manifest_is_not_absence(
     tmp_path: Path,
 ) -> None:
-    from l9_ci.capabilities import (
-        CapabilityState,
-        build_capability_inventory,
-    )
-
     _write(tmp_path, "pkg/mod.py", "x = 1\n")
     _write(tmp_path, "pyproject.toml", "[project\nname = \n")
 
-    inventory = build_capability_inventory(tmp_path)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     assert inventory.status is CapabilityState.FAILED
     failed = [
@@ -144,22 +165,42 @@ def test_l9_ci_sdk_001_negative_malformed_manifest_is_not_absence(
     assert failed[0].reason
 
 
+def test_l9_ci_sdk_001_negative_second_language_is_never_hidden(
+    tmp_path: Path,
+) -> None:
+    # Forty Python files and one TypeScript file: a primary-language heuristic
+    # would report Python alone.
+    for index in range(40):
+        _write(tmp_path, f"svc/mod_{index}.py", "x = 1\n")
+    _write(tmp_path, "web/index.ts", "export const x = 1;\n")
+    _write(tmp_path, "native/lib.rs", "fn main() {}\n")
+
+    inventory = _inventory(tmp_path, _TARGETS)
+
+    states = {item.language: item.state for item in inventory.languages}
+    assert states == {
+        "python": CapabilityState.APPLICABLE,
+        "typescript": CapabilityState.APPLICABLE,
+        "rust": CapabilityState.UNSUPPORTED,
+    }
+    applicable = [
+        item.target
+        for item in inventory.provider_prerequisites
+        if item.state is CapabilityState.APPLICABLE
+    ]
+    assert applicable == ["language:python", "language:typescript"]
+
+
 # --- L9-CI-SDK-002: not applicable and coverage are evidence states ---------
 
 
-@_missing("l9_ci.capabilities.build_capability_inventory", "PR 1b")
 def test_l9_ci_sdk_002_positive_no_supported_code_is_reasoned_not_applicable(
     tmp_path: Path,
 ) -> None:
-    from l9_ci.capabilities import (
-        CapabilityState,
-        build_capability_inventory,
-    )
-
     _write(tmp_path, "README.md", "# docs only\n")
     _write(tmp_path, "data/table.csv", "a,b\n1,2\n")
 
-    inventory = build_capability_inventory(tmp_path)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     assert inventory.status is CapabilityState.NOT_APPLICABLE
     assert inventory.examined_file_count == 2
@@ -167,6 +208,45 @@ def test_l9_ci_sdk_002_positive_no_supported_code_is_reasoned_not_applicable(
     for prerequisite in inventory.provider_prerequisites:
         assert prerequisite.state is CapabilityState.NOT_APPLICABLE
         assert prerequisite.reason
+
+
+def test_l9_ci_sdk_002_negative_missing_executable_is_incomplete(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path, "svc/app.py", "x = 1\n")
+    missing = tuple(
+        AnalysisTarget(
+            target.provider_id,
+            target.scope,
+            target.name,
+            target.languages,
+            target.rulepack,
+            target.rulepack_resolved,
+            executable="missing",
+        )
+        for target in _TARGETS
+    )
+
+    inventory = _inventory(tmp_path, missing)
+
+    assert inventory.status is CapabilityState.INCOMPLETE
+    python = next(
+        item
+        for item in inventory.provider_prerequisites
+        if item.target == "language:python"
+    )
+    assert python.state is CapabilityState.INCOMPLETE
+
+
+def test_l9_ci_sdk_002_negative_unsupported_is_not_not_applicable(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path, "app/Main.kt", "fun main() {}\n")
+
+    inventory = _inventory(tmp_path, _TARGETS)
+
+    assert inventory.status is CapabilityState.UNSUPPORTED
+    assert inventory.status is not CapabilityState.NOT_APPLICABLE
 
 
 @pytest.mark.parametrize(
@@ -207,34 +287,36 @@ def test_l9_ci_sdk_002_negative_zero_findings_over_zero_files_is_never_pass(
 # --- L9-CI-SDK-003: rulepack composition is immutable and monotonic ---------
 
 
-@_missing("l9_ci.rulesets.semgrep.compose_rulepack", "PR 1c")
 def test_l9_ci_sdk_003_positive_composition_resolves_one_digest() -> None:
-    from l9_ci.rulesets.semgrep import compose_rulepack
-
-    first = compose_rulepack(languages=("python",))
-    second = compose_rulepack(languages=("python",))
+    first = _compose(languages=("python",), include_candidates=True)
+    second = _compose(languages=("python",), include_candidates=True)
 
     assert first.content_digest == second.content_digest
     assert re.fullmatch(r"sha256:[0-9a-f]{64}", first.content_digest)
     assert first.rule_ids == second.rule_ids
     assert first.rule_ids == tuple(sorted(first.rule_ids))
     assert first.rule_ids
+    assert first.reproducible is True
+    for pack in first.packs:
+        for file in pack.files:
+            assert re.fullmatch(r"[0-9a-f]{64}", file.sha256)
 
 
-@_missing("l9_ci.rulesets.semgrep.compose_rulepack", "PR 1c")
 def test_l9_ci_sdk_003_negative_restriction_cannot_suppress_the_baseline() -> None:
-    from l9_ci.rulesets.semgrep import (
-        RulepackCompositionError,
-        compose_rulepack,
-    )
-
-    baseline_rule = compose_rulepack(languages=("python",)).rule_ids[0]
+    baseline_rule = _compose(languages=("python",)).rule_ids[0]
 
     with pytest.raises(RulepackCompositionError, match="baseline"):
-        compose_rulepack(
+        _compose(
             languages=("python",),
             excluded_rule_ids=(baseline_rule,),
         )
+
+
+def test_l9_ci_sdk_003_negative_registry_label_is_not_a_pin() -> None:
+    labelled = _compose(languages=("python",), registry_rulesets=("p/python",))
+
+    assert labelled.reproducible is False
+    assert labelled.unpinned_sources == ("p/python",)
 
 
 # --- L9-CI-SDK-004: specialized behaviour is preserved by fixtures ----------
@@ -259,10 +341,23 @@ def test_l9_ci_sdk_004_positive_fixtured_rules_pin_both_directions() -> None:
     )
 
 
-@_missing("l9_ci.rulesets.semgrep.validate_harvest_ledger", "PR 1c")
-def test_l9_ci_sdk_004_negative_consolidation_without_witness_is_refused() -> None:
-    from l9_ci.rulesets.semgrep import validate_harvest_ledger
+def test_l9_ci_sdk_004_positive_harvested_rules_keep_donor_witnesses() -> None:
+    pack = REPO_ROOT / "l9_ci" / "rulesets" / "semgrep" / "packs" / "python-portable"
+    fixture = (RULE_FIXTURES.parent / "packs" / "python-portable").glob("*.py")
+    text = "\n".join(path.read_text(encoding="utf-8") for path in fixture)
+    rules = [
+        rule
+        for path in sorted(pack.glob("*.yml"))
+        for rule in yaml.safe_load(path.read_text(encoding="utf-8"))["rules"]
+    ]
+    assert rules
+    for rule in rules:
+        assert f"# ruleid: {rule['id']}" in text, f"{rule['id']}: no known-bad"
+        assert f"# ok: {rule['id']}" in text, f"{rule['id']}: no known-good"
+        assert rule["metadata"]["l9"]["harvest"]["donors"]
 
+
+def test_l9_ci_sdk_004_negative_consolidation_without_witness_is_refused() -> None:
     name_only_retirement = {
         "donor": {
             "repository": "Quantum-L9/example",

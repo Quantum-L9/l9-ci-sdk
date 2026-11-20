@@ -18,6 +18,8 @@ EXPECTED_SCHEMAS = {
     "evidence-report.schema.json",
     "sarif-log.schema.json",
     "observation.schema.json",
+    "capability-inventory.schema.json",
+    "rulepack-composition.schema.json",
 }
 
 
