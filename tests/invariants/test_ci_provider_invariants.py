@@ -317,7 +317,9 @@ def test_l9_ci_sdk_003_negative_restriction_cannot_suppress_the_baseline() -> No
 
 
 def test_l9_ci_sdk_004_positive_fixtured_rules_pin_both_directions() -> None:
-    fixtures = sorted(RULE_FIXTURES.glob("*.py"))
+    # A fixture is paired by stem, whatever its suffix: the repository stores
+    # one of them as .pyfixture so that scanners do not read it as product code.
+    fixtures = sorted(path for path in RULE_FIXTURES.iterdir() if path.is_file())
     assert fixtures, "no packaged rule fixtures found"
     for fixture in fixtures:
         rule_file = ruleset_dir("python") / f"{fixture.stem}.yml"
@@ -325,6 +327,12 @@ def test_l9_ci_sdk_004_positive_fixtured_rules_pin_both_directions() -> None:
         text = fixture.read_text(encoding="utf-8")
         assert "# ruleid:" in text, f"{fixture.name} has no known-bad trigger"
         assert "# ok:" in text, f"{fixture.name} has no known-good nontrigger"
+    fixtured = {fixture.stem for fixture in fixtures}
+    packaged = {path.stem for path in ruleset_dir("python").glob("*.yml")}
+    assert fixtured == packaged, (
+        "every packaged Python rule file needs a fixture: "
+        f"missing={sorted(packaged - fixtured)}"
+    )
 
 
 @_missing("l9_ci.rulesets.semgrep.validate_harvest_ledger", "PR 1c")
@@ -402,6 +410,13 @@ def test_contract_carries_exactly_the_five_proposed_invariants() -> None:
     assert tuple(invariants) == INVARIANT_IDS
     for statement in invariants.values():
         assert statement
+
+
+def test_contract_marks_the_invariant_block_as_proposed() -> None:
+    text = CONTRACT.read_text(encoding="utf-8")
+    preamble = text.split("\nci_provider_invariants:\n", 1)[0].rsplit("\n\n", 1)[1]
+    assert preamble.startswith("# PROPOSED, NOT ADMITTED.")
+    assert "ADR 0020" in preamble
 
 
 def test_adr_0020_is_proposed_and_indexed() -> None:
