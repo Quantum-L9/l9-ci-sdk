@@ -11,6 +11,7 @@
     "policy",
     "source",
     "nosem",
+    "analysis_budget",
     "consumer_semgrepignore",
     "files_tracked",
     "files_in_scope",
@@ -38,6 +39,21 @@
     "nosem": {
       "description": "Inline `nosemgrep` comments do not suppress findings in a required run.",
       "const": "disabled"
+    },
+    "analysis_budget": {
+      "description": "Per-rule, per-file Semgrep analysis budget of the required run. A rule/file pair that exceeds it is not analysed and counts as incomplete coverage, never as a pass.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeout_seconds", "timeout_threshold", "on_timeout"],
+      "properties": {
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "timeout_threshold": {
+          "description": "Semgrep --timeout-threshold; 0 disables skipping the remaining rules on a file after repeated timeouts.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "on_timeout": { "const": "incomplete" }
+      }
     },
     "consumer_semgrepignore": {
       "type": "object",
