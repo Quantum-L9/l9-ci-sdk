@@ -12,7 +12,7 @@ updated: 2026-07-27
 
 ## Prerequisites
 
-- Python 3.11 or newer
+- Python 3.12 or newer
 - Git
 - A source checkout of `Quantum-L9/l9-ci-sdk`
 

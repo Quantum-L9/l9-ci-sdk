@@ -12,7 +12,7 @@ updated: 2026-07-27
 
 | Axis | Supported/current | Source |
 |---|---|---|
-| Python runtime | `>=3.11`; upper bound not declared | `.l9/tool-stack.yaml` |
+| Python runtime | `>=3.12`; upper bound not declared | `.l9/tool-stack.yaml` |
 | Self-CI default Python | `3.12` | `.github/workflows/l9-self-ci.yml` |
 | SDK runtime | `1.0.0` | `l9_ci.__version__` |
 | Artifact protocol | `l9.finding-bundle/v1` | `.l9/compatibility.yaml` |

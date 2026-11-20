@@ -6,7 +6,7 @@
 # whether one is present, so this file is the single lint authority either
 # way. It is kept coherent with the repository's real configuration sources:
 #   * requirements.txt / requirements-ci.txt  -> runtime + CI tooling
-#   * .l9/tool-stack.yaml (minimum_version: 3.11) -> target-version below
+#   * .l9/tool-stack.yaml (minimum_version: 3.12) -> target-version below
 #   * .pre-commit-config.yaml (ruff + ruff-format hooks) -> format settings
 #
 # The rule selection is pinned EXPLICITLY rather than relying on Ruff's built-in
@@ -16,7 +16,7 @@
 # runner happened to resolve. Pinning the rule set makes `ruff check` and
 # `ruff format --check` deterministic across those versions.
 
-target-version = "py311"
+target-version = "py312"
 line-length = 88
 src = ["l9_ci", "tests"]
 # memory-bank/ holds local session resume + agent WIP; never part of the SDK

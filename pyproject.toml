@@ -8,7 +8,7 @@ version = "2.0.0"
 description = "Canonical CI observations, provider adapters, normalized findings, validation, and deterministic artifact generation for Quantum-L9."
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "jsonschema==4.26.0",
     "referencing==0.37.0",
@@ -17,8 +17,8 @@ dependencies = [
 
 [project.optional-dependencies]
 ci = [
-    "ruff==0.16.5",
-    "mypy==2.3.1",
+    "ruff==0.16.1",
+    "mypy==2.3.0",
     "types-PyYAML==6.0.12.20260724",
     "types-jsonschema==4.26.0.20260518",
     "pytest==9.1.1",

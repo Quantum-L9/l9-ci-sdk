@@ -80,7 +80,7 @@ architectural_rules:
 foundation:
   runtime:
     language: Python
-    minimum_version: '3.11'
+    minimum_version: '3.12'
   interchange:
     canonical_format: JSON
     configuration_formats:

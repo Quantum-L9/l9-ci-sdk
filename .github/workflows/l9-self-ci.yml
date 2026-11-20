@@ -57,8 +57,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
-  GITLEAKS_VERSION: '8.18.4'
+  PYTHON_VERSION: '3.12.14'
+  GITLEAKS_VERSION: '8.24.3'
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────

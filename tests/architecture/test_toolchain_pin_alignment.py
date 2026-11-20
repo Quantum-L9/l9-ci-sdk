@@ -3,9 +3,10 @@
 Core owns organization tool-version selection; these pins govern only this
 repository. They still have to agree inside the repository, or a hook would run
 a different ruff than the one CI gates on, and the self-CI Semgrep pin has to
-be a version the SDK's normalizer is validated for. Nothing here reads Core
-files: alignment with Core's lock is checked by Core's own toolchain-alignment
-step, which runs on this repository.
+be a version the SDK's normalizer is validated for. Equality with Core's lock
+is enforced by tests/architecture/test_core_toolchain_lock_alignment.py against
+the mirror in .l9/core-toolchain-lock.json; Core's own toolchain-alignment step
+also runs on this repository.
 """
 
 from __future__ import annotations
