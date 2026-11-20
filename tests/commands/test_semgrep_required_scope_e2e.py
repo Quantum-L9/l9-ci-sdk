@@ -155,3 +155,93 @@ def test_required_run_writes_schema_valid_scope_evidence(
     assert {item["pattern"]: item["count"] for item in evidence["excluded"]} == {
         "directory_names:tests": 1
     }
+
+
+# --- JavaScript planned through the TypeScript pack (Cursor-Governance P0) ----
+
+
+def _required_typescript_run(root: Path, out: Path) -> tuple[dict, dict, int]:
+    """Run the required TypeScript instance as Core does; return bundle, raw, gate."""
+    command = [
+        sys.executable,
+        "-m",
+        "l9_ci",
+        "semgrep",
+        "run",
+        "--language",
+        "typescript",
+        "--profile",
+        "l9-baseline",
+        "--root",
+        str(root),
+        "--snapshot-id",
+        "witness",
+        "--output",
+        str(out / "bundle.json"),
+        "--raw-output",
+        str(out / "raw" / "report.json"),
+        "--required",
+        "--format",
+        "json",
+    ]
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    gate = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "l9_ci",
+            "gate",
+            "evaluate",
+            "--bundle",
+            str(out / "bundle.json"),
+            "--output",
+            str(out / "gate.json"),
+            "--no-strict-unresolved",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    bundle = json.loads((out / "bundle.json").read_text(encoding="utf-8"))
+    raw = json.loads((out / "raw" / "report.json").read_text(encoding="utf-8"))
+    return bundle, raw, gate.returncode
+
+
+@_needs_semgrep
+def test_required_typescript_instance_completes_on_in_scope_javascript(
+    tmp_path: Path,
+) -> None:
+    """A repository that really has JavaScript gets a completed instance."""
+    root = _repository(
+        tmp_path / "repo",
+        {
+            "web/app.js": "module.exports = function add(a, b) { return a + b; };\n",
+            "web/util.ts": "export const y: number = 1;\n",
+            "tests/fixture.js": "module.exports = {};\n",
+        },
+    )
+    bundle, raw, gate = _required_typescript_run(root, tmp_path / "out")
+    assert sorted(raw["paths"]["scanned"]) == ["web/app.js", "web/util.ts"]
+    (coverage,) = bundle["coverage"]
+    assert coverage["status"] == "complete"
+    assert coverage["files_analyzed"] == 2
+    assert gate in (0, 1), "a completed instance concludes pass or fail"
+
+
+@_needs_semgrep
+def test_typescript_instance_on_test_fixtures_only_cannot_complete(
+    tmp_path: Path,
+) -> None:
+    """Why the inventory must not plan it: JS only under tests/ scans nothing."""
+    root = _repository(
+        tmp_path / "repo",
+        {
+            "ops/app.py": "x = 1\n",
+            "ops/scripts/tests/fixtures/run_workflow.js": "module.exports = {};\n",
+        },
+    )
+    bundle, raw, gate = _required_typescript_run(root, tmp_path / "out")
+    assert raw["paths"]["scanned"] == []
+    assert bundle["coverage"][0]["status"] == "partial"
+    assert gate == 6
