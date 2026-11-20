@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 390
+Files: 392
 
 ## Contents
 
@@ -40,6 +40,7 @@ Files: 390
 - `.l9/architecture.yaml`
 - `.l9/audit-findings.md`
 - `.l9/compatibility.yaml`
+- `.l9/core-toolchain-lock.json`
 - `.l9/integration-contract.yaml`
 - `.l9/ownership.yaml`
 - `.l9/public-api.yaml`
@@ -270,6 +271,7 @@ Files: 390
 - `scripts/generate_validation_report.py`
 - `scripts/harvest_donor_evidence.py`
 - `tests/__init__.py`
+- `tests/architecture/test_core_toolchain_lock_alignment.py`
 - `tests/architecture/test_dependency_boundaries.py`
 - `tests/architecture/test_l9_wiring.py`
 - `tests/architecture/test_manifest_reconcile_workflow.py`
