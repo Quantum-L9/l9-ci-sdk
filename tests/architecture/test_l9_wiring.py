@@ -198,7 +198,6 @@ _ALLOWED_EXTERNAL_ACTION_PREFIXES = (
 
 # Workflows with intentional elevated write scopes beyond checks:write.
 _ALLOWED_WRITE_SCOPES = {
-    "l9-manifest-reconcile.yml": {"contents"},  # bot commits MANIFEST.md
     "l9-self-ci.yml": {"pull-requests"},  # marker comment
     "publish.yml": {"id-token", "actions"},  # OIDC publish + download-artifact
 }

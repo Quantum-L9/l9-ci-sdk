@@ -77,6 +77,22 @@ jobs:
           "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
             --config l9_ci/rulesets/semgrep/python \
             tests/fixtures/semgrep/rules/python
+          # The TypeScript pack also serves JavaScript; its fixture is a .js
+          # file (SDK ADR 0020, L9-CI-SDK-001).
+          "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
+            --config l9_ci/rulesets/semgrep/typescript \
+            tests/fixtures/semgrep/rules/typescript
+          # Harvested candidate packs carry their own annotated fixtures
+          # (SDK ADR 0020, L9-CI-SDK-004).
+          "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
+            --config l9_ci/rulesets/semgrep/packs/python-portable \
+            tests/fixtures/semgrep/rules/packs/python-portable
+          # Required central runs: --disable-nosem and the declared scan scope,
+          # against the real Semgrep (lane L1f). The pytest step has no semgrep
+          # binary, so these witnesses skip there; PATH is appended, not
+          # prepended, so `python` stays the job interpreter with the SDK.
+          L9_REQUIRE_SEMGREP=1 PATH="$PATH:$RUNNER_TEMP/semgrep/bin" python -m pytest -q -p no:cacheprovider \
+            tests/commands/test_semgrep_required_scope_e2e.py
       - name: critical gate evaluator 100% branch coverage
         id: gate_evaluator_cov
         continue-on-error: true
@@ -92,7 +108,8 @@ jobs:
         id: manifest_check
         continue-on-error: true
         # MANIFEST.md is owned by the `l9-ci manifest generate` CLI (see
-        # l9-manifest-reconcile.yml, which auto-commits corrections to PRs);
+        # l9-manifest-reconcile.yml, which fails on drift and uploads the fix
+        # as a patch artifact; it never pushes);
         # regenerate it the same way here so this check catches real drift
         # instead of comparing the working tree to itself.
         run: |

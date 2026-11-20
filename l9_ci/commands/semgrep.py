@@ -11,6 +11,7 @@ from l9_ci.commands.errors import emit_error
 from l9_ci.pipeline import SemgrepPipelineRequest, run_semgrep_pipeline
 from l9_ci.providers.semgrep import SemgrepProvider
 from l9_ci.rulesets.semgrep import (
+    compose_rulepack,
     SUPPORTED_LANGUAGES,
     default_identity_map_path,
     default_profile_name,
@@ -18,6 +19,12 @@ from l9_ci.rulesets.semgrep import (
     resolve_profile,
     ruleset_dir,
 )
+from l9_ci.commands.semgrep_scope import (
+    resolve_scan_scope,
+    scope_evidence_path,
+    write_scope_evidence,
+)
+from l9_ci.rulesets.semgrep.scope import ScanScope, packaged_scan_scope_policy
 
 # One global registry ruleset per language, inherited by every downstream
 # consumer by default. A caller may opt out with --no-registry-config
@@ -143,6 +150,54 @@ def register_semgrep_commands(
     _add_common_arguments(run)
     run.set_defaults(handler=handle_run)
 
+    compose = semgrep_subparsers.add_parser(
+        "compose",
+        help=(
+            "Resolve the effective packaged rulepack for the named languages "
+            "and frameworks to exact file digests and rule IDs"
+        ),
+    )
+    compose.add_argument("--language", action="append", default=[])
+    compose.add_argument("--framework", action="append", default=[])
+    compose.add_argument(
+        "--include-candidates",
+        action="store_true",
+        help="also compose candidate packs (harvested, shadow mode)",
+    )
+    compose.add_argument(
+        "--product-config",
+        action="append",
+        type=Path,
+        default=[],
+        help="an authorized product rule file to add; it may not redefine a rule",
+    )
+    compose.add_argument(
+        "--registry-ruleset",
+        action="append",
+        default=[],
+        help=(
+            "a registry label that will also be scanned (for example p/python); "
+            "recorded as unpinned, which makes the composition not reproducible"
+        ),
+    )
+    compose.add_argument(
+        "--exclude-rule",
+        action="append",
+        default=[],
+        help="a non-baseline rule ID to leave out; a baseline rule is refused",
+    )
+    compose.add_argument(
+        "--materialize",
+        type=Path,
+        default=None,
+        help=(
+            "write exactly the composed rules, with exclusions applied, into "
+            "this empty directory; scan that directory, not the SDK's own"
+        ),
+    )
+    compose.add_argument("--format", choices=("text", "json"), default="text")
+    compose.set_defaults(handler=handle_compose)
+
 
 def handle_detect(args: argparse.Namespace) -> int:
     provider = SemgrepProvider()
@@ -210,6 +265,25 @@ def _build_run_exclusion_arguments() -> tuple[str, ...]:
     return tuple(arguments)
 
 
+# A required central run reports every finding of a required rule, including
+# one on a line carrying an inline `nosemgrep` comment: an annotation in the
+# consumer's tree must not silence a central rule. Waiving a finding is a
+# policy decision recorded in the finding policy, never a source comment.
+_REQUIRED_RUN_ARGUMENTS = ("--disable-nosem",)
+
+
+def _resolve_required_scope(args: argparse.Namespace) -> ScanScope | None:
+    """Return the declared scan scope for a required run, else ``None``.
+
+    A non-required run keeps Semgrep's own scope resolution. A required run
+    scans exactly the files the packaged scan-scope policy declares; see
+    :mod:`l9_ci.rulesets.semgrep.scope`.
+    """
+    if not args.required:
+        return None
+    return resolve_scan_scope(args.root.resolve(), packaged_scan_scope_policy())
+
+
 def _request(
     args: argparse.Namespace,
     *,
@@ -218,6 +292,7 @@ def _request(
     provider_version: str | None,
     identity_map_path: Path | None,
     execution_arguments: tuple[str, ...] = (),
+    execution_targets: tuple[str, ...] = (),
 ) -> SemgrepPipelineRequest:
     return SemgrepPipelineRequest(
         report_path=report_path,
@@ -242,6 +317,7 @@ def _request(
             50_000_000,
         ),
         execution_arguments=execution_arguments,
+        execution_targets=execution_targets,
     )
 
 
@@ -289,6 +365,24 @@ def handle_run(args: argparse.Namespace) -> int:
     raw_output = args.raw_output or args.output.with_name(
         f"{args.output.stem}.raw.json"
     )
+    execution_arguments = (
+        _build_run_config_arguments(args) + _build_run_exclusion_arguments()
+    )
+    execution_targets: tuple[str, ...] = ()
+    try:
+        scope = _resolve_required_scope(args)
+        if scope is not None:
+            # Written before Semgrep runs, so a failed run still records the
+            # scope it was given.
+            write_scope_evidence(scope, scope_evidence_path(raw_output))
+            execution_arguments += _REQUIRED_RUN_ARGUMENTS
+            execution_targets = scope.targets
+    except Exception as exc:
+        return emit_error(
+            exc,
+            output_format=OutputFormat(args.format),
+            default=ExitCode.PROVIDER_EXECUTION_FAILURE,
+        )
     return _execute_request(
         args,
         _request(
@@ -297,8 +391,38 @@ def handle_run(args: argparse.Namespace) -> int:
             execute=True,
             provider_version=None,
             identity_map_path=args.identity_map or default_identity_map_path(),
-            execution_arguments=_build_run_config_arguments(args)
-            + _build_run_exclusion_arguments(),
+            execution_arguments=execution_arguments,
+            execution_targets=execution_targets,
         ),
         default=ExitCode.PROVIDER_EXECUTION_FAILURE,
     )
+
+
+def handle_compose(args: argparse.Namespace) -> int:
+    try:
+        composition = compose_rulepack(
+            languages=tuple(args.language),
+            frameworks=tuple(args.framework),
+            include_candidates=args.include_candidates,
+            product_configs=tuple(args.product_config),
+            registry_rulesets=tuple(args.registry_ruleset),
+            excluded_rule_ids=tuple(args.exclude_rule),
+            SDK_version=SDK_version(),
+        )
+        materialized = (
+            [path.name for path in composition.materialize(args.materialize)]
+            if args.materialize is not None
+            else []
+        )
+        payload = {
+            "composition": composition.to_dict(),
+            "materialized": materialized,
+        }
+    except Exception as exc:
+        return emit_error(
+            exc,
+            output_format=OutputFormat(args.format),
+            default=ExitCode.INVALID_ARGUMENTS,
+        )
+    print(render_success(payload, output_format=OutputFormat(args.format)))
+    return int(ExitCode.SUCCESS)

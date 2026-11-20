@@ -126,7 +126,9 @@ class SemgrepProvider:
             "--json-output",
             str(request.output_path),
             *request.arguments,
-            ".",
+            # Explicit file targets (a required run's declared scope) are never
+            # filtered by .semgrepignore; "." is expanded through it.
+            *(request.targets or (".",)),
         )
 
     def execute(

@@ -16,7 +16,8 @@ that file as the consumer copy-in template.
 - Scratchpad: `memory-bank/` (including WIP packs) is user/agent scratch only —
   gitignored in this repo and excluded via `--exclude-dir memory-bank` in CI.
 - Write behavior: atomic and idempotent.
-- Drift behavior: drift is repaired, not treated as a merge failure.
+- Drift behavior: drift fails the reconcile workflow, which publishes the fix
+  as a patch artifact; the workflow never pushes (see "PR behavior").
 
 ## CLI
 
@@ -32,13 +33,23 @@ without automatic commit behavior.
 
 ## PR behavior
 
-For same-repository PR branches, the workflow commits the corrected manifest
-directly to the PR head. That push emits a new `synchronize` event, and CI
-runs again against the corrected revision.
+The workflow runs read-only (`contents: read`, `persist-credentials: false`)
+for every PR, same-repository or fork. On drift it prints the diff and the
+regeneration command, uploads `repository-reconcile.patch` as the
+`repository-reconcile-patch` artifact, and fails. The author regenerates (or
+applies the patch) and pushes; that push is an ordinary `synchronize` event
+and every workflow runs on the corrected head.
 
-Fork PR tokens are read-only. The workflow therefore generates and uploads
-`manifest-reconcile.patch` without failing the PR. Using `pull_request_target`
-to execute untrusted fork code is intentionally prohibited.
+The workflow formerly committed the correction to same-repository PR heads
+with the workflow `GITHUB_TOKEN`. GitHub starts no workflow run for a push
+made with that token, so the corrected head carried no CI at all (or runs held
+at `action_required`): l9-ci-sdk#117 head `df39e1e6` sat with every required
+check missing. Pushing with a different credential would need a new secret,
+which is out of scope, so the push was removed (2026-11-20).
+`tests/architecture/test_manifest_reconcile_workflow.py` keeps it removed.
+
+Using `pull_request_target` to execute untrusted fork code is intentionally
+prohibited.
 
 ## Downstream consumer adoption
 
@@ -49,9 +60,8 @@ dogfood generate step (`PYTHONPATH=. python -m l9_ci ...`) with:
    changes required).
 2. `"$EXECUTABLE" manifest generate --repository-root . --output MANIFEST.md --tracked-only`
    using the provisioned executable.
-3. `contents: write` for same-repository PR repair.
-4. A same-repo branch guard before push (already in the template).
-5. Concurrency cancellation so the corrected head supersedes stale CI work.
+3. `contents: read` only; the template never pushes.
+4. Concurrency cancellation so the corrected head supersedes stale CI work.
 
 Pin an SDK revision that includes the `manifest` CLI. Core-owned
 `workflow_call` packaging remains a future option; it is out of scope for

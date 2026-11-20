@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/capability-inventory.schema.json",
+  "title": "CapabilityInventory",
+  "description": "Every language, framework and provider prerequisite for one exact repository snapshot. A factual record: it carries no requiredness, enforcement mode or verdict.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "SDK_version",
+    "snapshot",
+    "examined_file_count",
+    "unclassified_file_count",
+    "languages",
+    "frameworks",
+    "manifests",
+    "package_managers",
+    "provider_prerequisites",
+    "status",
+    "reasons"
+  ],
+  "properties": {
+    "schema": { "const": "l9.capability-inventory/v1" },
+    "schema_version": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$" },
+    "SDK_version": { "type": "string", "minLength": 1 },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshot_id", "revision", "dirty", "source"],
+      "properties": {
+        "snapshot_id": { "type": "string", "pattern": "^snapshot_[0-9a-f]+$" },
+        "revision": { "type": ["string", "null"] },
+        "dirty": { "type": "boolean" },
+        "source": { "enum": ["git", "filesystem"] }
+      }
+    },
+    "examined_file_count": { "type": "integer", "minimum": 0 },
+    "unclassified_file_count": { "type": "integer", "minimum": 0 },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "language",
+          "state",
+          "file_count",
+          "unanalyzed_file_count",
+          "sample_paths",
+          "reason"
+        ],
+        "properties": {
+          "language": { "type": "string", "minLength": 1 },
+          "state": { "enum": ["applicable", "unsupported"] },
+          "file_count": { "type": "integer", "minimum": 1 },
+          "unanalyzed_file_count": { "type": "integer", "minimum": 0 },
+          "sample_paths": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "frameworks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "framework",
+          "state",
+          "languages",
+          "language_file_counts",
+          "evidence_count",
+          "evidence_paths",
+          "reason"
+        ],
+        "properties": {
+          "framework": { "type": "string", "minLength": 1 },
+          "state": { "enum": ["applicable", "not_applicable", "failed"] },
+          "languages": { "type": "array", "items": { "type": "string" } },
+          "language_file_counts": {
+            "type": "object",
+            "additionalProperties": { "type": "integer", "minimum": 0 }
+          },
+          "evidence_count": { "type": "integer", "minimum": 0 },
+          "evidence_paths": { "type": "array", "items": { "type": "string" } },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "manifests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind", "state", "reason", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "minLength": 1 },
+          "state": { "enum": ["applicable", "failed"] },
+          "reason": { "type": "string", "minLength": 1 },
+          "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "package_managers": { "type": "array", "items": { "type": "string" } },
+    "provider_prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider_id",
+          "target",
+          "state",
+          "file_count",
+          "rulepack",
+          "executable",
+          "executable_version",
+          "reason"
+        ],
+        "properties": {
+          "provider_id": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "pattern": "^(language|framework):.+$" },
+          "state": {
+            "enum": ["applicable", "not_applicable", "incomplete", "failed"]
+          },
+          "file_count": { "type": "integer", "minimum": 0 },
+          "rulepack": { "type": ["string", "null"] },
+          "executable": { "enum": ["available", "missing", "not_probed"] },
+          "executable_version": { "type": ["string", "null"] },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "status": {
+      "enum": ["applicable", "not_applicable", "unsupported", "incomplete", "failed"]
+    },
+    "reasons": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

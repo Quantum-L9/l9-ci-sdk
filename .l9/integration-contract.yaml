@@ -62,6 +62,40 @@ CLI:
     providers_detect:
       syntax: l9-ci providers detect --root ROOT --format json
       description: Deterministically detect repository languages and provider candidacy.
+    providers_inventory:
+      syntax: >-
+        l9-ci providers inventory --root ROOT [--probe-executables]
+        [--output INVENTORY] --format json
+      description: >-
+        Emit the l9.capability-inventory/v1 record for one exact repository
+        snapshot: every recognized language, every supported framework and
+        one prerequisite per SDK analysis target, each in an explicit state
+        (applicable, not_applicable, unsupported, incomplete, failed). The
+        command exits 0 whenever the record was built; the state is in the
+        record, and Core decides requiredness and enforcement from it.
+        Coverage is counted per file: the target `language:typescript` also
+        analyzes JavaScript (.js, .jsx, .mjs, .cjs), and a file no target
+        analyzes is counted in its language's unanalyzed_file_count
+        (schema_version 1.1.0).
+    semgrep_compose:
+      syntax: >-
+        l9-ci semgrep compose --language LANG [--language LANG]
+        [--framework NAME] [--include-candidates] [--product-config PATH]
+        [--registry-ruleset LABEL] [--exclude-rule RULE_ID]
+        [--materialize DIRECTORY] --format json
+      description: >-
+        Resolve the effective packaged Semgrep rulepack to exact content: every
+        rule file by SHA-256, every rule ID and one content digest
+        (l9.semgrep-rulepack-composition/v1). Refuses, with exit code 2, a
+        language with no baseline pack, an unknown framework, an exclusion of
+        a baseline rule and a product config that redefines a packaged rule.
+        A registry label is recorded as unpinned and makes the composition not
+        reproducible. With --materialize it also writes exactly the composed
+        rules, exclusions applied, into an empty directory; that directory is
+        the executable configuration, and the SDK's own rule directories are
+        not, because they still hold an excluded rule. This command resolves;
+        it does not scan, and it does not change what `l9-ci semgrep run`
+        scans.
     semgrep_normalize:
       syntax: >-
         l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT
@@ -177,3 +211,43 @@ version_negotiation:
     - minimum SDK requirements are explicit
     - exact SDK pinning is required for central CI
     - consumers must not infer compatibility from artifact shape alone
+
+# PROPOSED, NOT ADMITTED. These five statements are the candidate invariants of
+# SDK ADR 0020, whose status is Proposed (docs/adr/README.md). They become
+# binding integration requirements only when the SDK owner accepts that ADR.
+# Until then a consumer must not rely on them, and `metadata.status:
+# authoritative` above does not extend to this block. The wording is frozen by
+# the proposing campaign and is unchanged here. Each statement has a running
+# positive and negative witness in tests/invariants/.
+ci_provider_invariants:
+  - id: L9-CI-SDK-001
+    statement: >-
+      For one exact repository snapshot the SDK must enumerate every supported applicable
+      language, framework and provider prerequisite; it must not collapse a mixed repository
+      into a single preferred language. Unsupported or uncertain detections must remain
+      visible.
+  - id: L9-CI-SDK-002
+    statement: >-
+      The SDK must distinguish applicability, planned selection, actual invocation,
+      completed execution, analyzed paths, explicit exclusions, failed steps and missing
+      evidence for each provider. Not-applicable requires evidence of nonapplicability;
+      skip, unsupported and unknown cannot become completed-pass.
+  - id: L9-CI-SDK-003
+    statement: >-
+      Every effective scanner rulepack is the reproducible composition of versioned SDK
+      baseline, applicable language/framework packs and authorized product-specific
+      restrictions. Resolve exact rule content/configuration digests; subordinate rules
+      cannot suppress the organization baseline, and mutable remote registry labels alone do
+      not prove reproducibility.
+  - id: L9-CI-SDK-004
+    statement: >-
+      Before consolidating or retiring any effective scanner rule or configuration, prove
+      its unique intended behavior with at least one known-bad trigger and known-good
+      nontrigger. Where equivalence is not proven, retain the scoped owner and report the
+      coverage gap.
+  - id: L9-CI-SDK-005
+    statement: >-
+      SDK observations preserve exact provider identity, original rule IDs, source revision,
+      report provenance, scope and failures. Deduplication may correlate findings but may
+      not erase a distinct native result, unsupported severity, independent source or unique
+      coverage; SDK emits no final Assurance verdict.
