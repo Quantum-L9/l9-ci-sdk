@@ -114,8 +114,8 @@ through the versioned SDK identity map.
 ## Required central runs: `--disable-nosem` and the declared scan scope
 
 Core passes `--required` to `l9-ci semgrep run` when governance marks the
-provider required. A required run differs from any other run in two ways
-(lane L1f, 2026-11-20), and nothing else changes:
+provider required. A required run differs from any other run in three ways
+(lanes L1f and B5, 2026-11-20), and nothing else changes:
 
 1. **`--disable-nosem`.** Semgrep honours an inline `# nosemgrep` comment by
    default, so a consumer could silence a required central rule line by line.
@@ -139,14 +139,23 @@ provider required. A required run differs from any other run in two ways
    `tests/`, `test/` and `testsuite/` stay out of required scope by an explicit
    policy entry, matching the default that applied before. Bringing tests into
    scope is an organization policy decision and an edit to that list.
+3. **Declared analysis budget.** Semgrep's defaults give each rule 5 s per
+   file and, after 3 timeouts on one file, silently skip every remaining rule
+   on it. A required run passes `--timeout 30 --timeout-threshold 0`
+   (`REQUIRED_RULE_TIMEOUT_SECONDS`, `REQUIRED_RULE_TIMEOUT_THRESHOLD` in
+   `l9_ci/rulesets/semgrep/scope.py`): 30 s per rule and file, and no per-file
+   cut-off. A rule/file pair that still times out under that budget was not
+   analysed; the provider removes the file from the scanned paths, records
+   the pair as a limitation and reports coverage `partial`, so the gate ends
+   `incomplete`, never `pass` (#131).
 
 The effective scope is written beside the raw report as `<stem>.scope.json`
 (`l9.semgrep-scan-scope/v1`,
 [`semgrep-scan-scope.schema.json`](../../l9_ci/schemas/v1/semgrep-scan-scope.schema.json)):
 the policy version and digest, the tracked and in-scope file counts, a digest
 of the in-scope path list, every exclusion with its exact count and a bounded
-sample, any consumer `.semgrepignore` found (`honored: false`) and
-`nosem: disabled`. Core already uploads the raw-report directory, so the record
+sample, any consumer `.semgrepignore` found (`honored: false`), `nosem: disabled` and
+the `analysis_budget` (schema 1.1.0). Core already uploads the raw-report directory, so the record
 reaches the analysis artifact set. It is written before Semgrep starts.
 
 A required run fails closed, before Semgrep starts, when the root is not a Git

@@ -229,6 +229,11 @@ def test_scope_evidence_is_schema_valid_and_deterministic(tmp_path: Path) -> Non
     errors = sorted(_schema_validator().iter_errors(payload), key=str)
     assert errors == []
     assert payload["nosem"] == "disabled"
+    assert payload["analysis_budget"] == {
+        "timeout_seconds": 30,
+        "timeout_threshold": 0,
+        "on_timeout": "incomplete",
+    }
     assert payload["files_in_scope"] == 2  # src/a.py and .semgrepignore itself
     assert scope_evidence_path(Path("raw/report.json")) == Path("raw/report.scope.json")
 
@@ -278,6 +283,9 @@ def test_required_run_disables_nosem_and_scans_the_declared_scope(
     )
     request = _capture_run(monkeypatch, _run_argv(root, tmp_path / "out", "--required"))
     assert "--disable-nosem" in request.execution_arguments
+    arguments = list(request.execution_arguments)
+    assert arguments[arguments.index("--timeout") + 1] == "30"
+    assert arguments[arguments.index("--timeout-threshold") + 1] == "0"
     assert request.execution_targets == (".semgrepignore", "src/a.py")
     evidence = tmp_path / "out" / "raw" / "report.scope.json"
     assert json.loads(evidence.read_text(encoding="utf-8"))["files_in_scope"] == 2
@@ -289,6 +297,8 @@ def test_non_required_run_keeps_semgrep_scope_and_nosem(
     root = _repository(tmp_path / "repo", {"src/a.py": "x\n"})
     request = _capture_run(monkeypatch, _run_argv(root, tmp_path / "out"))
     assert "--disable-nosem" not in request.execution_arguments
+    assert "--timeout" not in request.execution_arguments
+    assert "--timeout-threshold" not in request.execution_arguments
     assert request.execution_targets == ()
     assert not (tmp_path / "out" / "raw" / "report.scope.json").exists()
 
