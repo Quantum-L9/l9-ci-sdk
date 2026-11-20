@@ -24,7 +24,6 @@ from jsonschema import Draft202012Validator
 
 import l9_ci.__main__ as main_module
 import l9_ci.commands.semgrep as semgrep_commands
-import l9_ci.rulesets.semgrep.scope as scope_module
 from l9_ci.providers.semgrep import SemgrepProvider
 from l9_ci.providers.spi import ProviderExecutionRequest
 from l9_ci.commands.semgrep_scope import (
@@ -210,7 +209,7 @@ def test_argv_bound_fails_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = _repository(tmp_path / "repo", {"src/a.py": "x\n", "src/b.py": "x\n"})
-    monkeypatch.setattr(scope_module, "MAX_TARGET_ARGUMENT_BYTES", 10)
+    monkeypatch.setattr("l9_ci.rulesets.semgrep.scope.MAX_TARGET_ARGUMENT_BYTES", 10)
     with pytest.raises(ScanScopeError, match="argv bytes"):
         resolve_scan_scope(root, packaged_scan_scope_policy())
 
