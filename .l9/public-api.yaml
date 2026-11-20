@@ -39,8 +39,19 @@ packages:
     - is_git_repository
     - write_repository_manifest
   l9_ci.capabilities:
+    - AnalysisTarget
+    - CAPABILITY_INVENTORY_PROTOCOL
+    - CAPABILITY_INVENTORY_SCHEMA_VERSION
+    - CapabilityInventory
+    - CapabilityState
+    - FrameworkCapability
+    - LanguageCapability
+    - ManifestEvidence
+    - ProviderPrerequisite
     - RepositoryCapabilities
+    - build_capability_inventory
     - detect_repository_capabilities
+    - validate_capability_inventory
   l9_ci.providers:
     - NetworkRequirement
     - Provider
