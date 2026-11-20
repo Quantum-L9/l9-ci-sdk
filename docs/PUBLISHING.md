@@ -19,7 +19,7 @@ how it is installed and how releases are published.
 - **Import package:** `l9_ci`
 - **Console entry point:** `l9-ci` → `l9_ci.cli:main`
 - **Build backend:** hatchling
-- **Requires:** Python `>=3.11`
+- **Requires:** Python `>=3.12`
 - **Runtime deps (exact pins; mirror `requirements.txt`):**
   `jsonschema==4.26.0`, `referencing==0.37.0`, `PyYAML==6.0.3`
 - **Current version (`pyproject.toml` / `l9_ci.__version__` /

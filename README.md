@@ -13,7 +13,7 @@ Agent operating law (architecture, phases, layer edges, git hygiene):
 
 ## Install
 
-Python **≥ 3.11**.
+Python **≥ 3.12**.
 
 ```bash
 # From PyPI (released package)
