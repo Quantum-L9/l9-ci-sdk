@@ -31,7 +31,13 @@ from typing import Any
 import pytest
 import yaml
 
-from l9_ci.capabilities import detect_repository_capabilities
+from l9_ci.capabilities import (
+    AnalysisTarget,
+    CapabilityState,
+    build_capability_inventory,
+    detect_repository_capabilities,
+)
+from l9_ci.commands.providers import default_analysis_targets
 from l9_ci.contracts import (
     Coverage,
     CoverageStatus,
@@ -56,6 +62,8 @@ ADR_0020 = (
 ADR_INDEX = REPO_ROOT / "docs" / "adr" / "README.md"
 SEMGREP_FIXTURES = REPO_ROOT / "tests" / "fixtures" / "semgrep"
 RULE_FIXTURES = SEMGREP_FIXTURES / "rules" / "python"
+
+_TARGETS = default_analysis_targets(REPO_ROOT)
 
 INVARIANT_IDS = tuple(f"L9-CI-SDK-00{number}" for number in range(1, 6))
 
@@ -120,19 +128,28 @@ def test_l9_ci_sdk_001_positive_mixed_repository_keeps_every_language(
     assert first == second
 
 
-@_missing("l9_ci.capabilities.build_capability_inventory", "PR 1b")
+def test_l9_ci_sdk_001_positive_odoo_recognizes_python_and_xml(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path, "addons/sale_ext/__manifest__.py", '{"name": "Sale Ext"}\n')
+    _write(tmp_path, "addons/sale_ext/models/sale.py", "x = 1\n")
+    _write(tmp_path, "addons/sale_ext/views/sale.xml", "<odoo/>\n")
+
+    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+
+    (odoo,) = inventory.frameworks
+    assert odoo.state is CapabilityState.APPLICABLE
+    assert dict(odoo.language_file_counts) == {"python": 2, "xml": 1}
+    assert {item.language for item in inventory.languages} == {"python", "xml"}
+
+
 def test_l9_ci_sdk_001_negative_malformed_manifest_is_not_absence(
     tmp_path: Path,
 ) -> None:
-    from l9_ci.capabilities import (
-        CapabilityState,
-        build_capability_inventory,
-    )
-
     _write(tmp_path, "pkg/mod.py", "x = 1\n")
     _write(tmp_path, "pyproject.toml", "[project\nname = \n")
 
-    inventory = build_capability_inventory(tmp_path)
+    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
 
     assert inventory.status is CapabilityState.FAILED
     failed = [
@@ -144,22 +161,42 @@ def test_l9_ci_sdk_001_negative_malformed_manifest_is_not_absence(
     assert failed[0].reason
 
 
+def test_l9_ci_sdk_001_negative_second_language_is_never_hidden(
+    tmp_path: Path,
+) -> None:
+    # Forty Python files and one TypeScript file: a primary-language heuristic
+    # would report Python alone.
+    for index in range(40):
+        _write(tmp_path, f"svc/mod_{index}.py", "x = 1\n")
+    _write(tmp_path, "web/index.ts", "export const x = 1;\n")
+    _write(tmp_path, "native/lib.rs", "fn main() {}\n")
+
+    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+
+    states = {item.language: item.state for item in inventory.languages}
+    assert states == {
+        "python": CapabilityState.APPLICABLE,
+        "typescript": CapabilityState.APPLICABLE,
+        "rust": CapabilityState.UNSUPPORTED,
+    }
+    applicable = [
+        item.target
+        for item in inventory.provider_prerequisites
+        if item.state is CapabilityState.APPLICABLE
+    ]
+    assert applicable == ["language:python", "language:typescript"]
+
+
 # --- L9-CI-SDK-002: not applicable and coverage are evidence states ---------
 
 
-@_missing("l9_ci.capabilities.build_capability_inventory", "PR 1b")
 def test_l9_ci_sdk_002_positive_no_supported_code_is_reasoned_not_applicable(
     tmp_path: Path,
 ) -> None:
-    from l9_ci.capabilities import (
-        CapabilityState,
-        build_capability_inventory,
-    )
-
     _write(tmp_path, "README.md", "# docs only\n")
     _write(tmp_path, "data/table.csv", "a,b\n1,2\n")
 
-    inventory = build_capability_inventory(tmp_path)
+    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
 
     assert inventory.status is CapabilityState.NOT_APPLICABLE
     assert inventory.examined_file_count == 2
@@ -167,6 +204,45 @@ def test_l9_ci_sdk_002_positive_no_supported_code_is_reasoned_not_applicable(
     for prerequisite in inventory.provider_prerequisites:
         assert prerequisite.state is CapabilityState.NOT_APPLICABLE
         assert prerequisite.reason
+
+
+def test_l9_ci_sdk_002_negative_missing_executable_is_incomplete(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path, "svc/app.py", "x = 1\n")
+    missing = tuple(
+        AnalysisTarget(
+            target.provider_id,
+            target.scope,
+            target.name,
+            target.languages,
+            target.rulepack,
+            target.rulepack_resolved,
+            executable="missing",
+        )
+        for target in _TARGETS
+    )
+
+    inventory = build_capability_inventory(tmp_path, targets=missing)
+
+    assert inventory.status is CapabilityState.INCOMPLETE
+    python = next(
+        item
+        for item in inventory.provider_prerequisites
+        if item.target == "language:python"
+    )
+    assert python.state is CapabilityState.INCOMPLETE
+
+
+def test_l9_ci_sdk_002_negative_unsupported_is_not_not_applicable(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path, "app/Main.kt", "fun main() {}\n")
+
+    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+
+    assert inventory.status is CapabilityState.UNSUPPORTED
+    assert inventory.status is not CapabilityState.NOT_APPLICABLE
 
 
 @pytest.mark.parametrize(

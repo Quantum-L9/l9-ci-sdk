@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 353
+Files: 358
 
 ## Contents
 
@@ -150,6 +150,7 @@ Files: 353
 - `l9_ci/baseline/schemas.py`
 - `l9_ci/capabilities/__init__.py`
 - `l9_ci/capabilities/detector.py`
+- `l9_ci/capabilities/inventory.py`
 - `l9_ci/capabilities/model.py`
 - `l9_ci/cli/__init__.py`
 - `l9_ci/cli/diagnostics.py`
@@ -234,6 +235,7 @@ Files: 353
 - `l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml`
 - `l9_ci/schemas/v1/agent-review-payload.schema.json`
 - `l9_ci/schemas/v1/attestation-envelope.schema.json`
+- `l9_ci/schemas/v1/capability-inventory.schema.json`
 - `l9_ci/schemas/v1/coverage.schema.json`
 - `l9_ci/schemas/v1/evidence-record.schema.json`
 - `l9_ci/schemas/v1/evidence-report.schema.json`
@@ -268,7 +270,10 @@ Files: 353
 - `tests/baseline/__init__.py`
 - `tests/baseline/test_baseline_kernel.py`
 - `tests/biome/test_biome_scan.py`
+- `tests/capabilities/__init__.py`
 - `tests/capabilities/test_detector.py`
+- `tests/capabilities/test_inventory.py`
+- `tests/capabilities/trees.py`
 - `tests/cli/test_exit_codes.py`
 - `tests/cli/test_output.py`
 - `tests/commands/__init__.py`
