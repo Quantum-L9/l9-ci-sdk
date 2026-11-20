@@ -94,7 +94,7 @@ interpreter (see `AGENTS.md` §10).
 | Self-CI (no Core) | `l9-self-ci.yml` | Classifier / rule-modes gate (`engine: ci-debt`) |
 | YAML governance | `l9-yaml-governance.yml` + dogfood | Reusable yamllint / governance JSON / Action pins / actionlint / zizmor |
 | Biome static checks | `l9-biome-scan-dogfood.yml` | SDK self-CI only (advisory); consumers get Biome from Core `org-ci.yml` (ADR 0017) |
-| Manifest reconcile | `l9-manifest-reconcile.yml` | Keeps root `MANIFEST.md` aligned with tracked truth |
+| Manifest reconcile | `l9-manifest-reconcile.yml` | Fails a PR whose root `MANIFEST.md` drifted from tracked truth and uploads the fix as a patch; never pushes |
 
 YAML governance configs: root [`lint/`](lint/); downstream YAML-governance
 callers pin immutable SDK SHAs. Biome config: root [`biome.json`](biome.json)

@@ -12,6 +12,14 @@
 # The uv.lock reconciliation intentionally changes only the editable root
 # package's version field. Dependency changes still require a real `uv lock`;
 # this step prevents producer identity drift when the project version changes.
+#
+# Detection only, never a push. A commit pushed with the workflow GITHUB_TOKEN
+# starts no new workflow run (GitHub's recursion guard), so a bot reconcile
+# commit left the PR head with its required checks never run or held at
+# `action_required` (l9-ci-sdk#117, head df39e1e6). The workflow therefore
+# fails on drift, prints the diff and the exact regeneration command, and
+# uploads the fix as a patch artifact for every PR, same-repository or fork.
+# The author applies it and pushes; that push is a normal `synchronize` event.
 
 name: L9 Manifest Reconcile
 
@@ -21,7 +29,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: l9-manifest-${{ github.event.pull_request.number || github.ref }}
@@ -38,8 +46,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          # Bot may push a reconcile commit to same-repository PR heads.
-          persist-credentials: true
+          # Read-only: this workflow never pushes (see header).
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -104,38 +112,27 @@ jobs:
             git diff -- MANIFEST.md uv.lock
           fi
 
-      - name: Commit reconciliation to PR
-        if: >-
-          steps.reconcile.outputs.changed == 'true' &&
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: |
-          set -euo pipefail
-          git config user.name "l9-manifest-bot"
-          git config user.email "l9-manifest-bot@users.noreply.github.com"
-          git checkout -B "$HEAD_REF"
-          git add -- MANIFEST.md uv.lock
-          git commit -m "chore(repo): reconcile derived repository state"
-          git push origin "HEAD:$HEAD_REF"
-          echo "Derived state corrected. The synchronize event starts CI again on the new head."
-
-      - name: Export fork patch
-        if: >-
-          steps.reconcile.outputs.changed == 'true' &&
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name != github.repository
+      - name: Export reconciliation patch
+        if: steps.reconcile.outputs.changed == 'true'
         run: git diff --binary -- MANIFEST.md uv.lock > repository-reconcile.patch
 
-      - name: Upload fork reconciliation patch
-        if: >-
-          steps.reconcile.outputs.changed == 'true' &&
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name != github.repository
+      - name: Upload reconciliation patch
+        if: steps.reconcile.outputs.changed == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: repository-reconcile-patch
           path: repository-reconcile.patch
           if-no-files-found: error
           retention-days: 14
+
+      - name: Fail on derived-state drift
+        if: steps.reconcile.outputs.changed == 'true'
+        run: |
+          msg="MANIFEST.md or the uv.lock root version does not match tracked truth."
+          msg="$msg Regenerate locally and push, or apply the repository-reconcile-patch artifact."
+          echo "::error title=Derived repository state is stale::$msg"
+          echo "Regenerate with:"
+          echo "  PYTHONPATH=\"\$PWD\" python -m l9_ci manifest generate --repository-root . --output MANIFEST.md --tracked-only --exclude-dir memory-bank"
+          echo "A uv.lock root-version change is in the patch only; apply it with:"
+          echo "  git apply repository-reconcile.patch"
+          exit 1

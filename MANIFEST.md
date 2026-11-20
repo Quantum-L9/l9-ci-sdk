@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 351
+Files: 352
 
 ## Contents
 
@@ -260,6 +260,7 @@ Files: 351
 - `tests/__init__.py`
 - `tests/architecture/test_dependency_boundaries.py`
 - `tests/architecture/test_l9_wiring.py`
+- `tests/architecture/test_manifest_reconcile_workflow.py`
 - `tests/architecture/test_public_api.py`
 - `tests/architecture/test_schema_inventory.py`
 - `tests/architecture/test_toolchain_pin_alignment.py`
