@@ -1,0 +1,63 @@
+---
+# Declared scan scope for central required Semgrep runs
+# (`l9-ci semgrep run --required`; Core passes --required when governance
+# marks the provider required).
+#
+# Before this policy, scope was decided implicitly by whichever of two sources
+# Semgrep found: a consumer's root `.semgrepignore`, which replaces Semgrep's
+# built-in default ignore list entirely, or that built-in list when no
+# `.semgrepignore` exists. Neither was declared by Core or the SDK, and the
+# first let a consumer drop any path, `src/` included, from a required central
+# rule. Under --required the SDK resolves the targets itself from this file and
+# passes each file to Semgrep explicitly. Semgrep applies `.semgrepignore`
+# patterns only while expanding a folder scan root, never to an explicit file
+# target, so neither the consumer file nor the built-in default applies.
+# See docs/architecture/semgrep-provider.md ("Declared scan scope").
+#
+# Matching:
+#   include.source: git-tracked   every file tracked at the analyzed snapshot
+#                                 (`git ls-files`); untracked and ignored files
+#                                 are not product code under analysis
+#   anchored_paths   a path equal to, or under, this repository-relative path
+#   directory_names  a path with a parent directory of this name, any depth
+#   names            a path with any component (file or directory) of this
+#                    name, any depth
+#   file_globs       a file whose base name matches this fnmatch glob
+#
+# The exclusions reproduce Semgrep's documented built-in default list
+# (semgrepignore v2 reference, "Default Semgrepignore patterns"), so a
+# repository without a `.semgrepignore` keeps its previous scope, plus the SDK
+# runtime the CLI already excluded.
+schema: l9.semgrep-scan-scope-policy/v1
+version: 1.0.0
+include:
+  source: git-tracked
+exclude:
+  anchored_paths:
+    # SDK runtime provisioned into the scanned tree by Core `provision-sdk`.
+    - .l9/runtime
+  directory_names:
+    # Common large or third-party paths (Semgrep default).
+    - node_modules
+    - build
+    - dist
+    - vendor
+    - .env
+    - .venv
+    - .tox
+    - .npm
+    - .yarn
+    - .semgrep_logs
+    # Test paths. Decision 2026-11-20, lane L1f: kept OUT of required central
+    # scope, matching the Semgrep default that applied before. Holding test
+    # code to every required rule is an organization policy call, raised with
+    # the CTO; changing it is an edit to this list only.
+    - test
+    - tests
+    - testsuite
+  names:
+    # Semgrep rule folder (Semgrep default): rule definitions, not code.
+    - .semgrep
+  file_globs:
+    - "*.min.js"
+    - "*_test.go"

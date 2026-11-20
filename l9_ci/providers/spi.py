@@ -22,6 +22,11 @@ class ProviderExecutionRequest:
     output_size_limit_bytes: int
     environment: Mapping[str, str] = field(default_factory=dict)
     arguments: tuple[str, ...] = ()
+    # Repository-relative files to analyze. Empty means the provider's own
+    # default scan root (the whole repository); non-empty means exactly these
+    # files, which a required Semgrep run uses so that no consumer ignore file
+    # can narrow a declared central scope (l9_ci.rulesets.semgrep.scope).
+    targets: tuple[str, ...] = ()
     # NOTE: a `network_allowed` flag was removed (DWA-008). The SDK executes
     # providers via subprocess and cannot enforce network isolation, so the flag
     # was inert and created false assurance. Network isolation is an explicit
@@ -33,6 +38,16 @@ class ProviderExecutionRequest:
         if self.output_size_limit_bytes <= 0:
             raise ValueError("output_size_limit_bytes must be positive")
         object.__setattr__(self, "arguments", tuple(self.arguments))
+        object.__setattr__(self, "targets", tuple(self.targets))
+        for target in self.targets:
+            if (
+                not target
+                or target.startswith(("/", "-"))
+                or ".." in Path(target).parts
+            ):
+                raise ValueError(
+                    f"targets must be repository-relative file paths: {target!r}"
+                )
 
 
 @dataclass(frozen=True, slots=True)
