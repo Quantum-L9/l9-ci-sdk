@@ -18,3 +18,7 @@ tests/fixtures/semgrep/source/
 # tests/rulesets/test_semgrep_rule_fixtures.py and the ci.yml "semgrep rule
 # fixtures" gate). Their ruleid lines are deliberate positives.
 tests/fixtures/semgrep/rules/
+
+# Harvest evidence fixtures: deliberate known-bad cases for donor rules
+# (docs/harvest/semgrep-donor-ledger.yaml). Scan input only.
+tests/fixtures/semgrep/harvest/

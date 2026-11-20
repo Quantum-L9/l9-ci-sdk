@@ -1,0 +1,55 @@
+---
+schema: l9.semgrep-rulepacks/v1
+metadata:
+  provider_id: semgrep
+  version: 1.0.0
+  status: authoritative
+# Registry of every Semgrep rulepack the SDK ships, and the fact that selects
+# each one. `compose_rulepack` reads only this file: a directory that is not
+# listed here is never composed, and a rule in a listed directory is never
+# left out.
+#
+# kind
+#   baseline   the organization baseline for a language. Always composed when
+#              the language is selected. No restriction can remove one of its
+#              rules.
+#   language   further rules for a language.
+#   framework  rules for a framework. Composed only when the caller names the
+#              framework, which it does from a capability inventory, never
+#              from a repository name.
+# status
+#   active     composed whenever its selector matches.
+#   candidate  composed only when the caller asks for candidates. A candidate
+#              pack is harvested or new and has not been through a canary.
+#
+# No framework pack is listed yet. See docs/harvest/semgrep-donor-ledger.yaml
+# for why the Odoo donor rules stay at their owner.
+packs:
+  python-baseline:
+    kind: baseline
+    status: active
+    directory: python
+    selector:
+      language: python
+    description: >-
+      Organization baseline for Python. The same directory
+      `l9-ci semgrep run --language python` scans.
+  typescript-baseline:
+    kind: baseline
+    status: active
+    directory: typescript
+    selector:
+      language: typescript
+    description: >-
+      Organization baseline for TypeScript. The same directory
+      `l9-ci semgrep run --language typescript` scans.
+  python-portable:
+    kind: language
+    status: candidate
+    directory: packs/python-portable
+    selector:
+      language: python
+    description: >-
+      Portable Python rules harvested from Cognitive.Engine.Graphs and
+      Enrichment.Inference.Engine. Shadow mode. Not part of any
+      `l9-ci semgrep run` profile.

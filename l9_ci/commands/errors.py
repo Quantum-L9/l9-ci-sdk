@@ -18,6 +18,7 @@ from __future__ import annotations
 import sys
 from l9_ci.cli import Diagnostic, ExitCode, OutputFormat
 from l9_ci.pipeline import UnsupportedProviderVersionError
+from l9_ci.rulesets.semgrep import RulepackCompositionError
 
 
 def classify_exception(
@@ -34,6 +35,12 @@ def classify_exception(
     # UnsupportedProviderVersionError subclasses ValueError — check it first.
     if isinstance(exc, UnsupportedProviderVersionError):
         return "incompatible_version", ExitCode.INCOMPATIBLE_VERSION
+    # RulepackCompositionError subclasses ValueError, and its messages contain
+    # the word "restriction". Classify it by type before the substring checks
+    # below, or a refused composition would be reported as a strict-identity
+    # failure.
+    if isinstance(exc, RulepackCompositionError):
+        return "rulepack_composition_refused", ExitCode.INVALID_ARGUMENTS
     if isinstance(exc, ValueError):
         message = str(exc)
         if "strict" in message or "unresolved" in message:
