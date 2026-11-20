@@ -36,6 +36,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 HARVEST = REPO_ROOT / "tests" / "fixtures" / "semgrep" / "harvest"
 PORTABLE_PACK = REPO_ROOT / "l9_ci" / "rulesets" / "semgrep" / "packs"
 PYTHON_BASELINE = REPO_ROOT / "l9_ci" / "rulesets" / "semgrep" / "python"
+CURSOR_SAMPLE = HARVEST / "cursor" / "sample.py.txt"
+CURSOR_COPIES = ("ops/memory/sample.py", "svc/sample.py")
 _MARKER = re.compile(r"#\s*(bad|good):\s*(\S+)")
 
 
@@ -110,6 +112,21 @@ def scan(
     }
 
 
+def _scan_cursor(config: Path) -> dict[str, dict[str, list[int]]]:
+    """Scan the Cursor sample both inside and outside the memory path.
+
+    The sample is stored as text (see its docstring), so it is written into a
+    scratch tree as Python here.
+    """
+    with tempfile.TemporaryDirectory() as scratch:
+        tree = Path(scratch) / "cursor"
+        for relative in CURSOR_COPIES:
+            target = tree / relative
+            target.parent.mkdir(parents=True)
+            shutil.copy2(CURSOR_SAMPLE, target)
+        return scan(config, tree)
+
+
 def _declared_rule_ids(config: Path) -> set[str]:
     files = sorted(config.rglob("*.yml")) if config.is_dir() else [config]
     declared: set[str] = set()
@@ -160,7 +177,7 @@ def main() -> int:
             args.ceg / ".semgrep/semgrep-rules.yaml", portable
         ),
         "sdk-portable/portable_fixture": scan(PORTABLE_PACK, portable),
-        "cursor/tree": scan(args.cursor / ".semgrep/l9-pr.yml", HARVEST / "cursor"),
+        "cursor/tree": _scan_cursor(args.cursor / ".semgrep/l9-pr.yml"),
         "odoo/donor_tests": scan(
             odoo_rules, args.odoo / ".semgrep" / "tests", mount=".semgrep/tests"
         ),
@@ -174,9 +191,7 @@ def main() -> int:
     payload = {
         "markers": {
             "python_overlap.py": markers(overlap),
-            "cursor/ops/memory/sample.py": markers(
-                HARVEST / "cursor/ops/memory/sample.py"
-            ),
+            "cursor/sample.py.txt": markers(CURSOR_SAMPLE),
             "odoo/plasticos_demo/models/bad.py": markers(
                 HARVEST / "odoo/plasticos_demo/models/bad.py"
             ),
