@@ -1,0 +1,20 @@
+{
+  "version": "representative-fixture",
+  "results": [],
+  "errors": [
+    {
+      "code": 3,
+      "level": "warn",
+      "type": "ParseError",
+      "rule_id": "python.lang.security.audit.eval-detected.eval-detected",
+      "message": "Syntax error at line src/example.py:3:\n `)` was unexpected",
+      "path": "src/example.py"
+    }
+  ],
+  "paths": {
+    "scanned": [
+      "src/example.py"
+    ],
+    "skipped": []
+  }
+}

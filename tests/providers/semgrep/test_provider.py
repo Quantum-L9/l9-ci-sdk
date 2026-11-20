@@ -173,8 +173,28 @@ def test_required_provider_zero_result_gates_incomplete(fixture_name: str) -> No
     assert _gate_status_for_required(normalization) is GateStatus.INCOMPLETE
 
 
-def test_required_warn_timeout_with_scanned_paths_gates_pass() -> None:
-    normalization = _normalize("report-error-warn.json", required=True)
+@pytest.mark.parametrize(
+    "fixture_name",
+    [
+        "report-error-warn.json",
+        # Real Semgrep 1.171.0 report; see report-timeout-captured.provenance.yaml.
+        "report-timeout-captured.json",
+    ],
+)
+def test_required_rule_timeout_gates_incomplete_not_pass(fixture_name: str) -> None:
+    """B5: a timed-out rule/file pair is incomplete coverage, never a pass.
+
+    Cursor-Governance run 44819081765 reported 5 rule timeouts on 4 files as
+    a complete pass with no incomplete provider.
+    """
+    normalization = _normalize(fixture_name, required=True)
+    assert normalization.failures == ()
+    assert normalization.coverage.status is CoverageStatus.PARTIAL
+    assert _gate_status_for_required(normalization) is GateStatus.INCOMPLETE
+
+
+def test_required_non_timeout_warn_with_scanned_paths_gates_pass() -> None:
+    normalization = _normalize("report-error-warn-parse.json", required=True)
     assert normalization.failures == ()
     assert normalization.coverage.status is CoverageStatus.COMPLETE
     assert _gate_status_for_required(normalization) is GateStatus.PASS
