@@ -32,8 +32,19 @@ Rules the inventory holds:
   that were read.
 - The record carries `SDK_version`, as every version-negotiated artifact does.
   The caller supplies it; this package does not guess it.
-- A framework target serves a language only when the framework holds a file
-  of it. An XML file outside every Odoo addon is not served by an Odoo target.
+- Coverage is counted per file. Each target declares the file suffixes its
+  tool analyzes; a file of a served language with another suffix, or outside
+  the framework a framework target is scoped to, is counted in that
+  language's `unanalyzed_file_count` and named in `reasons`. A language is
+  `applicable` when at least one of its files is analyzed, `unsupported` when
+  none is.
+- JavaScript is served by the `semgrep` target `language:typescript`: the
+  TypeScript rulepack declares `languages: [typescript, javascript]`, its
+  fixture `tests/fixtures/semgrep/rules/typescript/l9-baseline-security.js`
+  proves every rule on JavaScript in both directions, and
+  `l9-ci semgrep run --language typescript` analyzes `.js`, `.jsx`, `.mjs`
+  and `.cjs`. There is no separate JavaScript target, so a repository with
+  both languages is scanned once.
 - The executable is a fact about the machine, so it is `not_probed` unless
   the caller asks (`--probe-executables`).
 - The record carries no requiredness, enforcement mode or verdict. Core
@@ -54,6 +65,9 @@ schema and that `status` agrees with the entries.
   unlisted suffix is counted in `unclassified_file_count` and not named.
 - `requirements.txt`, `go.mod`, `pom.xml` and `build.gradle` are recorded as
   evidence and not parsed, so they cannot be reported malformed.
-- JavaScript, Go, Java, Kotlin, Ruby, Rust, PHP, Swift, Scala, C#, C, C++,
-  shell and XML are recognized and have no analysis target in this SDK build.
+- Go, Java, Kotlin, Ruby, Rust, PHP, Swift, Scala, C#, C, C++, shell and XML
+  are recognized and have no analysis target in this SDK build.
+- Semgrep 1.171.0 does not scan `.mts` or `.cts`. Those TypeScript files are
+  reported as not analyzed. `tests/rulesets/test_semgrep_target_suffixes.py`
+  re-checks each target's declared suffixes against the real executable.
 - Odoo is the only framework with a detector.

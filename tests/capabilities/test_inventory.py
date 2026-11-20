@@ -307,6 +307,123 @@ def test_default_targets_cover_every_packaged_language(tmp_path: Path) -> None:
     ]
     assert all(target.rulepack_resolved for target in targets)
     assert {target.executable for target in targets} == {"not_probed"}
+    by_name = {target.name: target for target in targets}
+    assert by_name["python"].languages == ("python",)
+    assert by_name["typescript"].languages == ("typescript", "javascript")
+    assert ".mts" not in by_name["typescript"].suffixes
+    assert ".cts" not in by_name["typescript"].suffixes
+
+
+def _default(tmp_path: Path, tree: Mapping[str, str]) -> CapabilityInventory:
+    trees.materialize(tmp_path, tree)
+    inventory = build_capability_inventory(
+        tmp_path,
+        targets=default_analysis_targets(tmp_path),
+        SDK_version=trees.SDK_VERSION,
+    )
+    validate_capability_inventory(inventory.to_dict())
+    return inventory
+
+
+def test_javascript_only_is_analyzed_by_the_typescript_pack(tmp_path: Path) -> None:
+    inventory = _default(tmp_path, trees.JAVASCRIPT_ONLY)
+
+    assert inventory.status is CapabilityState.APPLICABLE
+    assert _languages(inventory) == {"javascript": CapabilityState.APPLICABLE}
+    (javascript,) = inventory.languages
+    assert javascript.file_count == 4
+    assert javascript.unanalyzed_file_count == 0
+    prerequisites = {item.target: item for item in inventory.provider_prerequisites}
+    assert prerequisites["language:typescript"].state is CapabilityState.APPLICABLE
+    assert prerequisites["language:typescript"].file_count == 4
+    assert prerequisites["language:typescript"].rulepack == (
+        "l9_ci/rulesets/semgrep/typescript"
+    )
+    assert prerequisites["language:python"].state is CapabilityState.NOT_APPLICABLE
+
+
+def test_mixed_typescript_and_javascript_is_one_target(tmp_path: Path) -> None:
+    inventory = _default(
+        tmp_path, {**trees.TYPESCRIPT_ONLY, "scripts/build.js": "module.exports = 1;\n"}
+    )
+
+    assert _languages(inventory) == {
+        "javascript": CapabilityState.APPLICABLE,
+        "typescript": CapabilityState.APPLICABLE,
+    }
+    counts = {item.target: item.file_count for item in inventory.provider_prerequisites}
+    assert counts == {"language:python": 0, "language:typescript": 3}
+
+
+def test_unscanned_typescript_suffixes_are_not_counted_as_covered(
+    tmp_path: Path,
+) -> None:
+    inventory = _default(tmp_path, trees.TYPESCRIPT_UNSCANNED_SUFFIXES)
+
+    (typescript,) = inventory.languages
+    assert typescript.state is CapabilityState.APPLICABLE
+    assert typescript.file_count == 3
+    assert typescript.unanalyzed_file_count == 2
+    assert ".cts" in typescript.reason and ".mts" in typescript.reason
+    prerequisites = {item.target: item for item in inventory.provider_prerequisites}
+    assert prerequisites["language:typescript"].file_count == 1
+    assert any(
+        reason.startswith("language typescript:") for reason in inventory.reasons
+    )
+
+
+def test_only_unscanned_suffixes_leave_the_language_unsupported(
+    tmp_path: Path,
+) -> None:
+    inventory = _default(tmp_path, {"src/worker.mts": "export const w = 1;\n"})
+
+    assert _languages(inventory) == {"typescript": CapabilityState.UNSUPPORTED}
+    assert inventory.status is CapabilityState.UNSUPPORTED
+    prerequisites = {item.target: item for item in inventory.provider_prerequisites}
+    assert prerequisites["language:typescript"].state is CapabilityState.NOT_APPLICABLE
+
+
+def test_framework_scope_counts_unanalyzed_files_per_language(
+    tmp_path: Path,
+) -> None:
+    tree = {
+        **trees.ODOO_PYTHON_XML,
+    }
+    odoo_target = AnalysisTarget(
+        provider_id="semgrep",
+        scope="framework",
+        name="odoo",
+        languages=("python", "xml"),
+        rulepack="example/odoo",
+        rulepack_resolved=True,
+    )
+    trees.materialize(tmp_path, tree)
+
+    inventory = trees.inventory(tmp_path, (*trees.semgrep_targets(), odoo_target))
+
+    xml = next(item for item in inventory.languages if item.language == "xml")
+    # odoo19 view inside the addon is analyzed; docs/diagram.xml is not.
+    assert xml.state is CapabilityState.APPLICABLE
+    assert xml.file_count == 2
+    assert xml.unanalyzed_file_count == 1
+
+
+@pytest.mark.parametrize("suffix", ["ts", ".TS", "."])
+def test_analysis_target_rejects_a_malformed_suffix(suffix: str) -> None:
+    with pytest.raises(ValueError, match="suffix"):
+        AnalysisTarget(
+            "semgrep", "language", "x", ("python",), None, True, suffixes=(suffix,)
+        )
+
+
+def test_two_targets_with_one_name_are_refused(tmp_path: Path) -> None:
+    trees.materialize(tmp_path, trees.PYTHON_ONLY)
+    target = trees.semgrep_targets()[0]
+
+    with pytest.raises(ValueError, match="share"):
+        build_capability_inventory(
+            tmp_path, targets=(target, target), SDK_version=trees.SDK_VERSION
+        )
 
 
 def test_cli_emits_the_inventory_and_writes_it(

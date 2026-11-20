@@ -42,11 +42,19 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["language", "state", "file_count", "sample_paths", "reason"],
+        "required": [
+          "language",
+          "state",
+          "file_count",
+          "unanalyzed_file_count",
+          "sample_paths",
+          "reason"
+        ],
         "properties": {
           "language": { "type": "string", "minLength": 1 },
           "state": { "enum": ["applicable", "unsupported"] },
           "file_count": { "type": "integer", "minimum": 1 },
+          "unanalyzed_file_count": { "type": "integer", "minimum": 0 },
           "sample_paths": {
             "type": "array",
             "minItems": 1,
