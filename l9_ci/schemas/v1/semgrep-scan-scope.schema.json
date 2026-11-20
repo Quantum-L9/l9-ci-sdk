@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/semgrep-scan-scope.schema.json",
+  "title": "SemgrepScanScope",
+  "description": "The effective scan scope of one required Semgrep run (`l9-ci semgrep run --required`), written beside the raw report as <stem>.scope.json. A factual record of what was scanned and why; it carries no verdict.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "policy",
+    "source",
+    "nosem",
+    "consumer_semgrepignore",
+    "files_tracked",
+    "files_in_scope",
+    "in_scope_sha256",
+    "excluded"
+  ],
+  "properties": {
+    "schema": { "const": "l9.semgrep-scan-scope/v1" },
+    "schema_version": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$" },
+    "policy": {
+      "description": "The SDK-packaged scan-scope policy that decided the scope.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "version", "sha256"],
+      "properties": {
+        "schema": { "const": "l9.semgrep-scan-scope-policy/v1" },
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "source": {
+      "description": "Where candidate files come from: files tracked at the analyzed snapshot.",
+      "const": "git-tracked"
+    },
+    "nosem": {
+      "description": "Inline `nosemgrep` comments do not suppress findings in a required run.",
+      "const": "disabled"
+    },
+    "consumer_semgrepignore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "honored"],
+      "properties": {
+        "files": {
+          "description": "Tracked .semgrepignore files present in the repository.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "honored": { "const": false }
+      }
+    },
+    "files_tracked": { "type": "integer", "minimum": 0 },
+    "files_in_scope": { "type": "integer", "minimum": 1 },
+    "in_scope_sha256": {
+      "description": "SHA-256 of the newline-joined, ordered list of in-scope paths.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "excluded": {
+      "description": "Tracked files left out of scope, grouped by the policy entry (or not-a-regular-file) that excluded them.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "count", "sample_paths", "truncated"],
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1 },
+          "count": { "type": "integer", "minimum": 1 },
+          "sample_paths": {
+            "type": "array",
+            "maxItems": 50,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "truncated": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

@@ -98,6 +98,53 @@ Identity resolution is unchanged by profile selection: L9-authored rules carry
 trusted `metadata.l9.canonical_rule_id`, and third-party registry rules resolve
 through the versioned SDK identity map.
 
+## Required central runs: `--disable-nosem` and the declared scan scope
+
+Core passes `--required` to `l9-ci semgrep run` when governance marks the
+provider required. A required run differs from any other run in two ways
+(lane L1f, 2026-11-20), and nothing else changes:
+
+1. **`--disable-nosem`.** Semgrep honours an inline `# nosemgrep` comment by
+   default, so a consumer could silence a required central rule line by line.
+   A required run passes `--disable-nosem`, and the annotated line yields its
+   finding. Waiving a finding is a decision for the finding policy, not a
+   source comment.
+2. **Declared scan scope.** Semgrep otherwise takes scope from a consumer's
+   root `.semgrepignore`, which replaces Semgrep's built-in default list
+   entirely, or from that built-in list when no `.semgrepignore` exists.
+   Neither was declared by Core or the SDK, and the first let a consumer drop
+   any path, `src/` included. A required run resolves its targets from the
+   SDK-packaged policy
+   [`l9_ci/rulesets/semgrep/scan-scope.yaml`](../../l9_ci/rulesets/semgrep/scan-scope.yaml)
+   (`l9.semgrep-scan-scope-policy/v1`): every Git-tracked file at the analyzed
+   snapshot, minus the declared exclusions, which reproduce Semgrep's
+   documented default list plus `.l9/runtime`. Each resolved file is passed to
+   Semgrep as an explicit target. Semgrep applies `.semgrepignore` patterns
+   only while expanding a folder scan root, never to an explicit file, so
+   neither a consumer `.semgrepignore` nor the built-in list applies.
+
+   `tests/`, `test/` and `testsuite/` stay out of required scope by an explicit
+   policy entry, matching the default that applied before. Bringing tests into
+   scope is an organization policy decision and an edit to that list.
+
+The effective scope is written beside the raw report as `<stem>.scope.json`
+(`l9.semgrep-scan-scope/v1`,
+[`semgrep-scan-scope.schema.json`](../../l9_ci/schemas/v1/semgrep-scan-scope.schema.json)):
+the policy version and digest, the tracked and in-scope file counts, a digest
+of the in-scope path list, every exclusion with its exact count and a bounded
+sample, any consumer `.semgrepignore` found (`honored: false`) and
+`nosem: disabled`. Core already uploads the raw-report directory, so the record
+reaches the analysis artifact set. It is written before Semgrep starts.
+
+A required run fails closed, before Semgrep starts, when the root is not a Git
+work tree, when the scope is empty, or when the explicit targets would exceed
+the argv bound (`MAX_TARGET_ARGUMENT_BYTES`, 1,000,000 bytes). A run without
+`--required` keeps Semgrep's own scope and `nosem` handling.
+
+Witnesses: `tests/rulesets/test_semgrep_scan_scope.py` (no Semgrep needed) and
+`tests/commands/test_semgrep_required_scope_e2e.py` (real Semgrep; run by the
+`semgrep rule fixtures` step of `.github/workflows/ci.yml`).
+
 ---
 # `pyproject.toml` additions
 Merge these with existing dependencies:
