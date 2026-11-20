@@ -92,7 +92,8 @@ jobs:
           # binary, so these witnesses skip there; PATH is appended, not
           # prepended, so `python` stays the job interpreter with the SDK.
           L9_REQUIRE_SEMGREP=1 PATH="$PATH:$RUNNER_TEMP/semgrep/bin" python -m pytest -q -p no:cacheprovider \
-            tests/commands/test_semgrep_required_scope_e2e.py
+            tests/commands/test_semgrep_required_scope_e2e.py \
+            tests/commands/test_semgrep_consumer_run_e2e.py
       - name: critical gate evaluator 100% branch coverage
         id: gate_evaluator_cov
         continue-on-error: true

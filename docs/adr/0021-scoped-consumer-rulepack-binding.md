@@ -1,8 +1,10 @@
 # ADR 0021: Scoped consumer rulepack binding
 
 ## Status
-Proposed. Design for review before implementation (lane L1-CANARY-FIXES, item
-B3). No code ships with this ADR.
+Accepted (2026-11-20). The CTO approved the decision for implementation in the
+L1-CANARY-FIXES campaign (item B3); the operator can revisit it. Proposed in
+#132. Implemented in the SDK PR that adds this status, with the
+implementation notes below.
 
 **Decision owner:** `Quantum-L9/l9-ci-sdk` for the declaration schema,
 validation, composition, execution and evidence; `Quantum-L9/l9-ci-core` for
@@ -100,8 +102,16 @@ SDK does not take over a product's semantic ownership.
    the declaring repository and advisory elsewhere, but requiredness is
    Core's.
 
-No Core change is needed before the SDK side exists: until Core plans the
-target, the inventory merely reports it.
+~~No Core change is needed before the SDK side exists: until Core plans the
+target, the inventory merely reports it.~~ Corrected at implementation: Core's
+planner (`plan-required-instances/plan.py`, `SAFE_TARGET`) accepts only
+`language:` and `framework:` targets and raises `PlanningError` on any other.
+An unrequested `consumer:` prerequisite would therefore fail every inventory
+of a declaring repository. The SDK reports the consumer target only under
+`l9-ci providers inventory --consumer-rules`, so the Core change also has to:
+
+4. Accept `consumer:` in `SAFE_TARGET`, and pass `--consumer-rules` to the
+   inventory step only once steps 1 to 3 are live.
 
 ## Alternatives considered and rejected
 
@@ -126,3 +136,50 @@ target, the inventory merely reports it.
   above).
 - Local `make pr` enforcement stays until the Core step is live and a canary
   re-run shows the four rules firing in CI (`L9-CI-CORE-004`).
+
+## Implementation notes (2026-11-20)
+
+These are lane-local choices made at implementation. They do not change the
+decision above.
+
+- **Execution is a separate subcommand:** `l9-ci semgrep consumer-run`, not
+  `run --consumer-rules`. `run` is per language and selects packaged
+  profiles. A consumer run selects neither: it loads only the declared files.
+  Keeping them apart means no central flag can leak into a consumer run, and
+  the reverse. `--required` on `consumer-run` marks the provider required in
+  the bundle and does not apply the central scan scope.
+- **Validation** lives in `l9_ci/rulesets/semgrep/consumer.py`:
+  - `rule_id_prefix` defaults to `l9.`;
+  - the canonical namespace is `CONSUMER-<REPOSITORY>-<NAME>`, where
+    `<REPOSITORY>` is the repository part of `owner`, upper-cased (for
+    Cursor-Governance, `CONSUMER-CURSOR-GOVERNANCE-`);
+  - a rule file holds only `rules`;
+  - per-rule keys are an explicit allow-list;
+  - limits are 32 rule files and 256 rules.
+- **Evidence** is written beside the raw report as `<stem>.consumer.json`
+  (`l9.semgrep-consumer-rulepack-evidence/v1`), before Semgrep starts. It
+  names the owner, the declaration and every rule file with its SHA-256 and
+  rule IDs, `nosem: honored` and `consumer_semgrepignore: honored`. Findings
+  carry the consumer canonical IDs.
+- **Analysis budget.** The consumer run uses the same budget as a required
+  central run (`--timeout 30 --timeout-threshold 0`, #133). A rule/file pair
+  that still times out is incomplete coverage.
+- **Inventory.**
+  - When no declaration exists, no consumer target is reported (decision 6
+    said `not_applicable`). Every repository would otherwise carry a
+    placeholder target with nothing to plan.
+  - An invalid declaration is reported `failed` as
+    `consumer:invalid-declaration`.
+  - The target name is the owner, lower-cased, with `/` replaced by `.`
+    (`consumer:quantum-l9.cursor-governance`), to fit Core's target name
+    pattern.
+  - Applicability is matched from each rule's own `paths` and languages.
+  - Consumer coverage never counts toward a language's central coverage.
+  - `l9.capability-inventory/v1` goes to schema 1.2.0.
+- **Cursor-Governance's first rule needs a path scope.** Its
+  `l9.no-semgrep-app-token-in-child-env` rule carries no `paths`, so
+  decision 2 refuses it. The Consequences section above assumed otherwise.
+  Cursor-Governance has to add a `paths.include` to it (and the
+  `canonical_rule_id` metadata to all four rules) before its declaration
+  validates.
+

@@ -121,6 +121,7 @@ def test_wheel_contains_packaged_semgrep_scan_scope_policy(built_wheel: Path) ->
     for member in (
         "l9_ci/rulesets/semgrep/scan-scope.yaml",
         "l9_ci/schemas/v1/semgrep-scan-scope.schema.json",
+        "l9_ci/schemas/v1/semgrep-consumer-rulepack-evidence.schema.json",
     ):
         assert member in members, f"built wheel is missing {member}"
 

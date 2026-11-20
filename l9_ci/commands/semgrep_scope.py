@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import os
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 from l9_ci.artifacts.serializer import canonical_json_bytes
 from l9_ci.repository.git import inspect_git_repository, is_git_repository
@@ -49,8 +51,18 @@ def scope_evidence_path(raw_report: Path) -> Path:
     return raw_report.with_name(f"{raw_report.stem}.scope.json")
 
 
+def consumer_evidence_path(raw_report: Path) -> Path:
+    """Return the consumer record path beside ``raw_report``."""
+    return raw_report.with_name(f"{raw_report.stem}.consumer.json")
+
+
 def write_scope_evidence(scope: ScanScope, destination: Path) -> None:
     """Write ``scope`` as canonical JSON, atomically."""
+    write_evidence_record(scope.to_dict(), destination)
+
+
+def write_evidence_record(payload: Mapping[str, Any], destination: Path) -> None:
+    """Write one evidence record as canonical JSON, atomically."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
@@ -58,7 +70,7 @@ def write_scope_evidence(scope: ScanScope, destination: Path) -> None:
     temporary_path = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "wb") as handle:
-            handle.write(canonical_json_bytes(scope.to_dict()))
+            handle.write(canonical_json_bytes(dict(payload)))
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary_path, destination)
@@ -66,4 +78,10 @@ def write_scope_evidence(scope: ScanScope, destination: Path) -> None:
         temporary_path.unlink(missing_ok=True)
 
 
-__all__ = ["resolve_scan_scope", "scope_evidence_path", "write_scope_evidence"]
+__all__ = [
+    "consumer_evidence_path",
+    "resolve_scan_scope",
+    "scope_evidence_path",
+    "write_evidence_record",
+    "write_scope_evidence",
+]

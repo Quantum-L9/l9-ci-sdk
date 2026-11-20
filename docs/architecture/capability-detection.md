@@ -57,6 +57,18 @@ Rules the inventory holds:
   a required `language:typescript` instance was planned, scanned nothing and
   ended `incomplete`. Witness:
   `tests/capabilities/test_inventory_scan_scope.py`.
+- A consumer rulepack declaration (`.l9/semgrep-consumer-rules.yaml`,
+  ADR 0021) is reported as `semgrep consumer:<owner>` only under
+  `l9-ci providers inventory --consumer-rules`, because Core's planner accepts
+  only `language:` and `framework:` targets today.
+  - It is `applicable` when at least one tracked file is admitted by a
+    declared rule's own `paths` and languages.
+  - It is `not_applicable` when no tracked file is.
+  - It is `failed` (`consumer:invalid-declaration`) when the declaration does
+    not validate.
+  - Without a declaration, no consumer target is reported.
+  - Consumer coverage never counts toward a language's central coverage.
+  - Witness: `tests/capabilities/test_inventory_consumer_target.py`.
 - The executable is a fact about the machine, so it is `not_probed` unless
   the caller asks (`--probe-executables`).
 - The record carries no requiredness, enforcement mode or verdict. Core
