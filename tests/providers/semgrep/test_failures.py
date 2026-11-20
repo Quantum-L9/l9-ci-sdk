@@ -65,17 +65,37 @@ def _normalize_inline(report: dict, *, required: bool):
     )
 
 
-def test_warn_level_report_error_is_limitation_not_failure() -> None:
+def test_warn_level_timeout_is_not_a_failure_but_coverage_is_partial() -> None:
+    """A rule that timed out on a file never evaluated it (B5, 2026-11-20).
+
+    Semgrep reports it at level=warn, so it stays non-fatal (no failure),
+    but the file is not fully analyzed: coverage is PARTIAL and the
+    limitation names the rule/file pair.
+    """
     report = json.loads(
         (FIXTURE_ROOT / "report-error-warn.json").read_text(encoding="utf-8")
     )
     result = _normalize_inline(report, required=True)
     assert result.failures == ()
-    assert result.coverage.status is CoverageStatus.COMPLETE
-    assert any(
-        "Timeout" in item or "timeout" in item.lower()
-        for item in result.coverage.limitations
+    assert result.coverage.status is CoverageStatus.PARTIAL
+    assert result.coverage.files_considered == 1
+    assert result.coverage.files_analyzed == 0
+    assert (
+        "incomplete analysis: rule "
+        "python.lang.security.audit.dangerous-system-call-tainted-env-args "
+        "did not finish on src/example.py (Timeout)"
+    ) in result.coverage.limitations
+
+
+def test_other_warn_level_errors_stay_limitations_with_complete_coverage() -> None:
+    """Honour level=warn for everything that is not unfinished analysis."""
+    report = json.loads(
+        (FIXTURE_ROOT / "report-error-warn-parse.json").read_text(encoding="utf-8")
     )
+    result = _normalize_inline(report, required=True)
+    assert result.failures == ()
+    assert result.coverage.status is CoverageStatus.COMPLETE
+    assert any("Syntax error" in item for item in result.coverage.limitations)
 
 
 def test_error_level_report_error_stays_fatal_when_required() -> None:

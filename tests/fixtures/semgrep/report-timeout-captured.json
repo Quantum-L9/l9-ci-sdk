@@ -1,0 +1,19 @@
+{
+  "errors": [
+    {
+      "code": 2,
+      "level": "warn",
+      "message": "Timeout when running slow-taint on r/big.py:\n ",
+      "path": "r/big.py",
+      "rule_id": "slow-taint",
+      "type": "Timeout"
+    }
+  ],
+  "paths": {
+    "scanned": [
+      "r/big.py"
+    ]
+  },
+  "results": [],
+  "version": "1.171.0"
+}

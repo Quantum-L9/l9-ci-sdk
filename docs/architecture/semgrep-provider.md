@@ -45,8 +45,21 @@ Errors
 
 Malformed report structure becomes report_malformed.
 
-Entries in the report’s top-level errors array become structured execution
-failures and partial coverage.
+Entries in the report’s top-level errors array follow Semgrep's own `level`:
+
+* `level: error`, or a missing or unknown level, becomes a structured execution
+  failure (fatal when the provider is required), and coverage is partial.
+* `level: warn` stays a limitation and is not a failure (SDK #83).
+* Except: a warn entry whose `type` is `Timeout`, `FixpointTimeout`,
+  `OutOfMemory` or `StackOverflow` means a rule started on a file and did not
+  finish. It is still not a failure, but coverage is partial: the file is not
+  counted as analyzed, and the limitation names the rule and the file
+  (`incomplete analysis: rule <id> did not finish on <path> (<type>)`). A
+  required provider's gate is therefore `incomplete`, never `pass`. Found on
+  Cursor-Governance run 44819081765, where 5 rule timeouts on 4 files were
+  reported as a complete pass (lane L1-CANARY-FIXES, B5). Witnesses:
+  `tests/providers/semgrep/test_provider.py`, including the real captured
+  report `tests/fixtures/semgrep/report-timeout-captured.json`.
 
 Strict mode
 
