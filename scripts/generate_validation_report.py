@@ -9,7 +9,7 @@ file-tree digest.
 
 MANIFEST.md is a *separate* artifact owned by the `l9-ci manifest generate`
 CLI command (see `.github/workflows/l9-manifest-reconcile.yml`, which
-auto-commits corrections to PRs) — this script does not generate or touch it,
+fails on drift and uploads the fix as a patch artifact) — this script does not generate or touch it,
 to avoid two competing, differently-formatted generators fighting over the
 same file. `ci.yml` regenerates MANIFEST.md via that CLI command before
 running this script, so the two stay consistent.
