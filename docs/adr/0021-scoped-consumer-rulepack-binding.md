@@ -182,4 +182,3 @@ decision above.
   Cursor-Governance has to add a `paths.include` to it (and the
   `canonical_rule_id` metadata to all four rules) before its declaration
   validates.
-
