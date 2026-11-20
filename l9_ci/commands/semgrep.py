@@ -180,6 +180,15 @@ def register_semgrep_commands(
         default=[],
         help="a non-baseline rule ID to leave out; a baseline rule is refused",
     )
+    compose.add_argument(
+        "--materialize",
+        type=Path,
+        default=None,
+        help=(
+            "write exactly the composed rules, with exclusions applied, into "
+            "this empty directory; scan that directory, not the SDK's own"
+        ),
+    )
     compose.add_argument("--format", choices=("text", "json"), default="text")
     compose.set_defaults(handler=handle_compose)
 
@@ -353,8 +362,17 @@ def handle_compose(args: argparse.Namespace) -> int:
             product_configs=tuple(args.product_config),
             registry_rulesets=tuple(args.registry_ruleset),
             excluded_rule_ids=tuple(args.exclude_rule),
+            SDK_version=SDK_version(),
         )
-        payload = composition.to_dict()
+        materialized = (
+            [path.name for path in composition.materialize(args.materialize)]
+            if args.materialize is not None
+            else []
+        )
+        payload = {
+            "composition": composition.to_dict(),
+            "materialized": materialized,
+        }
     except Exception as exc:
         return emit_error(
             exc,

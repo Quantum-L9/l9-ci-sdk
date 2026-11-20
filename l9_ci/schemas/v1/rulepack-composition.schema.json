@@ -8,6 +8,7 @@
   "required": [
     "schema",
     "schema_version",
+    "SDK_version",
     "languages",
     "frameworks",
     "packs",
@@ -37,6 +38,7 @@
   "properties": {
     "schema": { "const": "l9.semgrep-rulepack-composition/v1" },
     "schema_version": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$" },
+    "SDK_version": { "type": "string", "minLength": 1 },
     "languages": { "type": "array", "items": { "type": "string" } },
     "frameworks": { "type": "array", "items": { "type": "string" } },
     "packs": {

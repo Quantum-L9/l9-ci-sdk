@@ -36,7 +36,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 HARVEST = REPO_ROOT / "tests" / "fixtures" / "semgrep" / "harvest"
 PORTABLE_PACK = REPO_ROOT / "l9_ci" / "rulesets" / "semgrep" / "packs"
 PYTHON_BASELINE = REPO_ROOT / "l9_ci" / "rulesets" / "semgrep" / "python"
-CURSOR_SAMPLE = HARVEST / "cursor" / "sample.py.txt"
+CURSOR_SAMPLE = HARVEST / "cursor" / "sample.pyfixture"
 CURSOR_COPIES = ("ops/memory/sample.py", "svc/sample.py")
 _MARKER = re.compile(r"#\s*(bad|good):\s*(\S+)")
 
@@ -191,7 +191,7 @@ def main() -> int:
     payload = {
         "markers": {
             "python_overlap.py": markers(overlap),
-            "cursor/sample.py.txt": markers(CURSOR_SAMPLE),
+            "cursor/sample.pyfixture": markers(CURSOR_SAMPLE),
             "odoo/plasticos_demo/models/bad.py": markers(
                 HARVEST / "odoo/plasticos_demo/models/bad.py"
             ),

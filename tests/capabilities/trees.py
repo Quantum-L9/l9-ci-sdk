@@ -10,9 +10,15 @@ either reject or silently repair.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Sequence
 
-from l9_ci.capabilities import AnalysisTarget
+from l9_ci.capabilities import (
+    AnalysisTarget,
+    CapabilityInventory,
+    build_capability_inventory,
+)
+
+SDK_VERSION = "2.0.0"
 
 PYTHON_ONLY: Mapping[str, str] = {
     "pyproject.toml": '[project]\nname = "svc"\nversion = "0.1.0"\n',
@@ -97,3 +103,11 @@ def semgrep_targets(
         )
         for language in ("python", "typescript")
     )
+
+
+def inventory(
+    root: Path,
+    targets: Sequence[AnalysisTarget],
+) -> CapabilityInventory:
+    """Build an inventory the way a caller does, with a fixed SDK version."""
+    return build_capability_inventory(root, targets=targets, SDK_version=SDK_VERSION)

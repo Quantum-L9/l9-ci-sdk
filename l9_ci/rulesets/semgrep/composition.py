@@ -25,7 +25,7 @@ import functools
 import hashlib
 import importlib.resources
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -95,11 +95,14 @@ class ComposedPack:
 class RulepackComposition:
     """One resolved composition.
 
-    ``config_paths`` is where the composed files are on this machine, for the
-    caller that executes them. It is deliberately not part of ``to_dict`` or
-    of ``content_digest``: the digest names content, not a location.
+    The record names content, never a location: no path on this machine is in
+    ``to_dict`` or in ``content_digest``. To execute a composition, call
+    :meth:`materialize`, which writes exactly the rules this record lists.
+    The source directories are not exposed, because scanning them would also
+    run any rule the composition excluded.
     """
 
+    SDK_version: str
     languages: tuple[str, ...]
     frameworks: tuple[str, ...]
     packs: tuple[ComposedPack, ...]
@@ -108,7 +111,7 @@ class RulepackComposition:
     unpinned_sources: tuple[str, ...]
     rule_ids: tuple[str, ...]
     content_digest: str
-    config_paths: tuple[Path, ...]
+    _sources: tuple[tuple[str, Path], ...] = field(repr=False, compare=False)
     schema: str = RULEPACK_COMPOSITION_PROTOCOL
     schema_version: str = RULEPACK_COMPOSITION_SCHEMA_VERSION
 
@@ -120,6 +123,7 @@ class RulepackComposition:
         return {
             "schema": self.schema,
             "schema_version": self.schema_version,
+            "SDK_version": self.SDK_version,
             "languages": list(self.languages),
             "frameworks": list(self.frameworks),
             "packs": [pack.to_dict() for pack in self.packs],
@@ -130,6 +134,54 @@ class RulepackComposition:
             "rule_ids": list(self.rule_ids),
             "content_digest": self.content_digest,
         }
+
+    def materialize(self, destination: Path) -> tuple[Path, ...]:
+        """Write exactly the composed rules into ``destination``.
+
+        One file per composed source, in composition order. A file with no
+        excluded rule is copied byte for byte. A file with an excluded rule is
+        rewritten without it, and a file left with no rule is not written.
+        Raises if ``destination`` is not empty, or if a source no longer has
+        the content this composition recorded.
+        """
+        destination.mkdir(parents=True, exist_ok=True)
+        if any(destination.iterdir()):
+            raise RulepackCompositionError(
+                f"materialize destination is not empty: {destination.name}"
+            )
+        recorded = {
+            file.path: file.sha256
+            for file in (
+                *(file for pack in self.packs for file in pack.files),
+                *self.product_configs,
+            )
+        }
+        excluded = set(self.excluded_rule_ids)
+        written: list[Path] = []
+        for index, (label, source) in enumerate(self._sources):
+            content = source.read_bytes()
+            if hashlib.sha256(content).hexdigest() != recorded[label]:
+                raise RulepackCompositionError(
+                    f"{label} changed after it was composed; compose again"
+                )
+            name = "".join(
+                character if character.isalnum() or character in "-." else "_"
+                for character in label
+            )
+            target = destination / f"{index:03d}-{name}"
+            document = yaml.safe_load(content.decode("utf-8"))
+            kept = [rule for rule in document["rules"] if rule["id"] not in excluded]
+            if not kept:
+                continue
+            if len(kept) == len(document["rules"]):
+                target.write_bytes(content)
+            else:
+                target.write_text(
+                    yaml.safe_dump({**document, "rules": kept}, sort_keys=False),
+                    encoding="utf-8",
+                )
+            written.append(target)
+        return tuple(written)
 
 
 def _package_root() -> Path:
@@ -234,16 +286,17 @@ def _composed_file(path: Path, label: str) -> ComposedFile:
     return ComposedFile(path=label, sha256=digest, rule_ids=_rule_ids(path, label))
 
 
-def _compose_pack(definition: RulepackDefinition) -> tuple[ComposedPack, Path]:
+def _compose_pack(
+    definition: RulepackDefinition,
+) -> tuple[ComposedPack, tuple[tuple[str, Path], ...]]:
     directory = _package_root() / definition.directory
     files = sorted(directory.glob("*.yml")) if directory.is_dir() else []
     if not files:
         raise RulepackCompositionError(
             f"rulepack {definition.pack_id!r}: no rule file in {definition.directory!r}"
         )
-    composed = tuple(
-        _composed_file(path, f"{definition.directory}/{path.name}") for path in files
-    )
+    labelled = tuple((f"{definition.directory}/{path.name}", path) for path in files)
+    composed = tuple(_composed_file(path, label) for label, path in labelled)
     return (
         ComposedPack(
             pack_id=definition.pack_id,
@@ -251,7 +304,7 @@ def _compose_pack(definition: RulepackDefinition) -> tuple[ComposedPack, Path]:
             status=definition.status,
             files=composed,
         ),
-        directory,
+        labelled,
     )
 
 
@@ -270,6 +323,7 @@ def compose_rulepack(
     product_configs: Sequence[Path] = (),
     registry_rulesets: Sequence[str] = (),
     excluded_rule_ids: Sequence[str] = (),
+    SDK_version: str,
 ) -> RulepackComposition:
     """Resolve the effective rulepack for the named languages and frameworks.
 
@@ -278,7 +332,13 @@ def compose_rulepack(
     restriction that names a baseline rule or an unknown rule, a product
     configuration that redefines a packaged rule ID, or two sources that
     define the same rule ID.
+
+    ``SDK_version`` is the producing SDK version, carried on the record as on
+    every version-negotiated artifact. It is not part of ``content_digest``:
+    the digest names the rules, whichever SDK build resolved them.
     """
+    if not isinstance(SDK_version, str) or not SDK_version.strip():
+        raise RulepackCompositionError("SDK_version must be a non-empty string")
     selected_languages = _unique_sorted(languages, "languages")
     selected_frameworks = _unique_sorted(frameworks, "frameworks")
     if not selected_languages and not selected_frameworks:
@@ -303,7 +363,7 @@ def compose_rulepack(
             )
 
     packs: list[ComposedPack] = []
-    config_paths: list[Path] = []
+    sources: list[tuple[str, Path]] = []
     for definition in definitions:
         wanted = (
             selected_frameworks
@@ -314,9 +374,9 @@ def compose_rulepack(
             continue
         if definition.status == "candidate" and not include_candidates:
             continue
-        pack, directory = _compose_pack(definition)
+        pack, pack_sources = _compose_pack(definition)
         packs.append(pack)
-        config_paths.append(directory)
+        sources.extend(pack_sources)
 
     owner: dict[str, str] = {}
     for pack in packs:
@@ -335,9 +395,24 @@ def compose_rulepack(
         for rule_id in pack.rule_ids
     }
 
+    # Order by name and then by content, so that two product files with the
+    # same name in different directories compose identically whichever order
+    # the caller passed them in. The label carries a content prefix for the
+    # same reason: a bare file name would not tell them apart.
+    resolved = sorted(
+        (
+            (
+                config.name,
+                _composed_file(config, f"product:{config.name}").sha256,
+                config,
+            )
+            for config in product_configs
+        ),
+        key=lambda item: (item[0], item[1]),
+    )
     products: list[ComposedFile] = []
-    for config in sorted(product_configs, key=lambda item: item.name):
-        composed = _composed_file(config, f"product:{config.name}")
+    for name, sha256, config in resolved:
+        composed = _composed_file(config, f"product:{sha256[:12]}:{name}")
         for rule_id in composed.rule_ids:
             if rule_id in baseline_rule_ids:
                 raise RulepackCompositionError(
@@ -351,7 +426,7 @@ def compose_rulepack(
                 )
             owner[rule_id] = composed.path
         products.append(composed)
-        config_paths.append(config)
+        sources.append((composed.path, config))
 
     excluded = _unique_sorted(excluded_rule_ids, "excluded rule IDs")
     for rule_id in excluded:
@@ -377,6 +452,7 @@ def compose_rulepack(
         json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
     return RulepackComposition(
+        SDK_version=SDK_version,
         languages=selected_languages,
         frameworks=selected_frameworks,
         packs=tuple(packs),
@@ -385,5 +461,5 @@ def compose_rulepack(
         unpinned_sources=unpinned,
         rule_ids=rule_ids,
         content_digest=f"sha256:{digest}",
-        config_paths=tuple(config_paths),
+        _sources=tuple(sources),
     )
