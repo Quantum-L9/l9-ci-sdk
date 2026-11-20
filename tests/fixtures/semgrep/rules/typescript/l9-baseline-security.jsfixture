@@ -3,6 +3,9 @@
 // whose rules declare `languages: [typescript, javascript]`. Every line
 // annotated `ruleid` must be flagged and every line annotated `ok` must not.
 //
+// Stored as .jsfixture so CodeQL and the publish security gate do not analyse
+// its deliberate known-bad lines as product code.
+//
 // Scan input only. Never imported or executed.
 
 const child_process = require("child_process");

@@ -8,10 +8,13 @@ against the real ``semgrep`` executable: every suffix the inventory maps to a
 served language is written to disk, the target's packaged rulepack is run, and
 the set of files Semgrep scanned must equal the declared set.
 
-They also run the TypeScript pack's ``semgrep --test`` fixture, which is a
-JavaScript file: every rule in that pack must flag its known-bad line and
-leave its known-good line alone on JavaScript, or the pack does not serve
-JavaScript.
+They also run the TypeScript pack's ``semgrep --test`` fixture, which is
+JavaScript: every rule in that pack must flag its known-bad line and leave its
+known-good line alone on JavaScript, or the pack does not serve JavaScript.
+The fixture is stored as ``.jsfixture``, the repository's convention for a
+scanner fixture (``rules/python/l9-file-permissions.pyfixture``): as ``.js``,
+CodeQL default setup and the publish security gate analyse its deliberate
+known-bad lines as product code.
 
 Like tests/rulesets/test_semgrep_rule_fixtures.py these need a ``semgrep``
 executable and skip without one; the ``semgrep rule fixtures`` step in
@@ -49,8 +52,13 @@ _PROBE = {
 }
 
 
+def test_javascript_fixture_is_outside_javascript_extension_scanners() -> None:
+    assert (TS_FIXTURES / "l9-baseline-security.jsfixture").is_file()
+    assert not (TS_FIXTURES / "l9-baseline-security.js").exists()
+
+
 def test_typescript_pack_has_a_javascript_fixture() -> None:
-    fixture = TS_FIXTURES / "l9-baseline-security.js"
+    fixture = TS_FIXTURES / "l9-baseline-security.jsfixture"
     assert fixture.is_file(), f"missing Semgrep fixture {fixture}"
     text = fixture.read_text(encoding="utf-8")
     rules = (ruleset_dir("typescript") / "l9-baseline-security.yml").read_text(

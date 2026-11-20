@@ -336,7 +336,7 @@ Files: 390
 - `tests/fixtures/semgrep/rules/python/l9-logging.py`
 - `tests/fixtures/semgrep/rules/python/l9-routing.py`
 - `tests/fixtures/semgrep/rules/python/l9-transport.py`
-- `tests/fixtures/semgrep/rules/typescript/l9-baseline-security.js`
+- `tests/fixtures/semgrep/rules/typescript/l9-baseline-security.jsfixture`
 - `tests/fixtures/semgrep/runtime/identity-map.yaml`
 - `tests/fixtures/semgrep/runtime/policy.yaml`
 - `tests/fixtures/semgrep/runtime/provenance.yaml`

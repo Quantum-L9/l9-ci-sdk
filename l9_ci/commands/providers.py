@@ -117,7 +117,7 @@ def handle_detect(args: argparse.Namespace) -> int:
 # The typescript run serves JavaScript too: every rule in
 # l9_ci/rulesets/semgrep/typescript declares `languages: [typescript,
 # javascript]`, and tests/fixtures/semgrep/rules/typescript/ proves each one
-# on a .js file in both directions. Semgrep does not scan .mts or .cts, so
+# on JavaScript in both directions. Semgrep does not scan .mts or .cts, so
 # those TypeScript files are reported as not analyzed rather than covered.
 _TARGET_FILES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "python": (("python",), (".py",)),
