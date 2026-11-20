@@ -40,7 +40,7 @@ Rules the inventory holds:
   none is.
 - JavaScript is served by the `semgrep` target `language:typescript`: the
   TypeScript rulepack declares `languages: [typescript, javascript]`, its
-  fixture `tests/fixtures/semgrep/rules/typescript/l9-baseline-security.js`
+  fixture `tests/fixtures/semgrep/rules/typescript/l9-baseline-security.jsfixture`
   proves every rule on JavaScript in both directions, and
   `l9-ci semgrep run --language typescript` analyzes `.js`, `.jsx`, `.mjs`
   and `.cjs`. There is no separate JavaScript target, so a repository with
