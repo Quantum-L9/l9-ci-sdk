@@ -178,6 +178,13 @@ version_negotiation:
     - exact SDK pinning is required for central CI
     - consumers must not infer compatibility from artifact shape alone
 
+# PROPOSED, NOT ADMITTED. These five statements are the candidate invariants of
+# SDK ADR 0020, whose status is Proposed (docs/adr/README.md). They become
+# binding integration requirements only when the SDK owner accepts that ADR.
+# Until then a consumer must not rely on them, and `metadata.status:
+# authoritative` above does not extend to this block. The wording is frozen by
+# the proposing campaign and is unchanged here. Each statement has a running
+# positive and negative witness in tests/invariants/.
 ci_provider_invariants:
   - id: L9-CI-SDK-001
     statement: >-
