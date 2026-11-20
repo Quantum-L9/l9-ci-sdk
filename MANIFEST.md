@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 389
+Files: 388
 
 ## Contents
 
@@ -305,8 +305,7 @@ Files: 389
 - `tests/contracts/test_schema_conformance.py`
 - `tests/execution/test_profiles.py`
 - `tests/execution/test_selection.py`
-- `tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py`
-- `tests/fixtures/semgrep/harvest/cursor/svc/sample.py`
+- `tests/fixtures/semgrep/harvest/cursor/sample.py.txt`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/data/bad_cron.xml`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.py`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.sql`

@@ -552,17 +552,19 @@ rows:
     in another repository. It stays scoped and owned where it is.
   witnesses:
     known_bad:
-      fixture: tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py
-      source: authored
-      evidence: Flags line(s) [15] of the memory-path copy (marked bad at line 15).
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Flags line(s) [17] of the memory-path copy (marked bad at line 15).
     known_good:
-      fixture: tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py
-      source: authored
-      evidence: Does not flag line 46 (json.dumps, marked good).
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Does not flag the json.dumps line marked good.
     non_target:
       kind: path_scope
-      evidence: The identical file at tests/fixtures/semgrep/harvest/cursor/svc/sample.py is outside
-        the rule's paths.include and produces no finding (none).
+      evidence: 'The same sample written as svc/sample.py is outside the rule''s paths.include
+        and produces no finding (none). The include is a path fragment, not a repository identity:
+        it matches ''ops/memory/'' anywhere in a path, so in another repository the rule is silent
+        only because no such path exists there.'
   retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
     CURSOR_CANARY_PASS (L9-CI-CORE-004).
 - rule_id: l9.memory-boundary-spawn-only-through-the-binding
@@ -582,17 +584,19 @@ rows:
     in another repository. It stays scoped and owned where it is.
   witnesses:
     known_bad:
-      fixture: tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py
-      source: authored
-      evidence: Flags line(s) [34, 39] of the memory-path copy (marked bad at line 34).
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Flags line(s) [36, 41] of the memory-path copy (marked bad at line 34).
     known_good:
-      fixture: tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py
-      source: authored
-      evidence: Does not flag line 46 (json.dumps, marked good).
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Does not flag the json.dumps line marked good.
     non_target:
       kind: path_scope
-      evidence: The identical file at tests/fixtures/semgrep/harvest/cursor/svc/sample.py is outside
-        the rule's paths.include and produces no finding (none).
+      evidence: 'The same sample written as svc/sample.py is outside the rule''s paths.include
+        and produces no finding (none). The include is a path fragment, not a repository identity:
+        it matches ''ops/memory/'' anywhere in a path, so in another repository the rule is silent
+        only because no such path exists there.'
   retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
     CURSOR_CANARY_PASS (L9-CI-CORE-004).
 - rule_id: l9.memory-boundary-no-shell-string-spawn
@@ -612,17 +616,19 @@ rows:
     in another repository. It stays scoped and owned where it is.
   witnesses:
     known_bad:
-      fixture: tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py
-      source: authored
-      evidence: Flags line(s) [39] of the memory-path copy (marked bad at line 39).
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Flags line(s) [41] of the memory-path copy (marked bad at line 39).
     known_good:
-      fixture: tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py
-      source: authored
-      evidence: Does not flag line 46 (json.dumps, marked good).
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Does not flag the json.dumps line marked good.
     non_target:
       kind: path_scope
-      evidence: The identical file at tests/fixtures/semgrep/harvest/cursor/svc/sample.py is outside
-        the rule's paths.include and produces no finding (none).
+      evidence: 'The same sample written as svc/sample.py is outside the rule''s paths.include
+        and produces no finding (none). The include is a path fragment, not a repository identity:
+        it matches ''ops/memory/'' anywhere in a path, so in another repository the rule is silent
+        only because no such path exists there.'
   retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
     CURSOR_CANARY_PASS (L9-CI-CORE-004).
 - rule_id: l9.no-semgrep-app-token-in-child-env
@@ -637,7 +643,7 @@ rows:
   scope: python; no path scope
   disposition: defer_unknown
   rationale: 'Behaviour is proven, applicability is not. The rule has no path scope and flags
-    the read wherever it appears (lines {''ops/memory/sample.py'': [20], ''svc/sample.py'': [20]}).
+    the read wherever it appears (lines {''ops/memory/sample.py'': [22], ''svc/sample.py'': [22]}).
     Its meaning is Cursor-Governance''s rule that a model-controlled process must not inherit
     the Semgrep credential; a repository whose CI legitimately configures Semgrep from that variable
     would be reported. Whether any other consumer has that trust model is unknown.'
@@ -645,19 +651,19 @@ rows:
     consumer with the same local-scan trust model is identified before any language-level promotion.
   witnesses:
     known_bad:
-      fixture: tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py
-      source: authored
-      evidence: Flags line 20 (os.environ.get('SEMGREP_APP_TOKEN')).
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Flags line [22] (os.environ.get('SEMGREP_APP_TOKEN')).
     known_good:
-      fixture: tests/fixtures/semgrep/harvest/cursor/ops/memory/sample.py
-      source: authored
-      evidence: Does not flag line 25 (os.environ.get('L9_MEMORY_NAMESPACE')).
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      source: authored; written as ops/memory/sample.py for the scan
+      evidence: Does not flag os.environ.get('L9_MEMORY_NAMESPACE'), marked good.
     non_target:
       kind: not_composed
       evidence: 'This rule is in no SDK pack. It is unscoped at the donor: it also flags the copy
-        at tests/fixtures/semgrep/harvest/cursor/svc/sample.py line 20, which is why it cannot
-        become a fleet default without a scope decision. tests/rulesets/test_harvest_ledger.py
-        asserts that no composition carries the donor rule ID.'
+        written as svc/sample.py (line [22]), which is why it cannot become a fleet default without
+        a scope decision. tests/rulesets/test_harvest_ledger.py asserts that no composition carries
+        the donor rule ID.'
   retirement: None. The donor rule stays in place at its owner. No consumer check is retired before
     CURSOR_CANARY_PASS (L9-CI-CORE-004).
 - rule_id: plasticos-python-bare-except
