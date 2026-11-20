@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/rulepack-composition.schema.json",
+  "title": "RulepackComposition",
+  "description": "One resolved composition of the packaged Semgrep rulepacks: every file by SHA-256, every rule ID and one digest over the whole. A factual record; it carries no requiredness and no verdict.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "languages",
+    "frameworks",
+    "packs",
+    "product_configs",
+    "excluded_rule_ids",
+    "unpinned_sources",
+    "reproducible",
+    "rule_ids",
+    "content_digest"
+  ],
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "rule_ids"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "rule_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema": { "const": "l9.semgrep-rulepack-composition/v1" },
+    "schema_version": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$" },
+    "languages": { "type": "array", "items": { "type": "string" } },
+    "frameworks": { "type": "array", "items": { "type": "string" } },
+    "packs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pack_id", "kind", "status", "files"],
+        "properties": {
+          "pack_id": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["baseline", "language", "framework"] },
+          "status": { "enum": ["active", "candidate"] },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/file" }
+          }
+        }
+      }
+    },
+    "product_configs": { "type": "array", "items": { "$ref": "#/$defs/file" } },
+    "excluded_rule_ids": { "type": "array", "items": { "type": "string" } },
+    "unpinned_sources": { "type": "array", "items": { "type": "string" } },
+    "reproducible": { "type": "boolean" },
+    "rule_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "content_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

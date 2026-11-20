@@ -11,6 +11,7 @@ from l9_ci.commands.errors import emit_error
 from l9_ci.pipeline import SemgrepPipelineRequest, run_semgrep_pipeline
 from l9_ci.providers.semgrep import SemgrepProvider
 from l9_ci.rulesets.semgrep import (
+    compose_rulepack,
     SUPPORTED_LANGUAGES,
     default_identity_map_path,
     default_profile_name,
@@ -142,6 +143,45 @@ def register_semgrep_commands(
     )
     _add_common_arguments(run)
     run.set_defaults(handler=handle_run)
+
+    compose = semgrep_subparsers.add_parser(
+        "compose",
+        help=(
+            "Resolve the effective packaged rulepack for the named languages "
+            "and frameworks to exact file digests and rule IDs"
+        ),
+    )
+    compose.add_argument("--language", action="append", default=[])
+    compose.add_argument("--framework", action="append", default=[])
+    compose.add_argument(
+        "--include-candidates",
+        action="store_true",
+        help="also compose candidate packs (harvested, shadow mode)",
+    )
+    compose.add_argument(
+        "--product-config",
+        action="append",
+        type=Path,
+        default=[],
+        help="an authorized product rule file to add; it may not redefine a rule",
+    )
+    compose.add_argument(
+        "--registry-ruleset",
+        action="append",
+        default=[],
+        help=(
+            "a registry label that will also be scanned (for example p/python); "
+            "recorded as unpinned, which makes the composition not reproducible"
+        ),
+    )
+    compose.add_argument(
+        "--exclude-rule",
+        action="append",
+        default=[],
+        help="a non-baseline rule ID to leave out; a baseline rule is refused",
+    )
+    compose.add_argument("--format", choices=("text", "json"), default="text")
+    compose.set_defaults(handler=handle_compose)
 
 
 def handle_detect(args: argparse.Namespace) -> int:
@@ -302,3 +342,24 @@ def handle_run(args: argparse.Namespace) -> int:
         ),
         default=ExitCode.PROVIDER_EXECUTION_FAILURE,
     )
+
+
+def handle_compose(args: argparse.Namespace) -> int:
+    try:
+        composition = compose_rulepack(
+            languages=tuple(args.language),
+            frameworks=tuple(args.framework),
+            include_candidates=args.include_candidates,
+            product_configs=tuple(args.product_config),
+            registry_rulesets=tuple(args.registry_ruleset),
+            excluded_rule_ids=tuple(args.exclude_rule),
+        )
+        payload = composition.to_dict()
+    except Exception as exc:
+        return emit_error(
+            exc,
+            output_format=OutputFormat(args.format),
+            default=ExitCode.INVALID_ARGUMENTS,
+        )
+    print(render_success(payload, output_format=OutputFormat(args.format)))
+    return int(ExitCode.SUCCESS)
