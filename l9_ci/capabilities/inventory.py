@@ -33,7 +33,7 @@ import ast
 import hashlib
 import json
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from importlib.resources import files
 from pathlib import Path, PurePosixPath
@@ -191,6 +191,14 @@ class AnalysisTarget:
     lower case with the leading dot. Empty means every file of ``languages``.
     A file of a served language with any other suffix is counted as not
     analyzed, never as covered.
+
+    ``scope_exclusion`` returns the declared scan-scope entry that keeps a
+    repository-relative path out of the target's scan, or ``None`` when the
+    path is in scope. A target is planned only on files its scan will
+    actually reach: when every matching file is excluded, the target is
+    ``not_applicable`` and the reason names the exclusions. The composition
+    layer supplies the predicate, because this package must not import the
+    scope policy (``l9_ci.rulesets``).
     """
 
     provider_id: str
@@ -202,6 +210,9 @@ class AnalysisTarget:
     executable: str = "not_probed"
     executable_version: str | None = None
     suffixes: tuple[str, ...] = ()
+    scope_exclusion: Callable[[str], str | None] | None = field(
+        default=None, compare=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         if self.scope not in _TARGET_SCOPES:
@@ -378,14 +389,29 @@ def _read_manifest(root: Path, relative: str) -> ManifestEvidence:
 def _languages(
     by_language: Mapping[str, tuple[str, ...]],
     analyzed: frozenset[str],
+    out_of_scope: frozenset[str] = frozenset(),
 ) -> tuple[LanguageCapability, ...]:
     result = []
     for language in sorted(by_language):
         paths = by_language[language]
         missed = tuple(path for path in paths if path not in analyzed)
-        if len(missed) == len(paths):
+        excluded = sum(1 for path in missed if path in out_of_scope)
+        if missed and excluded == len(paths):
+            state = CapabilityState.UNSUPPORTED
+            reason = (
+                f"all {excluded} file(s) are outside the declared scan scope, "
+                "so no analysis target scans them"
+            )
+        elif len(missed) == len(paths):
             state = CapabilityState.UNSUPPORTED
             reason = "no declared analysis target analyzes a file of this language"
+        elif excluded:
+            state = CapabilityState.APPLICABLE
+            reason = (
+                f"declared analysis targets analyze {len(paths) - len(missed)} of "
+                f"{len(paths)} file(s); {excluded} are outside the declared scan "
+                f"scope and {len(missed) - excluded} are analyzed by no target"
+            )
         elif missed:
             state = CapabilityState.APPLICABLE
             reason = (
@@ -498,12 +524,14 @@ def _analyzed_files(
     by_language: Mapping[str, tuple[str, ...]],
     frameworks: Mapping[str, FrameworkCapability],
     framework_files: Mapping[str, frozenset[str]],
-) -> frozenset[str]:
-    """The files ``target`` would actually analyze in this snapshot.
+) -> tuple[frozenset[str], dict[str, tuple[str, ...]]]:
+    """The files ``target`` would actually analyze, and those its scope drops.
 
     A file counts when it belongs to one of the target's languages, has one of
-    its suffixes (any suffix when none are declared) and, for a framework
-    target, lies inside an applicable framework.
+    its suffixes (any suffix when none are declared), for a framework target
+    lies inside an applicable framework, and is not excluded by the target's
+    declared scan scope. Excluded files are returned grouped by the scope
+    entry that excluded them.
     """
     candidates = [
         path for language in target.languages for path in by_language.get(language, ())
@@ -516,10 +544,22 @@ def _analyzed_files(
     if target.scope == "framework":
         framework = frameworks.get(target.name)
         if framework is None or framework.state is not CapabilityState.APPLICABLE:
-            return frozenset()
+            return frozenset(), {}
         scope = framework_files.get(target.name, frozenset())
         candidates = [path for path in candidates if path in scope]
-    return frozenset(candidates)
+    excluded: dict[str, list[str]] = {}
+    if target.scope_exclusion is not None:
+        kept = []
+        for path in candidates:
+            label = target.scope_exclusion(path)
+            if label is None:
+                kept.append(path)
+            else:
+                excluded.setdefault(label, []).append(path)
+        candidates = kept
+    return frozenset(candidates), {
+        label: tuple(sorted(paths)) for label, paths in sorted(excluded.items())
+    }
 
 
 def _target_file_count(
@@ -527,6 +567,7 @@ def _target_file_count(
     analyzed: frozenset[str],
     frameworks: Mapping[str, FrameworkCapability],
     examined: int,
+    excluded: Mapping[str, tuple[str, ...]] | None = None,
 ) -> tuple[int, CapabilityState | None, str]:
     """Return the file count a target would analyze and why it may not apply.
 
@@ -545,6 +586,19 @@ def _target_file_count(
             return 0, CapabilityState.NOT_APPLICABLE, framework.reason
         if framework.state is not CapabilityState.APPLICABLE:
             return 0, CapabilityState.FAILED, framework.reason
+    if not analyzed and excluded:
+        kind = " or ".join(target.languages)
+        count = sum(len(paths) for paths in excluded.values())
+        detail = ", ".join(
+            f"{label} ({len(paths)}: {', '.join(paths[:3])})"
+            for label, paths in excluded.items()
+        )
+        return (
+            0,
+            CapabilityState.NOT_APPLICABLE,
+            f"no {kind} file this target analyzes is inside the declared scan "
+            f"scope: {count} file(s) excluded by {detail}",
+        )
     if not analyzed:
         kind = " or ".join(target.languages)
         where = f"{target.name} source " if target.scope == "framework" else ""
@@ -559,17 +613,21 @@ def _target_file_count(
 
 def _prerequisites(
     targets: Sequence[AnalysisTarget],
-    analyzed_by_target: Mapping[str, frozenset[str]],
+    analyzed_by_target: Mapping[
+        str, tuple[frozenset[str], Mapping[str, tuple[str, ...]]]
+    ],
     frameworks: Mapping[str, FrameworkCapability],
     examined: int,
 ) -> tuple[ProviderPrerequisite, ...]:
     result = []
     for target in sorted(targets, key=lambda item: (item.provider_id, item.target)):
+        analyzed, excluded = analyzed_by_target[f"{target.provider_id} {target.target}"]
         file_count, blocked, why = _target_file_count(
             target,
-            analyzed_by_target[f"{target.provider_id} {target.target}"],
+            analyzed,
             frameworks,
             examined,
+            excluded,
         )
         state: CapabilityState
         if blocked is not None:
@@ -714,8 +772,17 @@ def build_capability_inventory(
     prerequisites = _prerequisites(
         targets, analyzed_by_target, by_framework, len(all_files)
     )
-    analyzed = frozenset().union(*analyzed_by_target.values())
-    languages = _languages(by_language, analyzed)
+    analyzed = frozenset().union(*(files for files, _ in analyzed_by_target.values()))
+    out_of_scope = (
+        frozenset(
+            path
+            for _, excluded in analyzed_by_target.values()
+            for paths in excluded.values()
+            for path in paths
+        )
+        - analyzed
+    )
+    languages = _languages(by_language, analyzed, out_of_scope)
     status, reasons = _overall(
         languages, frameworks, manifests, prerequisites, len(all_files)
     )

@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 399
+Files: 400
 
 ## Contents
 
@@ -290,6 +290,7 @@ Files: 399
 - `tests/capabilities/__init__.py`
 - `tests/capabilities/test_detector.py`
 - `tests/capabilities/test_inventory.py`
+- `tests/capabilities/test_inventory_scan_scope.py`
 - `tests/capabilities/trees.py`
 - `tests/cli/test_exit_codes.py`
 - `tests/cli/test_output.py`

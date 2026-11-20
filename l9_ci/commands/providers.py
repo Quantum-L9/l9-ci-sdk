@@ -15,6 +15,7 @@ from l9_ci.commands.errors import emit_error
 from l9_ci.commands.semgrep import SDK_version
 from l9_ci.providers import ProviderRegistry, SemgrepProvider
 from l9_ci.rulesets.semgrep import SUPPORTED_LANGUAGES, ruleset_dir
+from l9_ci.rulesets.semgrep.scope import packaged_scan_scope_policy
 
 
 def default_registry() -> ProviderRegistry:
@@ -148,6 +149,7 @@ def default_analysis_targets(
             version = provider.detect_version()
         else:
             executable = "missing"
+    scope_policy = packaged_scan_scope_policy()
     targets = []
     for language in sorted(SUPPORTED_LANGUAGES):
         languages, suffixes = _TARGET_FILES[language]
@@ -166,6 +168,10 @@ def default_analysis_targets(
                 executable=executable,
                 executable_version=version,
                 suffixes=suffixes,
+                # Plan only on files the required run will scan: the same
+                # declared scope `semgrep run --required` resolves its targets
+                # from (l9_ci/rulesets/semgrep/scan-scope.yaml).
+                scope_exclusion=scope_policy.exclusion_for,
             )
         )
     return tuple(targets)
