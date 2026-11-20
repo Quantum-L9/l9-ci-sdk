@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 396
+Files: 397
 
 ## Contents
 
@@ -23,6 +23,7 @@ Files: 396
 - `.github/governance/rule-modes.yaml`
 - `.github/governance/semgrep-policy.yaml`
 - `.github/governance/waivers.yaml`
+- `.github/pull_request_template.md`
 - `.github/scripts/agent_review_payload.py`
 - `.github/scripts/classify_pr.py`
 - `.github/scripts/evaluate_ci_gate.py`
