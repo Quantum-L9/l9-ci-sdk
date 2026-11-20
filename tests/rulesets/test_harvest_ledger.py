@@ -19,6 +19,7 @@ import yaml
 from l9_ci.rulesets.semgrep import (
     HARVEST_DISPOSITIONS,
     HARVEST_LEDGER_SCHEMA,
+    RulepackComposition,
     compose_rulepack,
     rulepack_definitions,
     validate_harvest_ledger,
@@ -34,6 +35,11 @@ EXPECTED_ROWS = {
     "Quantum-L9/Cursor-Governance": 4,
     "cryptoxdog/IB-Odoo_19": 39,
 }
+
+
+def _compose(**selection: Any) -> RulepackComposition:
+    """Compose the way a caller does, with a fixed SDK version."""
+    return compose_rulepack(**selection, SDK_version="2.0.0")
 
 
 def _document() -> dict[str, Any]:
@@ -118,9 +124,7 @@ def test_every_cited_sdk_fixture_exists() -> None:
 
 def test_consolidated_rows_name_a_rule_the_sdk_really_composes() -> None:
     composed = set(
-        compose_rulepack(
-            languages=("python", "typescript"), include_candidates=True
-        ).rule_ids
+        _compose(languages=("python", "typescript"), include_candidates=True).rule_ids
     )
     for row in ROWS:
         if "sdk_rule" in row:
@@ -132,9 +136,7 @@ def test_consolidated_rows_name_a_rule_the_sdk_really_composes() -> None:
 def test_no_donor_rule_id_is_delivered_by_any_composition() -> None:
     """The non-target witness for every rule that stays at its owner."""
     composed = set(
-        compose_rulepack(
-            languages=("python", "typescript"), include_candidates=True
-        ).rule_ids
+        _compose(languages=("python", "typescript"), include_candidates=True).rule_ids
     )
     donor_ids = {row["rule_id"] for row in ROWS}
     assert composed.isdisjoint(donor_ids)

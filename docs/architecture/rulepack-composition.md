@@ -48,6 +48,28 @@ The default `l9-ci semgrep run` profile includes a registry ruleset, so a run
 under that profile is not content-reproducible today. This is reported, not
 changed here.
 
+## Executing a composition
+
+The record names content and carries no path. `RulepackComposition.materialize`
+(`l9-ci semgrep compose --materialize DIRECTORY`) writes exactly the composed
+rules into an empty directory: a file with no excluded rule is copied byte for
+byte, a file with an excluded rule is rewritten without it, and a file left
+with no rule is not written. Scan that directory.
+
+The SDK's own rule directories are not exposed as the executable
+configuration. They still hold any rule the composition excluded, and
+Semgrep's `--exclude-rule` does not match a rule loaded from a path by its
+bare ID, so a list of directories plus exclusions would run the excluded
+rule. `materialize` refuses a destination that is not empty, and a source
+whose content changed after it was composed.
+
+Product files are ordered by name and then by content digest, and their
+label carries a digest prefix, so two files with the same name compose
+identically whichever order the caller passes them in.
+
+Every record carries `SDK_version`. It is not part of `content_digest`: the
+digest names the rules, whichever SDK build resolved them.
+
 ## What this does not do
 
 - It does not scan. `l9-ci semgrep run` is unchanged and still scans the

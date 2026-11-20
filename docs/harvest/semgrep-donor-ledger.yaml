@@ -552,11 +552,11 @@ rows:
     in another repository. It stays scoped and owned where it is.
   witnesses:
     known_bad:
-      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
       source: authored; written as ops/memory/sample.py for the scan
-      evidence: Flags line(s) [17] of the memory-path copy (marked bad at line 15).
+      evidence: Flags line(s) [19] of the memory-path copy (marked bad at line 15).
     known_good:
-      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
       source: authored; written as ops/memory/sample.py for the scan
       evidence: Does not flag the json.dumps line marked good.
     non_target:
@@ -584,11 +584,11 @@ rows:
     in another repository. It stays scoped and owned where it is.
   witnesses:
     known_bad:
-      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
       source: authored; written as ops/memory/sample.py for the scan
-      evidence: Flags line(s) [36, 41] of the memory-path copy (marked bad at line 34).
+      evidence: Flags line(s) [38, 43] of the memory-path copy (marked bad at line 34).
     known_good:
-      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
       source: authored; written as ops/memory/sample.py for the scan
       evidence: Does not flag the json.dumps line marked good.
     non_target:
@@ -616,11 +616,11 @@ rows:
     in another repository. It stays scoped and owned where it is.
   witnesses:
     known_bad:
-      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
       source: authored; written as ops/memory/sample.py for the scan
-      evidence: Flags line(s) [41] of the memory-path copy (marked bad at line 39).
+      evidence: Flags line(s) [43] of the memory-path copy (marked bad at line 39).
     known_good:
-      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
       source: authored; written as ops/memory/sample.py for the scan
       evidence: Does not flag the json.dumps line marked good.
     non_target:
@@ -643,7 +643,7 @@ rows:
   scope: python; no path scope
   disposition: defer_unknown
   rationale: 'Behaviour is proven, applicability is not. The rule has no path scope and flags
-    the read wherever it appears (lines {''ops/memory/sample.py'': [22], ''svc/sample.py'': [22]}).
+    the read wherever it appears (lines {''ops/memory/sample.py'': [24], ''svc/sample.py'': [24]}).
     Its meaning is Cursor-Governance''s rule that a model-controlled process must not inherit
     the Semgrep credential; a repository whose CI legitimately configures Semgrep from that variable
     would be reported. Whether any other consumer has that trust model is unknown.'
@@ -651,17 +651,17 @@ rows:
     consumer with the same local-scan trust model is identified before any language-level promotion.
   witnesses:
     known_bad:
-      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
       source: authored; written as ops/memory/sample.py for the scan
-      evidence: Flags line [22] (os.environ.get('SEMGREP_APP_TOKEN')).
+      evidence: Flags line [24] (os.environ.get('SEMGREP_APP_TOKEN')).
     known_good:
-      fixture: tests/fixtures/semgrep/harvest/cursor/sample.py.txt
+      fixture: tests/fixtures/semgrep/harvest/cursor/sample.pyfixture
       source: authored; written as ops/memory/sample.py for the scan
       evidence: Does not flag os.environ.get('L9_MEMORY_NAMESPACE'), marked good.
     non_target:
       kind: not_composed
       evidence: 'This rule is in no SDK pack. It is unscoped at the donor: it also flags the copy
-        written as svc/sample.py (line [22]), which is why it cannot become a fleet default without
+        written as svc/sample.py (line [24]), which is why it cannot become a fleet default without
         a scope decision. tests/rulesets/test_harvest_ledger.py asserts that no composition carries
         the donor rule ID.'
   retirement: None. The donor rule stays in place at its owner. No consumer check is retired before

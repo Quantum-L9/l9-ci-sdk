@@ -1,10 +1,12 @@
 """Known-bad and known-good cases for the Cursor-Governance rules.
 
-Stored as text, not as a Python module: this file exists to be flagged by
-Cursor-Governance's own rules, and those rules stay at their owner. The
-evidence script writes it into a scratch tree twice, as ops/memory/sample.py
-and as svc/sample.py. The three memory-boundary rules are path-scoped to the
-memory path, so they must flag the first copy and stay silent on the second.
+Stored as .pyfixture, not as a Python module, as the repository's other
+scanner fixture is (rules/python/l9-file-permissions.pyfixture). This file
+exists to be flagged by Cursor-Governance's own rules, and those rules stay
+at their owner. The evidence script writes it into a scratch tree twice, as
+ops/memory/sample.py and as svc/sample.py. The three memory-boundary rules
+are path-scoped to the memory path, so they must flag the first copy and
+stay silent on the second.
 
 Scan input only. Never imported or executed.
 """

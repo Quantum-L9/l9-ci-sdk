@@ -27,6 +27,7 @@ import yaml
 
 from l9_ci.capabilities import (
     AnalysisTarget,
+    CapabilityInventory,
     CapabilityState,
     build_capability_inventory,
     detect_repository_capabilities,
@@ -44,6 +45,7 @@ from l9_ci.integration import build_observation, validate_observation
 from l9_ci.providers import ProviderNormalizationContext
 from l9_ci.providers.semgrep import SemgrepProvider
 from l9_ci.rulesets.semgrep import (
+    RulepackComposition,
     RulepackCompositionError,
     compose_rulepack,
     ruleset_dir,
@@ -65,6 +67,18 @@ RULE_FIXTURES = SEMGREP_FIXTURES / "rules" / "python"
 _TARGETS = default_analysis_targets(REPO_ROOT)
 
 INVARIANT_IDS = tuple(f"L9-CI-SDK-00{number}" for number in range(1, 6))
+
+
+def _inventory(
+    root: Path,
+    targets: tuple[AnalysisTarget, ...],
+) -> CapabilityInventory:
+    return build_capability_inventory(root, targets=targets, SDK_version="2.0.0")
+
+
+def _compose(**selection: Any) -> RulepackComposition:
+    """Compose the way a caller does, with a fixed SDK version."""
+    return compose_rulepack(**selection, SDK_version="2.0.0")
 
 
 def _write(root: Path, relative: str, text: str = "") -> None:
@@ -125,7 +139,7 @@ def test_l9_ci_sdk_001_positive_odoo_recognizes_python_and_xml(
     _write(tmp_path, "addons/sale_ext/models/sale.py", "x = 1\n")
     _write(tmp_path, "addons/sale_ext/views/sale.xml", "<odoo/>\n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     (odoo,) = inventory.frameworks
     assert odoo.state is CapabilityState.APPLICABLE
@@ -139,7 +153,7 @@ def test_l9_ci_sdk_001_negative_malformed_manifest_is_not_absence(
     _write(tmp_path, "pkg/mod.py", "x = 1\n")
     _write(tmp_path, "pyproject.toml", "[project\nname = \n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     assert inventory.status is CapabilityState.FAILED
     failed = [
@@ -161,7 +175,7 @@ def test_l9_ci_sdk_001_negative_second_language_is_never_hidden(
     _write(tmp_path, "web/index.ts", "export const x = 1;\n")
     _write(tmp_path, "native/lib.rs", "fn main() {}\n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     states = {item.language: item.state for item in inventory.languages}
     assert states == {
@@ -186,7 +200,7 @@ def test_l9_ci_sdk_002_positive_no_supported_code_is_reasoned_not_applicable(
     _write(tmp_path, "README.md", "# docs only\n")
     _write(tmp_path, "data/table.csv", "a,b\n1,2\n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     assert inventory.status is CapabilityState.NOT_APPLICABLE
     assert inventory.examined_file_count == 2
@@ -213,7 +227,7 @@ def test_l9_ci_sdk_002_negative_missing_executable_is_incomplete(
         for target in _TARGETS
     )
 
-    inventory = build_capability_inventory(tmp_path, targets=missing)
+    inventory = _inventory(tmp_path, missing)
 
     assert inventory.status is CapabilityState.INCOMPLETE
     python = next(
@@ -229,7 +243,7 @@ def test_l9_ci_sdk_002_negative_unsupported_is_not_not_applicable(
 ) -> None:
     _write(tmp_path, "app/Main.kt", "fun main() {}\n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     assert inventory.status is CapabilityState.UNSUPPORTED
     assert inventory.status is not CapabilityState.NOT_APPLICABLE
@@ -274,8 +288,8 @@ def test_l9_ci_sdk_002_negative_zero_findings_over_zero_files_is_never_pass(
 
 
 def test_l9_ci_sdk_003_positive_composition_resolves_one_digest() -> None:
-    first = compose_rulepack(languages=("python",), include_candidates=True)
-    second = compose_rulepack(languages=("python",), include_candidates=True)
+    first = _compose(languages=("python",), include_candidates=True)
+    second = _compose(languages=("python",), include_candidates=True)
 
     assert first.content_digest == second.content_digest
     assert re.fullmatch(r"sha256:[0-9a-f]{64}", first.content_digest)
@@ -289,17 +303,17 @@ def test_l9_ci_sdk_003_positive_composition_resolves_one_digest() -> None:
 
 
 def test_l9_ci_sdk_003_negative_restriction_cannot_suppress_the_baseline() -> None:
-    baseline_rule = compose_rulepack(languages=("python",)).rule_ids[0]
+    baseline_rule = _compose(languages=("python",)).rule_ids[0]
 
     with pytest.raises(RulepackCompositionError, match="baseline"):
-        compose_rulepack(
+        _compose(
             languages=("python",),
             excluded_rule_ids=(baseline_rule,),
         )
 
 
 def test_l9_ci_sdk_003_negative_registry_label_is_not_a_pin() -> None:
-    labelled = compose_rulepack(languages=("python",), registry_rulesets=("p/python",))
+    labelled = _compose(languages=("python",), registry_rulesets=("p/python",))
 
     assert labelled.reproducible is False
     assert labelled.unpinned_sources == ("p/python",)
@@ -309,7 +323,9 @@ def test_l9_ci_sdk_003_negative_registry_label_is_not_a_pin() -> None:
 
 
 def test_l9_ci_sdk_004_positive_fixtured_rules_pin_both_directions() -> None:
-    fixtures = sorted(RULE_FIXTURES.glob("*.py"))
+    # A fixture is paired by stem, whatever its suffix: the repository stores
+    # one of them as .pyfixture so that scanners do not read it as product code.
+    fixtures = sorted(path for path in RULE_FIXTURES.iterdir() if path.is_file())
     assert fixtures, "no packaged rule fixtures found"
     for fixture in fixtures:
         rule_file = ruleset_dir("python") / f"{fixture.stem}.yml"
@@ -317,6 +333,12 @@ def test_l9_ci_sdk_004_positive_fixtured_rules_pin_both_directions() -> None:
         text = fixture.read_text(encoding="utf-8")
         assert "# ruleid:" in text, f"{fixture.name} has no known-bad trigger"
         assert "# ok:" in text, f"{fixture.name} has no known-good nontrigger"
+    fixtured = {fixture.stem for fixture in fixtures}
+    packaged = {path.stem for path in ruleset_dir("python").glob("*.yml")}
+    assert fixtured == packaged, (
+        "every packaged Python rule file needs a fixture: "
+        f"missing={sorted(packaged - fixtured)}"
+    )
 
 
 def test_l9_ci_sdk_004_positive_harvested_rules_keep_donor_witnesses() -> None:
@@ -407,6 +429,13 @@ def test_contract_carries_exactly_the_five_proposed_invariants() -> None:
     assert tuple(invariants) == INVARIANT_IDS
     for statement in invariants.values():
         assert statement
+
+
+def test_contract_marks_the_invariant_block_as_proposed() -> None:
+    text = CONTRACT.read_text(encoding="utf-8")
+    preamble = text.split("\nci_provider_invariants:\n", 1)[0].rsplit("\n\n", 1)[1]
+    assert preamble.startswith("# PROPOSED, NOT ADMITTED.")
+    assert "ADR 0020" in preamble
 
 
 def test_adr_0020_is_proposed_and_indexed() -> None:

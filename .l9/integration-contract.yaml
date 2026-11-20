@@ -77,7 +77,8 @@ CLI:
       syntax: >-
         l9-ci semgrep compose --language LANG [--language LANG]
         [--framework NAME] [--include-candidates] [--product-config PATH]
-        [--registry-ruleset LABEL] [--exclude-rule RULE_ID] --format json
+        [--registry-ruleset LABEL] [--exclude-rule RULE_ID]
+        [--materialize DIRECTORY] --format json
       description: >-
         Resolve the effective packaged Semgrep rulepack to exact content: every
         rule file by SHA-256, every rule ID and one content digest
@@ -85,8 +86,12 @@ CLI:
         language with no baseline pack, an unknown framework, an exclusion of
         a baseline rule and a product config that redefines a packaged rule.
         A registry label is recorded as unpinned and makes the composition not
-        reproducible. This command resolves; it does not scan, and it does not
-        change what `l9-ci semgrep run` scans.
+        reproducible. With --materialize it also writes exactly the composed
+        rules, exclusions applied, into an empty directory; that directory is
+        the executable configuration, and the SDK's own rule directories are
+        not, because they still hold an excluded rule. This command resolves;
+        it does not scan, and it does not change what `l9-ci semgrep run`
+        scans.
     semgrep_normalize:
       syntax: >-
         l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT

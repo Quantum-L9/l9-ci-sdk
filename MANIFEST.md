@@ -304,7 +304,7 @@ Files: 388
 - `tests/contracts/test_schema_conformance.py`
 - `tests/execution/test_profiles.py`
 - `tests/execution/test_selection.py`
-- `tests/fixtures/semgrep/harvest/cursor/sample.py.txt`
+- `tests/fixtures/semgrep/harvest/cursor/sample.pyfixture`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/data/bad_cron.xml`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.py`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.sql`
