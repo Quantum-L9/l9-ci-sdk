@@ -45,6 +45,18 @@ Rules the inventory holds:
   `l9-ci semgrep run --language typescript` analyzes `.js`, `.jsx`, `.mjs`
   and `.cjs`. There is no separate JavaScript target, so a repository with
   both languages is scanned once.
+- A Semgrep target counts only files inside the declared scan scope
+  (`l9_ci/rulesets/semgrep/scan-scope.yaml`), the same scope
+  `l9-ci semgrep run --required` passes to Semgrep. When every matching file
+  is out of scope, the target is `not_applicable` and its reason names each
+  excluding scope entry with a sample of the paths, so Core plans no instance
+  the scan could never complete. Out-of-scope files stay counted in their
+  language's `unanalyzed_file_count`; a language whose files are all out of
+  scope is `unsupported` and says so. This was found on Cursor-Governance
+  (2026-11-20), where every JavaScript file is a fixture under `tests/`:
+  a required `language:typescript` instance was planned, scanned nothing and
+  ended `incomplete`. Witness:
+  `tests/capabilities/test_inventory_scan_scope.py`.
 - The executable is a fact about the machine, so it is `not_probed` unless
   the caller asks (`--probe-executables`).
 - The record carries no requiredness, enforcement mode or verdict. Core
