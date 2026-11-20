@@ -26,7 +26,14 @@ Rules the inventory holds:
 - Odoo is detected from a parsed addon manifest. Its Python and XML counts
   cover files inside addon directories only.
 - The record is bound to the snapshot (`snapshot_id`, `revision`, `dirty`) and
-  is a pure function of the snapshot and the declared targets.
+  is a pure function of the snapshot's paths, the content of its manifests and
+  the declared targets. The snapshot identity covers which paths exist, not
+  what they contain, so each manifest entry carries the `sha256` of the bytes
+  that were read.
+- The record carries `SDK_version`, as every version-negotiated artifact does.
+  The caller supplies it; this package does not guess it.
+- A framework target serves a language only when the framework holds a file
+  of it. An XML file outside every Odoo addon is not served by an Odoo target.
 - The executable is a fact about the machine, so it is `not_probed` unless
   the caller asks (`--probe-executables`).
 - The record carries no requiredness, enforcement mode or verdict. Core
