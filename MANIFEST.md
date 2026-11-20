@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 401
+Files: 404
 
 ## Contents
 
@@ -335,8 +335,11 @@ Files: 401
 - `tests/fixtures/semgrep/malformed.json`
 - `tests/fixtures/semgrep/provenance.yaml`
 - `tests/fixtures/semgrep/report-error-error.json`
+- `tests/fixtures/semgrep/report-error-warn-parse.json`
 - `tests/fixtures/semgrep/report-error-warn.json`
 - `tests/fixtures/semgrep/report-errors.json`
+- `tests/fixtures/semgrep/report-timeout-captured.json`
+- `tests/fixtures/semgrep/report-timeout-captured.provenance.yaml`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
 - `tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py`

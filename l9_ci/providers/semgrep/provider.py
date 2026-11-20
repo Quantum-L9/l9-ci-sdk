@@ -401,6 +401,11 @@ class SemgrepProvider:
                     limitations=tuple(finding_limitations),
                 )
             )
+        # Rule/file pairs Semgrep started but did not finish (a timeout, out of
+        # memory, stack overflow). Semgrep reports them at level=warn, and they
+        # stay non-fatal, but that rule never evaluated that file: coverage is
+        # not complete, so a required provider's gate cannot pass on it.
+        incomplete_pairs: set[tuple[str, str, str]] = set()
         report_errors = report.get("errors", [])
         if isinstance(report_errors, Sequence) and not isinstance(
             report_errors,
@@ -409,6 +414,9 @@ class SemgrepProvider:
             for index, report_error in enumerate(report_errors):
                 message = _semgrep_error_message(report_error, index)
                 limitations.append(message)
+                pair = _incomplete_analysis_pair(report_error)
+                if pair is not None:
+                    incomplete_pairs.add(pair)
                 if not _semgrep_error_is_fatal(report_error):
                     continue
                 failures.append(
@@ -435,13 +443,21 @@ class SemgrepProvider:
             findings,
         )
         limitations.extend(coverage_limitations)
+        incomplete_paths = {path for _, path, _ in incomplete_pairs}
+        for rule_id, path, error_type in sorted(incomplete_pairs):
+            limitations.append(
+                f"incomplete analysis: rule {rule_id} did not finish on {path} "
+                f"({error_type})"
+            )
+        analyzed_paths = set(analyzed_paths) - incomplete_paths
         # Coverage is COMPLETE when the report exposed a verified scanned
-        # inventory and no fatal report errors occurred. Warn-level entries
-        # stay in limitations and do not force PARTIAL (honour semgrep
-        # level=warn). A zero-finding report with no verified paths.scanned
-        # must not silently present as COMPLETE, or a required provider
-        # could pass the gate on unproven coverage.
-        if failures or not coverage_verified:
+        # inventory, no fatal report error occurred and every rule finished
+        # on every file. Other warn-level entries stay limitations (honour
+        # semgrep level=warn). A rule/file pair that did not finish makes the
+        # file not fully analyzed and coverage PARTIAL, so a required
+        # provider's gate is INCOMPLETE, never a pass. A zero-finding report
+        # with no verified paths.scanned must not present as COMPLETE either.
+        if failures or not coverage_verified or incomplete_pairs:
             coverage_status = CoverageStatus.PARTIAL
         else:
             coverage_status = CoverageStatus.COMPLETE
@@ -609,6 +625,30 @@ def _semgrep_error_level(error: Any) -> str | None:
         if isinstance(level, str) and level.strip():
             return level.strip().lower()
     return None
+
+
+# Semgrep error types that mean a rule started on a file and did not finish.
+# Semgrep renders all of them at level=warn (semgrep Core_error.ml
+# severity_of_error); the JSON entry names the rule (`rule_id`) and the file
+# (`path`). Other warn-level types (parse errors, too many matches) are kept
+# as limitations without changing coverage.
+_INCOMPLETE_ANALYSIS_ERROR_TYPES = frozenset(
+    {"Timeout", "FixpointTimeout", "OutOfMemory", "StackOverflow"}
+)
+
+
+def _incomplete_analysis_pair(error: Any) -> tuple[str, str, str] | None:
+    """Return (rule_id, path, type) for a rule that did not finish on a file."""
+    if not isinstance(error, Mapping):
+        return None
+    error_type = error.get("type")
+    if not isinstance(error_type, str) or error_type not in (
+        _INCOMPLETE_ANALYSIS_ERROR_TYPES
+    ):
+        return None
+    rule_id = _optional_string(error.get("rule_id")) or "<unknown rule>"
+    path = _optional_string(error.get("path")) or "<unknown path>"
+    return rule_id, path, error_type
 
 
 def _semgrep_error_is_fatal(error: Any) -> bool:
