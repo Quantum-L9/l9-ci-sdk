@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 392
+Files: 398
 
 ## Contents
 
@@ -170,6 +170,7 @@ Files: 392
 - `l9_ci/commands/observations.py`
 - `l9_ci/commands/providers.py`
 - `l9_ci/commands/semgrep.py`
+- `l9_ci/commands/semgrep_scope.py`
 - `l9_ci/contracts/__init__.py`
 - `l9_ci/contracts/bundle.py`
 - `l9_ci/contracts/classification.py`
@@ -240,6 +241,8 @@ Files: 392
 - `l9_ci/rulesets/semgrep/python/l9-logging.yml`
 - `l9_ci/rulesets/semgrep/python/l9-routing.yml`
 - `l9_ci/rulesets/semgrep/python/l9-transport.yml`
+- `l9_ci/rulesets/semgrep/scan-scope.yaml`
+- `l9_ci/rulesets/semgrep/scope.py`
 - `l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml`
 - `l9_ci/schemas/v1/agent-review-payload.schema.json`
 - `l9_ci/schemas/v1/attestation-envelope.schema.json`
@@ -258,6 +261,7 @@ Files: 392
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
 - `l9_ci/schemas/v1/rulepack-composition.schema.json`
 - `l9_ci/schemas/v1/sarif-log.schema.json`
+- `l9_ci/schemas/v1/semgrep-scan-scope.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
 - `lint/check_action_pins.py`
 - `lint/check_governance_json.py`
@@ -294,6 +298,7 @@ Files: 392
 - `tests/commands/test_manifest_cli.py`
 - `tests/commands/test_observation_cli.py`
 - `tests/commands/test_semgrep_command.py`
+- `tests/commands/test_semgrep_required_scope_e2e.py`
 - `tests/commands/test_semgrep_run_contract.py`
 - `tests/compatibility/fixtures/finding-bundle-v1-bad-summary.json`
 - `tests/compatibility/fixtures/finding-bundle-v1-minimal.json`
@@ -392,6 +397,7 @@ Files: 392
 - `tests/rulesets/test_rulepack_composition.py`
 - `tests/rulesets/test_semgrep_rule_fixtures.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
+- `tests/rulesets/test_semgrep_scan_scope.py`
 - `tests/rulesets/test_semgrep_target_suffixes.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`

@@ -113,6 +113,18 @@ def test_wheel_contains_packaged_semgrep_profile_registry(built_wheel: Path) -> 
     )
 
 
+def test_wheel_contains_packaged_semgrep_scan_scope_policy(built_wheel: Path) -> None:
+    """Every required ``semgrep run`` resolves its targets from this policy and
+    fails closed without it; name the regression if packaging drops it."""
+    with zipfile.ZipFile(built_wheel) as archive:
+        members = set(archive.namelist())
+    for member in (
+        "l9_ci/rulesets/semgrep/scan-scope.yaml",
+        "l9_ci/schemas/v1/semgrep-scan-scope.schema.json",
+    ):
+        assert member in members, f"built wheel is missing {member}"
+
+
 def test_wheel_contains_no_bytecode_cache(built_wheel: Path) -> None:
     with zipfile.ZipFile(built_wheel) as archive:
         leaked = [

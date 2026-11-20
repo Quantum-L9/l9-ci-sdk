@@ -54,6 +54,7 @@ class SemgrepPipelineRequest:
     timeout_seconds: int = 300
     output_size_limit_bytes: int = 50_000_000
     execution_arguments: tuple[str, ...] = ()
+    execution_targets: tuple[str, ...] = ()
     remediation_map_path: Path | None = None
 
 
@@ -127,6 +128,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
                 timeout_seconds=request.timeout_seconds,
                 output_size_limit_bytes=request.output_size_limit_bytes,
                 arguments=tuple(request.execution_arguments),
+                targets=tuple(request.execution_targets),
             ),
             context=context,
         )
