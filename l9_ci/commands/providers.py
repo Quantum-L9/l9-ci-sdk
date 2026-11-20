@@ -108,6 +108,26 @@ def handle_detect(args: argparse.Namespace) -> int:
     return int(ExitCode.SUCCESS)
 
 
+# What each packaged Semgrep language run actually analyzes: the inventory
+# languages it serves and the file suffixes Semgrep scans for them. Observed
+# with Semgrep 1.171.0 against this repository's rulepacks
+# (tests/rulesets/test_semgrep_target_suffixes.py re-checks it wherever a
+# semgrep executable is present).
+#
+# The typescript run serves JavaScript too: every rule in
+# l9_ci/rulesets/semgrep/typescript declares `languages: [typescript,
+# javascript]`, and tests/fixtures/semgrep/rules/typescript/ proves each one
+# on a .js file in both directions. Semgrep does not scan .mts or .cts, so
+# those TypeScript files are reported as not analyzed rather than covered.
+_TARGET_FILES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "python": (("python",), (".py",)),
+    "typescript": (
+        ("typescript", "javascript"),
+        (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"),
+    ),
+}
+
+
 def default_analysis_targets(
     root: Path,
     *,
@@ -130,6 +150,7 @@ def default_analysis_targets(
             executable = "missing"
     targets = []
     for language in sorted(SUPPORTED_LANGUAGES):
+        languages, suffixes = _TARGET_FILES[language]
         try:
             resolved = any(ruleset_dir(language).glob("*.yml"))
         except (FileNotFoundError, ValueError):
@@ -139,11 +160,12 @@ def default_analysis_targets(
                 provider_id="semgrep",
                 scope="language",
                 name=language,
-                languages=(language,),
+                languages=languages,
                 rulepack=f"l9_ci/rulesets/semgrep/{language}",
                 rulepack_resolved=resolved,
                 executable=executable,
                 executable_version=version,
+                suffixes=suffixes,
             )
         )
     return tuple(targets)

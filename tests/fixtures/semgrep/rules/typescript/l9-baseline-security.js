@@ -1,0 +1,89 @@
+// semgrep --test fixture: the packaged TypeScript baseline pack run on
+// JavaScript. Pairs with l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml,
+// whose rules declare `languages: [typescript, javascript]`. Every line
+// annotated `ruleid` must be flagged and every line annotated `ok` must not.
+//
+// Scan input only. Never imported or executed.
+
+const child_process = require("child_process");
+const { exec, execFile } = require("child_process");
+const path = require("path");
+const jwt = require("jsonwebtoken");
+const cors = require("cors");
+const _ = require("lodash");
+
+// --- child-process-exec ---
+
+function runShell(userInput) {
+  // ruleid: l9.baseline.typescript.child-process-exec
+  child_process.exec("ls " + userInput);
+  // ruleid: l9.baseline.typescript.child-process-exec
+  exec(userInput);
+  // ok: l9.baseline.typescript.child-process-exec
+  execFile("ls", ["-la", userInput]);
+}
+
+// --- eval-function-constructor ---
+
+function evaluate(source) {
+  // ruleid: l9.baseline.typescript.eval-function-constructor
+  eval(source);
+  // ruleid: l9.baseline.typescript.eval-function-constructor
+  const fn = new Function("a", source);
+  // ok: l9.baseline.typescript.eval-function-constructor
+  const parsed = JSON.parse(source);
+  return [fn, parsed];
+}
+
+// --- prototype-pollution ---
+
+function merge(target, untrusted) {
+  // ruleid: l9.baseline.typescript.prototype-pollution
+  Object.assign(target, untrusted);
+  // ruleid: l9.baseline.typescript.prototype-pollution
+  _.merge(target, untrusted);
+  // ok: l9.baseline.typescript.prototype-pollution
+  const copy = { ...target };
+  return copy;
+}
+
+// --- jwt-insecure ---
+
+function token(payload, key) {
+  // ruleid: l9.baseline.typescript.jwt-insecure
+  jwt.sign(payload, "hardcoded-secret", { algorithm: "HS256" });
+  // ok: l9.baseline.typescript.jwt-insecure
+  return jwt.sign(payload, key, { algorithm: "RS256" });
+}
+
+// --- cors-wildcard-credentials ---
+
+function corsConfig(app) {
+  // ruleid: l9.baseline.typescript.cors-wildcard-credentials
+  app.use(cors({ origin: "*", credentials: true }));
+  // ok: l9.baseline.typescript.cors-wildcard-credentials
+  app.use(cors({ origin: "https://app.example.com", credentials: true }));
+}
+
+// --- sql-string-concat ---
+
+function lookup(db, id) {
+  // ruleid: l9.baseline.typescript.sql-string-concat
+  db.query(`SELECT * FROM users WHERE id = ${id}`);
+  // ruleid: l9.baseline.typescript.sql-string-concat
+  db.query("SELECT * FROM users WHERE id = " + id + " LIMIT 1");
+  // ok: l9.baseline.typescript.sql-string-concat
+  return db.query("SELECT * FROM users WHERE id = $1", [id]);
+}
+
+// --- path-traversal ---
+
+function serve(req) {
+  // ruleid: l9.baseline.typescript.path-traversal
+  const unsafe = path.join("/srv/files", req.params.name);
+  // ok: l9.baseline.typescript.path-traversal
+  const safe = path.join("/srv/files", path.basename(String(req.params.name)));
+  return [unsafe, safe];
+}
+
+module.exports = { runShell, evaluate, merge, token, corsConfig, lookup, serve };

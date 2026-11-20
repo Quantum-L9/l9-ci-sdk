@@ -55,6 +55,21 @@ ODOO_PYTHON_XML: Mapping[str, str] = {
     "docs/diagram.xml": "<diagram/>\n",
 }
 
+JAVASCRIPT_ONLY: Mapping[str, str] = {
+    "package.json": '{"name": "tool", "version": "0.1.0"}\n',
+    "bin/cli.js": "module.exports = 1;\n",
+    "lib/index.mjs": "export const value = 1;\n",
+    "lib/legacy.cjs": "module.exports = 2;\n",
+    "ui/view.jsx": "export const View = () => null;\n",
+}
+
+TYPESCRIPT_UNSCANNED_SUFFIXES: Mapping[str, str] = {
+    "package.json": '{"name": "web"}\n',
+    "src/index.ts": "export const value = 1;\n",
+    "src/worker.mts": "export const worker = 1;\n",
+    "src/config.cts": "export const config = 1;\n",
+}
+
 NO_SUPPORTED_CODE: Mapping[str, str] = {
     "README.md": "# documentation only\n",
     "data/table.csv": "a,b\n1,2\n",

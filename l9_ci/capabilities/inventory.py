@@ -44,7 +44,7 @@ from jsonschema import Draft202012Validator
 from l9_ci.repository import build_repository_snapshot
 
 CAPABILITY_INVENTORY_PROTOCOL = "l9.capability-inventory/v1"
-CAPABILITY_INVENTORY_SCHEMA_VERSION = "1.0.0"
+CAPABILITY_INVENTORY_SCHEMA_VERSION = "1.1.0"
 
 _SAMPLE_LIMIT = 5
 
@@ -95,19 +95,28 @@ class CapabilityState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class LanguageCapability:
-    """One language present in the snapshot."""
+    """One language present in the snapshot.
+
+    ``unanalyzed_file_count`` is how many of its files no declared target
+    analyzes: a file with a suffix the target's tool does not scan, or a file
+    outside the framework a framework target is scoped to. A language is
+    ``applicable`` when at least one of its files is analyzed; the rest stay
+    counted here and named in the inventory's ``reasons``.
+    """
 
     language: str
     state: CapabilityState
     file_count: int
     sample_paths: tuple[str, ...]
     reason: str
+    unanalyzed_file_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "language": self.language,
             "state": self.state.value,
             "file_count": self.file_count,
+            "unanalyzed_file_count": self.unanalyzed_file_count,
             "sample_paths": list(self.sample_paths),
             "reason": self.reason,
         }
@@ -178,6 +187,11 @@ class AnalysisTarget:
     already knows about it: whether its packaged rulepack resolved and, when a
     probe was requested, whether its executable is available. The inventory
     then decides which of those targets this snapshot actually calls for.
+
+    ``suffixes`` are the file suffixes the target's tool actually analyzes,
+    lower case with the leading dot. Empty means every file of ``languages``.
+    A file of a served language with any other suffix is counted as not
+    analyzed, never as covered.
     """
 
     provider_id: str
@@ -188,6 +202,7 @@ class AnalysisTarget:
     rulepack_resolved: bool
     executable: str = "not_probed"
     executable_version: str | None = None
+    suffixes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.scope not in _TARGET_SCOPES:
@@ -198,6 +213,16 @@ class AnalysisTarget:
             raise ValueError(
                 "an analysis target needs a provider, a name and languages"
             )
+        for suffix in self.suffixes:
+            if (
+                not suffix.startswith(".")
+                or suffix != suffix.lower()
+                or len(suffix) < 2
+            ):
+                raise ValueError(
+                    f"analysis target suffix {suffix!r} must be lower case and "
+                    "start with a dot"
+                )
 
     @property
     def target(self) -> str:
@@ -353,17 +378,26 @@ def _read_manifest(root: Path, relative: str) -> ManifestEvidence:
 
 def _languages(
     by_language: Mapping[str, tuple[str, ...]],
-    served: frozenset[str],
+    analyzed: frozenset[str],
 ) -> tuple[LanguageCapability, ...]:
     result = []
     for language in sorted(by_language):
         paths = by_language[language]
-        if language in served:
-            state = CapabilityState.APPLICABLE
-            reason = "a declared analysis target consumes this language"
-        else:
+        missed = tuple(path for path in paths if path not in analyzed)
+        if len(missed) == len(paths):
             state = CapabilityState.UNSUPPORTED
-            reason = "no declared analysis target consumes this language"
+            reason = "no declared analysis target analyzes a file of this language"
+        elif missed:
+            state = CapabilityState.APPLICABLE
+            reason = (
+                f"declared analysis targets analyze {len(paths) - len(missed)} of "
+                f"{len(paths)} file(s); {len(missed)} with suffix "
+                f"{', '.join(_suffixes(missed))} or outside a framework scope "
+                "are analyzed by none"
+            )
+        else:
+            state = CapabilityState.APPLICABLE
+            reason = "declared analysis targets analyze every file of this language"
         result.append(
             LanguageCapability(
                 language=language,
@@ -371,9 +405,14 @@ def _languages(
                 file_count=len(paths),
                 sample_paths=paths[:_SAMPLE_LIMIT],
                 reason=reason,
+                unanalyzed_file_count=len(missed),
             )
         )
     return tuple(result)
+
+
+def _suffixes(paths: Sequence[str]) -> tuple[str, ...]:
+    return tuple(sorted({PurePosixPath(path).suffix.lower() for path in paths}))
 
 
 def _odoo_framework(
@@ -434,9 +473,59 @@ def _is_within(file_name: str, directory: str) -> bool:
     return file_name.startswith(directory + "/")
 
 
-def _target_file_count(
+def _framework_files(
+    all_files: tuple[str, ...],
+    manifests: tuple[ManifestEvidence, ...],
+) -> dict[str, frozenset[str]]:
+    """Files inside each detected framework, keyed by framework name."""
+    roots = sorted(
+        {
+            str(PurePosixPath(item.path).parent)
+            for item in manifests
+            if item.kind == "odoo-addon" and item.state is CapabilityState.APPLICABLE
+        }
+    )
+    return {
+        "odoo": frozenset(
+            file_name
+            for file_name in all_files
+            if any(_is_within(file_name, root) for root in roots)
+        )
+    }
+
+
+def _analyzed_files(
     target: AnalysisTarget,
     by_language: Mapping[str, tuple[str, ...]],
+    frameworks: Mapping[str, FrameworkCapability],
+    framework_files: Mapping[str, frozenset[str]],
+) -> frozenset[str]:
+    """The files ``target`` would actually analyze in this snapshot.
+
+    A file counts when it belongs to one of the target's languages, has one of
+    its suffixes (any suffix when none are declared) and, for a framework
+    target, lies inside an applicable framework.
+    """
+    candidates = [
+        path for language in target.languages for path in by_language.get(language, ())
+    ]
+    if target.suffixes:
+        allowed = set(target.suffixes)
+        candidates = [
+            path for path in candidates if PurePosixPath(path).suffix.lower() in allowed
+        ]
+    if target.scope == "framework":
+        framework = frameworks.get(target.name)
+        if framework is None or framework.state is not CapabilityState.APPLICABLE:
+            return frozenset()
+        scope = framework_files.get(target.name, frozenset())
+        candidates = [path for path in candidates if path in scope]
+    return frozenset(candidates)
+
+
+def _target_file_count(
+    target: AnalysisTarget,
+    analyzed: frozenset[str],
     frameworks: Mapping[str, FrameworkCapability],
     examined: int,
 ) -> tuple[int, CapabilityState | None, str]:
@@ -445,48 +534,43 @@ def _target_file_count(
     The second element is ``None`` when the target applies, otherwise the
     state that explains why it does not (``not_applicable`` or ``failed``).
     """
-    if target.scope == "language":
-        count = sum(len(by_language.get(language, ())) for language in target.languages)
-        if count == 0:
+    if target.scope == "framework":
+        framework = frameworks.get(target.name)
+        if framework is None:
             return (
                 0,
-                CapabilityState.NOT_APPLICABLE,
-                f"no {target.name} file among {examined} examined file(s)",
+                CapabilityState.FAILED,
+                f"framework {target.name!r} has no detector in this SDK",
             )
-        return count, None, ""
-    framework = frameworks.get(target.name)
-    if framework is None:
-        return (
-            0,
-            CapabilityState.FAILED,
-            f"framework {target.name!r} has no detector in this SDK",
-        )
-    if framework.state is CapabilityState.NOT_APPLICABLE:
-        return 0, CapabilityState.NOT_APPLICABLE, framework.reason
-    if framework.state is not CapabilityState.APPLICABLE:
-        return 0, CapabilityState.FAILED, framework.reason
-    count = sum(
-        framework.language_file_counts.get(language, 0) for language in target.languages
-    )
-    if count == 0:
+        if framework.state is CapabilityState.NOT_APPLICABLE:
+            return 0, CapabilityState.NOT_APPLICABLE, framework.reason
+        if framework.state is not CapabilityState.APPLICABLE:
+            return 0, CapabilityState.FAILED, framework.reason
+    if not analyzed:
+        kind = " or ".join(target.languages)
+        where = f"{target.name} source " if target.scope == "framework" else ""
         return (
             0,
             CapabilityState.NOT_APPLICABLE,
-            f"no {target.name} source file among {examined} examined file(s)",
+            f"no {where}{kind} file this target analyzes among {examined} "
+            "examined file(s)",
         )
-    return count, None, ""
+    return len(analyzed), None, ""
 
 
 def _prerequisites(
     targets: Sequence[AnalysisTarget],
-    by_language: Mapping[str, tuple[str, ...]],
+    analyzed_by_target: Mapping[str, frozenset[str]],
     frameworks: Mapping[str, FrameworkCapability],
     examined: int,
 ) -> tuple[ProviderPrerequisite, ...]:
     result = []
     for target in sorted(targets, key=lambda item: (item.provider_id, item.target)):
         file_count, blocked, why = _target_file_count(
-            target, by_language, frameworks, examined
+            target,
+            analyzed_by_target[f"{target.provider_id} {target.target}"],
+            frameworks,
+            examined,
         )
         state: CapabilityState
         if blocked is not None:
@@ -514,26 +598,6 @@ def _prerequisites(
             )
         )
     return tuple(result)
-
-
-def _serves(
-    target: AnalysisTarget,
-    language: str,
-    frameworks: Mapping[str, FrameworkCapability],
-) -> bool:
-    """Whether ``target`` would actually analyze files of ``language``.
-
-    A language target analyzes every file of its language. A framework target
-    analyzes only files inside the framework, so it serves a language only
-    when the framework is applicable and holds at least one file of it: an XML
-    file outside every Odoo addon is not served by an Odoo target.
-    """
-    if target.scope == "language":
-        return True
-    framework = frameworks.get(target.name)
-    if framework is None or framework.state is not CapabilityState.APPLICABLE:
-        return False
-    return framework.language_file_counts.get(language, 0) > 0
 
 
 def _overall(
@@ -570,7 +634,7 @@ def _overall(
     unsupported = tuple(
         f"language {item.language}: {item.reason}"
         for item in languages
-        if item.state is CapabilityState.UNSUPPORTED
+        if item.state is CapabilityState.UNSUPPORTED or item.unanalyzed_file_count > 0
     )
     applicable = [
         f"{item.provider_id} {item.target}: {item.reason}"
@@ -579,7 +643,7 @@ def _overall(
     ]
     if applicable:
         return CapabilityState.APPLICABLE, tuple(applicable) + unsupported
-    if unsupported:
+    if any(item.state is CapabilityState.UNSUPPORTED for item in languages):
         return CapabilityState.UNSUPPORTED, unsupported
     return (
         CapabilityState.NOT_APPLICABLE,
@@ -606,6 +670,9 @@ def build_capability_inventory(
     """
     if not isinstance(SDK_version, str) or not SDK_version.strip():
         raise ValueError("SDK_version must be a non-empty string")
+    keys = [f"{target.provider_id} {target.target}" for target in targets]
+    if len(set(keys)) != len(keys):
+        raise ValueError("two analysis targets share a provider and target name")
     root = root.resolve()
     snapshot = build_repository_snapshot(root)
     all_files = snapshot.files
@@ -638,14 +705,18 @@ def build_capability_inventory(
     )
     frameworks = (_odoo_framework(all_files, manifests),)
     by_framework = {item.framework: item for item in frameworks}
-    prerequisites = _prerequisites(targets, by_language, by_framework, len(all_files))
-    served = frozenset(
-        language
+    framework_files = _framework_files(all_files, manifests)
+    analyzed_by_target = {
+        f"{target.provider_id} {target.target}": _analyzed_files(
+            target, by_language, by_framework, framework_files
+        )
         for target in targets
-        for language in target.languages
-        if _serves(target, language, by_framework)
+    }
+    prerequisites = _prerequisites(
+        targets, analyzed_by_target, by_framework, len(all_files)
     )
-    languages = _languages(by_language, served)
+    analyzed = frozenset().union(*analyzed_by_target.values())
+    languages = _languages(by_language, analyzed)
     status, reasons = _overall(
         languages, frameworks, manifests, prerequisites, len(all_files)
     )
