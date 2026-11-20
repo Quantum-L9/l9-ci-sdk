@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 400
+Files: 401
 
 ## Contents
 
@@ -98,6 +98,7 @@ Files: 400
 - `docs/adr/0018-rule-precision-by-code-position-and-dispatch.md`
 - `docs/adr/0019-rule-precision-saas-and-usage-counts.md`
 - `docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md`
+- `docs/adr/0021-scoped-consumer-rulepack-binding.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
