@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 352
+Files: 354
 
 ## Contents
 
@@ -95,6 +95,7 @@ Files: 352
 - `docs/adr/0017-sdk-cedes-org-tool-version-selection.md`
 - `docs/adr/0018-rule-precision-by-code-position-and-dispatch.md`
 - `docs/adr/0019-rule-precision-saas-and-usage-counts.md`
+- `docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -326,6 +327,7 @@ Files: 352
 - `tests/integration/test_sarif_projection.py`
 - `tests/integration/test_sdk_validation_observation.py`
 - `tests/integration/test_versioning.py`
+- `tests/invariants/test_ci_provider_invariants.py`
 - `tests/pipeline/test_lifecycle.py`
 - `tests/pipeline/test_runner.py`
 - `tests/pipeline/test_semgrep_execution_path.py`
