@@ -81,7 +81,6 @@ _LANGUAGE_SUFFIXES: Mapping[str, str] = {
     ".xml": "xml",
 }
 
-_ODOO_MANIFEST_NAMES = frozenset({"__manifest__.py", "__openerp__.py"})
 _ODOO_LANGUAGES = ("python", "xml")
 
 
