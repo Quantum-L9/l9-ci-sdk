@@ -73,6 +73,10 @@ CLI:
         (applicable, not_applicable, unsupported, incomplete, failed). The
         command exits 0 whenever the record was built; the state is in the
         record, and Core decides requiredness and enforcement from it.
+        Coverage is counted per file: the target `language:typescript` also
+        analyzes JavaScript (.js, .jsx, .mjs, .cjs), and a file no target
+        analyzes is counted in its language's unanalyzed_file_count
+        (schema_version 1.1.0).
     semgrep_compose:
       syntax: >-
         l9-ci semgrep compose --language LANG [--language LANG]

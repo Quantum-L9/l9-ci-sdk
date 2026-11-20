@@ -147,6 +147,37 @@ def test_l9_ci_sdk_001_positive_odoo_recognizes_python_and_xml(
     assert {item.language for item in inventory.languages} == {"python", "xml"}
 
 
+def test_l9_ci_sdk_001_positive_javascript_is_analyzed_not_hidden(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path, "svc/app.py", "x = 1\n")
+    _write(tmp_path, "web/index.js", "module.exports = 1;\n")
+
+    inventory = _inventory(tmp_path, _TARGETS)
+
+    states = {item.language: item.state for item in inventory.languages}
+    assert states == {
+        "javascript": CapabilityState.APPLICABLE,
+        "python": CapabilityState.APPLICABLE,
+    }
+
+
+def test_l9_ci_sdk_001_negative_unscanned_suffix_is_not_counted_as_covered(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path, "src/index.ts", "export const x = 1;\n")
+    _write(tmp_path, "src/worker.mts", "export const w = 1;\n")
+
+    inventory = _inventory(tmp_path, _TARGETS)
+
+    (typescript,) = inventory.languages
+    assert typescript.unanalyzed_file_count == 1
+    covered = {
+        item.target: item.file_count for item in inventory.provider_prerequisites
+    }
+    assert covered["language:typescript"] == 1
+
+
 def test_l9_ci_sdk_001_negative_malformed_manifest_is_not_absence(
     tmp_path: Path,
 ) -> None:

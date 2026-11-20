@@ -77,6 +77,11 @@ jobs:
           "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
             --config l9_ci/rulesets/semgrep/python \
             tests/fixtures/semgrep/rules/python
+          # The TypeScript pack also serves JavaScript; its fixture is a .js
+          # file (SDK ADR 0020, L9-CI-SDK-001).
+          "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
+            --config l9_ci/rulesets/semgrep/typescript \
+            tests/fixtures/semgrep/rules/typescript
           # Harvested candidate packs carry their own annotated fixtures
           # (SDK ADR 0020, L9-CI-SDK-004).
           "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
