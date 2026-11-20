@@ -1,0 +1,187 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-ci-sdk-harvested-rulepack
+# layer: [ci, semgrep, language-pack, python]
+# tags: [harvested, python-portable, shadow-mode, candidate]
+# owner: platform
+# status: candidate
+# --- /L9_META ---
+#
+# Portable Python rules harvested from two consumers under SDK ADR 0020
+# (Proposed). Each rule below is a derivative of a donor rule; `metadata.l9.
+# harvest` names the exact donor revision and blob it was taken from, and
+# docs/harvest/semgrep-donor-ledger.yaml carries the disposition row.
+#
+# This pack is NOT part of any `l9-ci semgrep run` profile. It is composed
+# only by `compose_rulepack`, and only when the caller asks for candidate
+# packs. Every rule is `mode: shadow`. Nothing at a donor is retired by this
+# file: the donor rules stay where they are until Core proves the central
+# successor in a live canary (L9-CI-CORE-004).
+#
+# Path scope differs from the donors on purpose: the donor files carry their
+# own repository's `paths.exclude` lists (tests/, scripts/, venv/), which are
+# product settings and stay product-owned. The patterns are unchanged.
+rules:
+  - id: l9.python.portable.datetime-utcnow
+    pattern: datetime.utcnow()
+    message: >-
+      datetime.utcnow() is deprecated since Python 3.12 and returns a naive
+      datetime. Use datetime.now(UTC).
+    languages: [python]
+    severity: WARNING
+    metadata:
+      mode: shadow
+      category: correctness
+      l9:
+        canonical_rule_id: L9-PYTHON-DATETIME-UTCNOW
+        harvest:
+          donor_rule_id: no-datetime-utcnow
+          donors:
+            - repository: Quantum-L9/Cognitive.Engine.Graphs
+              head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+              path: .semgrep/semgrep-rules.yaml
+              blob: b770b980b741761194b6998e209b13042f49ad87
+            - repository: Quantum-L9/Enrichment.Inference.Engine
+              head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+              path: .semgrep/semgrep-rules.yaml
+              blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+
+  - id: l9.python.portable.httpx-async-client-without-context
+    patterns:
+      - pattern: $CLIENT = httpx.AsyncClient(...)
+      - pattern-not-inside: |
+          async with httpx.AsyncClient(...) as $CLIENT:
+              ...
+    message: >-
+      httpx.AsyncClient() assigned outside an async context manager leaks its
+      connections unless every path closes it. Use
+      `async with httpx.AsyncClient() as client:`.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      mode: shadow
+      category: correctness
+      l9:
+        canonical_rule_id: L9-PYTHON-HTTPX-ASYNC-CLIENT-CONTEXT
+        harvest:
+          donor_rule_id: httpx-async-context-required
+          donors:
+            - repository: Quantum-L9/Cognitive.Engine.Graphs
+              head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+              path: .semgrep/semgrep-rules.yaml
+              blob: b770b980b741761194b6998e209b13042f49ad87
+            - repository: Quantum-L9/Enrichment.Inference.Engine
+              head: 0a09593ee8b1313f2a1811febfd9ad3bb39531b6
+              path: .semgrep/semgrep-rules.yaml
+              blob: 753352355f0cde213c7b0f6244523cc3411e5d26
+
+  # Only real process-wide singletons: a module global rebound inside a
+  # function (`global X`), or a class attribute on cls / a CapitalName. A
+  # local or `self` lazy default is not shared state and needs no lock. This
+  # is the Cognitive.Engine.Graphs form. The Enrichment.Inference.Engine rule
+  # of the same ID matches every `if X is None: X = f()` and is not equivalent.
+  - id: l9.python.portable.singleton-init-without-lock
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern-inside: |
+                  def $F(...):
+                      ...
+                      global $X
+                      ...
+              - pattern: |
+                  if $X is None:
+                      $X = $FACTORY(...)
+          - pattern: |
+              if cls.$ATTR is None:
+                  cls.$ATTR = $FACTORY(...)
+          - patterns:
+              - pattern: |
+                  if $CLS.$ATTR is None:
+                      $CLS.$ATTR = $FACTORY(...)
+              - metavariable-regex:
+                  metavariable: $CLS
+                  regex: ^[A-Z][A-Za-z0-9_]*$
+      - pattern-not-inside: |
+          with $LOCK:
+              ...
+    message: >-
+      A process-wide singleton is initialized without a lock. Take the lock
+      and re-check inside it.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      mode: shadow
+      category: correctness
+      l9:
+        canonical_rule_id: L9-PYTHON-SINGLETON-INIT-WITHOUT-LOCK
+        harvest:
+          donor_rule_id: singleton-requires-lock
+          donors:
+            - repository: Quantum-L9/Cognitive.Engine.Graphs
+              head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+              path: .semgrep/semgrep-rules.yaml
+              blob: b770b980b741761194b6998e209b13042f49ad87
+
+  # Taint mode: float() only on values that flow from untrusted input and are
+  # not converted inside a try block. This is the Cognitive.Engine.Graphs
+  # form. The Enrichment.Inference.Engine rule of the same ID matches every
+  # bare float($VAR) outside a try and is not equivalent.
+  - id: l9.python.portable.float-of-untrusted-input-unguarded
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: os.environ[...]
+          - pattern: os.environ.get(...)
+          - pattern: os.getenv(...)
+          - pattern: sys.argv
+          - pattern: input(...)
+          - pattern: json.loads(...)
+          - pattern: yaml.safe_load(...)
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      def $F(..., $P, ...):
+                          ...
+                  - pattern-inside: |
+                      async def $F(..., $P, ...):
+                          ...
+              - metavariable-regex:
+                  metavariable: $P
+                  regex: ^(payload|body|raw|request|params|query|form|data)$
+              - pattern: $P
+    pattern-sanitizers:
+      - pattern: int(...)
+    pattern-sinks:
+      - patterns:
+          - pattern: float($VAR)
+          - pattern-not-inside: |
+              try:
+                  ...
+              except ...:
+                  ...
+          - pattern-not-inside: |
+              try:
+                  ...
+              except ...:
+                  ...
+              else:
+                  ...
+          - focus-metavariable: $VAR
+    message: >-
+      float() of untrusted input can raise ValueError or TypeError. Convert
+      inside a try block.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      mode: shadow
+      category: correctness
+      l9:
+        canonical_rule_id: L9-PYTHON-FLOAT-UNTRUSTED-UNGUARDED
+        harvest:
+          donor_rule_id: float-requires-try-except
+          donors:
+            - repository: Quantum-L9/Cognitive.Engine.Graphs
+              head: 073aa051e9d68ffcfadb736fc58ab6192276c8cd
+              path: .semgrep/semgrep-rules.yaml
+              blob: b770b980b741761194b6998e209b13042f49ad87

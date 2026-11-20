@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 358
+Files: 387
 
 ## Contents
 
@@ -114,6 +114,7 @@ Files: 358
 - `docs/architecture/redaction-contract.md`
 - `docs/architecture/repository-manifest.md`
 - `docs/architecture/repository-snapshots.md`
+- `docs/architecture/rulepack-composition.md`
 - `docs/architecture/semgrep-provider.md`
 - `docs/architecture/semgrep-ruleset-profiles.md`
 - `docs/architecture/validation-contract.md`
@@ -122,6 +123,8 @@ Files: 358
 - `docs/compatibility/README.md`
 - `docs/examples/core-semgrep-integration.sh`
 - `docs/examples/core-semgrep-workflow-fragment.yml`
+- `docs/harvest/README.md`
+- `docs/harvest/semgrep-donor-ledger.yaml`
 - `docs/migration/legacy-normalizer-to-sdk.md`
 - `docs/release/aud008-receipt.json`
 - `docs/release/aud008-ruleset.json`
@@ -224,7 +227,11 @@ Files: 358
 - `l9_ci/repository/snapshot.py`
 - `l9_ci/rulesets/__init__.py`
 - `l9_ci/rulesets/semgrep/__init__.py`
+- `l9_ci/rulesets/semgrep/composition.py`
+- `l9_ci/rulesets/semgrep/harvest.py`
 - `l9_ci/rulesets/semgrep/identity-map.yaml`
+- `l9_ci/rulesets/semgrep/packs.yaml`
+- `l9_ci/rulesets/semgrep/packs/python-portable/l9-python-portable.yml`
 - `l9_ci/rulesets/semgrep/profiles.yaml`
 - `l9_ci/rulesets/semgrep/python/l9-baseline-security.yml`
 - `l9_ci/rulesets/semgrep/python/l9-file-permissions.yml`
@@ -248,6 +255,7 @@ Files: 358
 - `l9_ci/schemas/v1/promotion-policy.schema.json`
 - `l9_ci/schemas/v1/provider-failure.schema.json`
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
+- `l9_ci/schemas/v1/rulepack-composition.schema.json`
 - `l9_ci/schemas/v1/sarif-log.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
 - `lint/check_action_pins.py`
@@ -260,6 +268,7 @@ Files: 358
 - `ruff.toml`
 - `scripts/aud008_install_required_check.sh`
 - `scripts/generate_validation_report.py`
+- `scripts/harvest_donor_evidence.py`
 - `tests/__init__.py`
 - `tests/architecture/test_dependency_boundaries.py`
 - `tests/architecture/test_l9_wiring.py`
@@ -295,6 +304,23 @@ Files: 358
 - `tests/contracts/test_schema_conformance.py`
 - `tests/execution/test_profiles.py`
 - `tests/execution/test_selection.py`
+- `tests/fixtures/semgrep/harvest/cursor/sample.pyfixture`
+- `tests/fixtures/semgrep/harvest/odoo/other_addon/data/bad_cron.xml`
+- `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.py`
+- `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.sql`
+- `tests/fixtures/semgrep/harvest/odoo/other_addon/models/bad.py`
+- `tests/fixtures/semgrep/harvest/odoo/other_addon/views/bad.xml`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/data/bad_cron.xml`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/data/good_cron.xml`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/migrations/bad.py`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/migrations/bad.sql`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/migrations/good.py`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/migrations/good.sql`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/models/bad.py`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/models/good.py`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/bad.xml`
+- `tests/fixtures/semgrep/harvest/odoo/plasticos_demo/views/good.xml`
+- `tests/fixtures/semgrep/harvest/python_overlap.py`
 - `tests/fixtures/semgrep/malformed.json`
 - `tests/fixtures/semgrep/provenance.yaml`
 - `tests/fixtures/semgrep/report-error-error.json`
@@ -302,6 +328,7 @@ Files: 358
 - `tests/fixtures/semgrep/report-errors.json`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
+- `tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py`
 - `tests/fixtures/semgrep/rules/python/l9-baseline-security.py`
 - `tests/fixtures/semgrep/rules/python/l9-file-permissions.pyfixture`
 - `tests/fixtures/semgrep/rules/python/l9-handler-signature.py`
@@ -355,8 +382,10 @@ Files: 358
 - `tests/repository/test_git_env_isolation.py`
 - `tests/repository/test_manifest.py`
 - `tests/repository/test_snapshot.py`
+- `tests/rulesets/test_harvest_ledger.py`
 - `tests/rulesets/test_packaged_rule_metadata_shape.py`
 - `tests/rulesets/test_packaging.py`
+- `tests/rulesets/test_rulepack_composition.py`
 - `tests/rulesets/test_semgrep_rule_fixtures.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/yaml/__init__.py`

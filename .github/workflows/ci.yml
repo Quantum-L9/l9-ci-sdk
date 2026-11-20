@@ -77,6 +77,11 @@ jobs:
           "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
             --config l9_ci/rulesets/semgrep/python \
             tests/fixtures/semgrep/rules/python
+          # Harvested candidate packs carry their own annotated fixtures
+          # (SDK ADR 0020, L9-CI-SDK-004).
+          "$RUNNER_TEMP/semgrep/bin/semgrep" --test --metrics=off \
+            --config l9_ci/rulesets/semgrep/packs/python-portable \
+            tests/fixtures/semgrep/rules/packs/python-portable
       - name: critical gate evaluator 100% branch coverage
         id: gate_evaluator_cov
         continue-on-error: true
