@@ -12,6 +12,7 @@ from l9_ci.capabilities import (
 )
 from l9_ci.cli import ExitCode, OutputFormat, render_success
 from l9_ci.commands.errors import emit_error
+from l9_ci.commands.semgrep import SDK_version
 from l9_ci.providers import ProviderRegistry, SemgrepProvider
 from l9_ci.rulesets.semgrep import SUPPORTED_LANGUAGES, ruleset_dir
 
@@ -157,6 +158,7 @@ def handle_inventory(args: argparse.Namespace) -> int:
                 root,
                 probe_executables=args.probe_executables,
             ),
+            SDK_version=SDK_version(),
         )
         payload = inventory.to_dict()
         validate_capability_inventory(payload)

@@ -8,6 +8,7 @@
   "required": [
     "schema",
     "schema_version",
+    "SDK_version",
     "snapshot",
     "examined_file_count",
     "unclassified_file_count",
@@ -22,6 +23,7 @@
   "properties": {
     "schema": { "const": "l9.capability-inventory/v1" },
     "schema_version": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$" },
+    "SDK_version": { "type": "string", "minLength": 1 },
     "snapshot": {
       "type": "object",
       "additionalProperties": false,
@@ -87,12 +89,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "kind", "state", "reason"],
+        "required": ["path", "kind", "state", "reason", "sha256"],
         "properties": {
           "path": { "type": "string", "minLength": 1 },
           "kind": { "type": "string", "minLength": 1 },
           "state": { "enum": ["applicable", "failed"] },
-          "reason": { "type": "string", "minLength": 1 }
+          "reason": { "type": "string", "minLength": 1 },
+          "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
         }
       }
     },

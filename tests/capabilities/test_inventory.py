@@ -35,9 +35,9 @@ def _inventory(
     **target_options: object,
 ) -> CapabilityInventory:
     trees.materialize(tmp_path, tree)
-    inventory = build_capability_inventory(
+    inventory = trees.inventory(
         tmp_path,
-        targets=trees.semgrep_targets(**target_options),  # type: ignore[arg-type]
+        trees.semgrep_targets(**target_options),  # type: ignore[arg-type]
     )
     validate_capability_inventory(inventory.to_dict())
     return inventory
@@ -127,12 +127,12 @@ def test_odoo_framework_target_serves_xml_only_inside_odoo(tmp_path: Path) -> No
     targets = (*trees.semgrep_targets(), odoo_target)
 
     trees.materialize(tmp_path / "odoo", trees.ODOO_PYTHON_XML)
-    inside = build_capability_inventory(tmp_path / "odoo", targets=targets)
+    inside = trees.inventory(tmp_path / "odoo", targets)
     assert _prerequisites(inside)["framework:odoo"] is CapabilityState.APPLICABLE
     assert _languages(inside)["xml"] is CapabilityState.APPLICABLE
 
     trees.materialize(tmp_path / "plain", {**trees.PYTHON_ONLY, "a.xml": "<a/>\n"})
-    outside = build_capability_inventory(tmp_path / "plain", targets=targets)
+    outside = trees.inventory(tmp_path / "plain", targets)
     assert _prerequisites(outside)["framework:odoo"] is CapabilityState.NOT_APPLICABLE
     assert _languages(outside)["xml"] is CapabilityState.UNSUPPORTED
 
@@ -235,7 +235,7 @@ def test_no_declared_target_makes_code_unsupported_never_absent(
     tmp_path: Path,
 ) -> None:
     trees.materialize(tmp_path, trees.PYTHON_ONLY)
-    inventory = build_capability_inventory(tmp_path, targets=())
+    inventory = trees.inventory(tmp_path, ())
 
     assert inventory.status is CapabilityState.UNSUPPORTED
     assert _languages(inventory) == {"python": CapabilityState.UNSUPPORTED}
@@ -260,8 +260,8 @@ def test_inventory_is_deterministic_and_schema_valid(
     trees.materialize(tmp_path / "a", tree)
     trees.materialize(tmp_path / "b", dict(reversed(list(tree.items()))))
 
-    first = build_capability_inventory(tmp_path / "a", targets=trees.semgrep_targets())
-    second = build_capability_inventory(tmp_path / "b", targets=trees.semgrep_targets())
+    first = trees.inventory(tmp_path / "a", trees.semgrep_targets())
+    second = trees.inventory(tmp_path / "b", trees.semgrep_targets())
 
     assert canonical_json_bytes(first.to_dict()) == canonical_json_bytes(
         second.to_dict()
@@ -358,3 +358,85 @@ def test_cli_reports_a_failed_inventory_as_a_record_not_a_crash(
 
     assert main() == 0
     assert json.loads(capsys.readouterr().out)["result"]["status"] == "failed"
+
+
+def test_inventory_carries_the_producing_sdk_version(tmp_path: Path) -> None:
+    payload = _inventory(tmp_path, trees.PYTHON_ONLY).to_dict()
+
+    assert payload["SDK_version"] == trees.SDK_VERSION
+    del payload["SDK_version"]
+    with pytest.raises(ValueError, match="SDK_version"):
+        validate_capability_inventory(payload)
+
+
+@pytest.mark.parametrize("version", ["", "   "])
+def test_sdk_version_is_required_and_never_guessed(
+    tmp_path: Path, version: str
+) -> None:
+    trees.materialize(tmp_path, trees.PYTHON_ONLY)
+
+    with pytest.raises(ValueError, match="SDK_version"):
+        build_capability_inventory(
+            tmp_path, targets=trees.semgrep_targets(), SDK_version=version
+        )
+
+
+def test_manifest_content_is_bound_when_the_snapshot_id_is_not(tmp_path: Path) -> None:
+    # Same paths, different manifest bytes: the snapshot identity covers which
+    # paths exist, so it does not move. The manifest digest must.
+    trees.materialize(tmp_path, trees.PYTHON_ONLY)
+    valid = trees.inventory(tmp_path, trees.semgrep_targets())
+    (tmp_path / "pyproject.toml").write_text("[project\nname = \n", encoding="utf-8")
+    broken = trees.inventory(tmp_path, trees.semgrep_targets())
+
+    assert valid.snapshot_id == broken.snapshot_id
+    assert valid.status is CapabilityState.APPLICABLE
+    assert broken.status is CapabilityState.FAILED
+    (before,) = (item for item in valid.manifests if item.path == "pyproject.toml")
+    (after,) = (item for item in broken.manifests if item.path == "pyproject.toml")
+    assert before.sha256 and after.sha256
+    assert before.sha256 != after.sha256
+    assert canonical_json_bytes(valid.to_dict()) != canonical_json_bytes(
+        broken.to_dict()
+    )
+
+
+def test_undecodable_manifest_fails_and_keeps_its_digest(tmp_path: Path) -> None:
+    trees.materialize(tmp_path, trees.PYTHON_ONLY)
+    (tmp_path / "pyproject.toml").write_bytes(b"\xff\xfe not utf-8")
+
+    inventory = trees.inventory(tmp_path, trees.semgrep_targets())
+
+    (manifest,) = (
+        item for item in inventory.manifests if item.path == "pyproject.toml"
+    )
+    assert manifest.state is CapabilityState.FAILED
+    assert manifest.sha256 is not None
+    assert "could not be read" in manifest.reason
+
+
+def test_framework_target_does_not_serve_a_language_outside_the_framework(
+    tmp_path: Path,
+) -> None:
+    # The addon holds Python only. The repository's one XML file is outside
+    # it, so an Odoo target will not analyze that file and XML stays unsupported.
+    tree = {
+        "addons/stock_ext/__manifest__.py": '{"name": "Stock Ext"}\n',
+        "addons/stock_ext/models/stock.py": "x = 1\n",
+        "docs/diagram.xml": "<diagram/>\n",
+    }
+    odoo_target = AnalysisTarget(
+        provider_id="semgrep",
+        scope="framework",
+        name="odoo",
+        languages=("python", "xml"),
+        rulepack="example/odoo",
+        rulepack_resolved=True,
+    )
+    trees.materialize(tmp_path, tree)
+
+    inventory = trees.inventory(tmp_path, (*trees.semgrep_targets(), odoo_target))
+
+    assert _prerequisites(inventory)["framework:odoo"] is CapabilityState.APPLICABLE
+    assert _languages(inventory)["xml"] is CapabilityState.UNSUPPORTED
+    assert any("language xml" in reason for reason in inventory.reasons)

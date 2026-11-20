@@ -30,6 +30,7 @@ mode and no verdict: Core decides what is required, Assurance decides policy.
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import tomllib
 from dataclasses import dataclass
@@ -142,12 +143,17 @@ class ManifestEvidence:
 
     ``state`` is ``applicable`` when the manifest parsed and ``failed`` when it
     did not. A manifest that does not parse is never treated as missing.
+
+    ``sha256`` is the digest of the bytes that were read, or ``None`` when the
+    file could not be read. The snapshot identity covers which paths exist, not
+    what they contain, so this is what binds a manifest's state to its content.
     """
 
     path: str
     kind: str
     state: CapabilityState
     reason: str
+    sha256: str | None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -155,6 +161,7 @@ class ManifestEvidence:
             "kind": self.kind,
             "state": self.state.value,
             "reason": self.reason,
+            "sha256": self.sha256,
         }
 
 
@@ -232,6 +239,7 @@ class ProviderPrerequisite:
 class CapabilityInventory:
     """Every capability fact for one exact repository snapshot."""
 
+    SDK_version: str
     snapshot_id: str
     revision: str | None
     dirty: bool
@@ -252,6 +260,7 @@ class CapabilityInventory:
         return {
             "schema": self.schema,
             "schema_version": self.schema_version,
+            "SDK_version": self.SDK_version,
             "snapshot": {
                 "snapshot_id": self.snapshot_id,
                 "revision": self.revision,
@@ -308,14 +317,25 @@ _MANIFESTS: Mapping[str, tuple[str, str | None, Callable[[str], None]]] = {
 def _read_manifest(root: Path, relative: str) -> ManifestEvidence:
     kind, _, parser = _MANIFESTS[PurePosixPath(relative).name]
     try:
-        text = (root / relative).read_text(encoding="utf-8")
-        parser(text)
-    except (OSError, UnicodeDecodeError) as exc:
+        content = (root / relative).read_bytes()
+    except OSError as exc:
         return ManifestEvidence(
             relative,
             kind,
             CapabilityState.FAILED,
             f"manifest could not be read: {type(exc).__name__}",
+            None,
+        )
+    digest = hashlib.sha256(content).hexdigest()
+    try:
+        parser(content.decode("utf-8"))
+    except UnicodeDecodeError:
+        return ManifestEvidence(
+            relative,
+            kind,
+            CapabilityState.FAILED,
+            "manifest could not be read: UnicodeDecodeError",
+            digest,
         )
     except (ValueError, SyntaxError) as exc:
         # tomllib.TOMLDecodeError and json.JSONDecodeError are ValueErrors.
@@ -324,8 +344,11 @@ def _read_manifest(root: Path, relative: str) -> ManifestEvidence:
             kind,
             CapabilityState.FAILED,
             f"manifest is malformed: {type(exc).__name__}",
+            digest,
         )
-    return ManifestEvidence(relative, kind, CapabilityState.APPLICABLE, "parsed")
+    return ManifestEvidence(
+        relative, kind, CapabilityState.APPLICABLE, "parsed", digest
+    )
 
 
 def _languages(
@@ -493,6 +516,26 @@ def _prerequisites(
     return tuple(result)
 
 
+def _serves(
+    target: AnalysisTarget,
+    language: str,
+    frameworks: Mapping[str, FrameworkCapability],
+) -> bool:
+    """Whether ``target`` would actually analyze files of ``language``.
+
+    A language target analyzes every file of its language. A framework target
+    analyzes only files inside the framework, so it serves a language only
+    when the framework is applicable and holds at least one file of it: an XML
+    file outside every Odoo addon is not served by an Odoo target.
+    """
+    if target.scope == "language":
+        return True
+    framework = frameworks.get(target.name)
+    if framework is None or framework.state is not CapabilityState.APPLICABLE:
+        return False
+    return framework.language_file_counts.get(language, 0) > 0
+
+
 def _overall(
     languages: tuple[LanguageCapability, ...],
     frameworks: tuple[FrameworkCapability, ...],
@@ -548,14 +591,21 @@ def build_capability_inventory(
     root: Path,
     *,
     targets: Sequence[AnalysisTarget],
+    SDK_version: str,
 ) -> CapabilityInventory:
     """Inventory every capability fact for the snapshot at ``root``.
 
     ``targets`` is every analysis target the caller can run. Each one becomes
     exactly one provider prerequisite, in a stated state, whether or not this
-    snapshot calls for it. The result is a pure function of the snapshot and
-    ``targets``.
+    snapshot calls for it. The result is a pure function of the snapshot's
+    paths, the content of its manifests and ``targets``.
+
+    ``SDK_version`` is the producing SDK version. Every version-negotiated
+    artifact carries it (``.l9/integration-contract.yaml``), and this package
+    does not guess it.
     """
+    if not isinstance(SDK_version, str) or not SDK_version.strip():
+        raise ValueError("SDK_version must be a non-empty string")
     root = root.resolve()
     snapshot = build_repository_snapshot(root)
     all_files = snapshot.files
@@ -593,17 +643,14 @@ def build_capability_inventory(
         language
         for target in targets
         for language in target.languages
-        if target.scope == "language"
-        or (
-            target.name in by_framework
-            and by_framework[target.name].state is CapabilityState.APPLICABLE
-        )
+        if _serves(target, language, by_framework)
     )
     languages = _languages(by_language, served)
     status, reasons = _overall(
         languages, frameworks, manifests, prerequisites, len(all_files)
     )
     return CapabilityInventory(
+        SDK_version=SDK_version,
         snapshot_id=snapshot.snapshot_id,
         revision=snapshot.revision,
         dirty=snapshot.dirty,

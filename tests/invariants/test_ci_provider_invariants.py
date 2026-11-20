@@ -33,6 +33,7 @@ import yaml
 
 from l9_ci.capabilities import (
     AnalysisTarget,
+    CapabilityInventory,
     CapabilityState,
     build_capability_inventory,
     detect_repository_capabilities,
@@ -75,6 +76,13 @@ def _missing(symbol: str, change: str) -> pytest.MarkDecorator:
         raises=ImportError,
         reason=f"missing capability: {symbol} ({change})",
     )
+
+
+def _inventory(
+    root: Path,
+    targets: tuple[AnalysisTarget, ...],
+) -> CapabilityInventory:
+    return build_capability_inventory(root, targets=targets, SDK_version="2.0.0")
 
 
 def _write(root: Path, relative: str, text: str = "") -> None:
@@ -135,7 +143,7 @@ def test_l9_ci_sdk_001_positive_odoo_recognizes_python_and_xml(
     _write(tmp_path, "addons/sale_ext/models/sale.py", "x = 1\n")
     _write(tmp_path, "addons/sale_ext/views/sale.xml", "<odoo/>\n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     (odoo,) = inventory.frameworks
     assert odoo.state is CapabilityState.APPLICABLE
@@ -149,7 +157,7 @@ def test_l9_ci_sdk_001_negative_malformed_manifest_is_not_absence(
     _write(tmp_path, "pkg/mod.py", "x = 1\n")
     _write(tmp_path, "pyproject.toml", "[project\nname = \n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     assert inventory.status is CapabilityState.FAILED
     failed = [
@@ -171,7 +179,7 @@ def test_l9_ci_sdk_001_negative_second_language_is_never_hidden(
     _write(tmp_path, "web/index.ts", "export const x = 1;\n")
     _write(tmp_path, "native/lib.rs", "fn main() {}\n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     states = {item.language: item.state for item in inventory.languages}
     assert states == {
@@ -196,7 +204,7 @@ def test_l9_ci_sdk_002_positive_no_supported_code_is_reasoned_not_applicable(
     _write(tmp_path, "README.md", "# docs only\n")
     _write(tmp_path, "data/table.csv", "a,b\n1,2\n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     assert inventory.status is CapabilityState.NOT_APPLICABLE
     assert inventory.examined_file_count == 2
@@ -223,7 +231,7 @@ def test_l9_ci_sdk_002_negative_missing_executable_is_incomplete(
         for target in _TARGETS
     )
 
-    inventory = build_capability_inventory(tmp_path, targets=missing)
+    inventory = _inventory(tmp_path, missing)
 
     assert inventory.status is CapabilityState.INCOMPLETE
     python = next(
@@ -239,7 +247,7 @@ def test_l9_ci_sdk_002_negative_unsupported_is_not_not_applicable(
 ) -> None:
     _write(tmp_path, "app/Main.kt", "fun main() {}\n")
 
-    inventory = build_capability_inventory(tmp_path, targets=_TARGETS)
+    inventory = _inventory(tmp_path, _TARGETS)
 
     assert inventory.status is CapabilityState.UNSUPPORTED
     assert inventory.status is not CapabilityState.NOT_APPLICABLE
