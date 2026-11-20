@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 387
+Files: 389
 
 ## Contents
 
@@ -335,6 +335,7 @@ Files: 387
 - `tests/fixtures/semgrep/rules/python/l9-logging.py`
 - `tests/fixtures/semgrep/rules/python/l9-routing.py`
 - `tests/fixtures/semgrep/rules/python/l9-transport.py`
+- `tests/fixtures/semgrep/rules/typescript/l9-baseline-security.jsfixture`
 - `tests/fixtures/semgrep/runtime/identity-map.yaml`
 - `tests/fixtures/semgrep/runtime/policy.yaml`
 - `tests/fixtures/semgrep/runtime/provenance.yaml`
@@ -388,6 +389,7 @@ Files: 387
 - `tests/rulesets/test_rulepack_composition.py`
 - `tests/rulesets/test_semgrep_rule_fixtures.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
+- `tests/rulesets/test_semgrep_target_suffixes.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`
 - `uv.lock`
