@@ -346,7 +346,7 @@ Files: 410
 - `tests/fixtures/semgrep/report-timeout-captured.provenance.yaml`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
-- `tests/fixtures/semgrep/rules/overlaps/shell_true_forms.py`
+- `tests/fixtures/semgrep/rules/overlaps/shell_true_forms.pyfixture`
 - `tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py`
 - `tests/fixtures/semgrep/rules/python/l9-baseline-security.py`
 - `tests/fixtures/semgrep/rules/python/l9-file-permissions.pyfixture`

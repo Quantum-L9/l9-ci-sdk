@@ -31,7 +31,10 @@ from tests.commands.test_semgrep_command import _build_run_namespace
 
 REGISTRY_RULE = "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
 L9_RULE = "l9.baseline.python.subprocess-shell-true"
-FORMS = Path("tests/fixtures/semgrep/rules/overlaps/shell_true_forms.py")
+# Deliberate shell=True calls: named .pyfixture so that bandit and CodeQL do
+# not read them as product code (the convention of l9-file-permissions); passed
+# to Semgrep as a .py copy in a temporary directory.
+FORMS = Path("tests/fixtures/semgrep/rules/overlaps/shell_true_forms.pyfixture")
 
 _needs_semgrep = pytest.mark.skipif(
     shutil.which("semgrep") is None and os.environ.get("L9_REQUIRE_SEMGREP") != "1",
@@ -94,9 +97,11 @@ def test_a_malformed_registry_is_refused(
         load_rule_overlaps(path)
 
 
-def _scan(*arguments: str) -> list[dict]:
+def _scan(tmp_path: Path, *arguments: str) -> list[dict]:
+    target = tmp_path / "shell_true_forms.py"
+    target.write_text(FORMS.read_text(encoding="utf-8"), encoding="utf-8")
     completed = subprocess.run(
-        ["semgrep", "scan", "--metrics=off", "--json", *arguments, "--", str(FORMS)],
+        ["semgrep", "scan", "--metrics=off", "--json", *arguments, "--", str(target)],
         capture_output=True,
         text=True,
         check=False,
@@ -114,9 +119,11 @@ def _spans(results: list[dict], suffix: str) -> list[tuple[int, int]]:
 
 
 @_needs_semgrep
-def test_the_l9_rule_matches_every_site_the_registry_rule_matches() -> None:
-    l9 = _spans(_scan("--config", str(ruleset_dir("python"))), L9_RULE)
-    registry = _spans(_scan("--config", f"r/{REGISTRY_RULE}"), REGISTRY_RULE)
+def test_the_l9_rule_matches_every_site_the_registry_rule_matches(
+    tmp_path: Path,
+) -> None:
+    l9 = _spans(_scan(tmp_path, "--config", str(ruleset_dir("python"))), L9_RULE)
+    registry = _spans(_scan(tmp_path, "--config", f"r/{REGISTRY_RULE}"), REGISTRY_RULE)
     assert registry, "the registry rule must match the fixture"
     for start, end in registry:
         assert any(a <= start and end <= b for a, b in l9), (start, end)
@@ -125,8 +132,9 @@ def test_the_l9_rule_matches_every_site_the_registry_rule_matches() -> None:
 
 
 @_needs_semgrep
-def test_the_composed_run_reports_each_site_once() -> None:
+def test_the_composed_run_reports_each_site_once(tmp_path: Path) -> None:
     both = _scan(
+        tmp_path,
         "--config",
         f"r/{REGISTRY_RULE}",
         "--config",
