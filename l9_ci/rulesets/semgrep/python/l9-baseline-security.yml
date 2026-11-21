@@ -131,9 +131,12 @@ rules:
       # whitespace, "/" or "." that is not an environment variable name.
       - pattern-regex: '\b\w*(?i:passw(?:or)?d)\w*\s*=\s*["''](?![A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+["''])[^"''\s/.]{6,}["'']'
       # A secret-, token- or api-key-named variable holding a secret-shaped
-      # value: a known vendor prefix, a mixed-case-plus-digit literal of 12+
-      # characters, or a 32+ character base64/hex-like literal with a digit.
-      - pattern-regex: '\b\w*(?i:secret|token|api_?key)\w*\s*=\s*["''](?![A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+["''])(?:(?:sk|pk|rk)[-_](?:live|test)[-_][^"''\s]{6,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}|(?:AKIA|ASIA)[A-Z0-9]{16}|AIza[0-9A-Za-z_-]{30,}|glpat-[A-Za-z0-9_-]{20,}|(?=[^"''\s]*[a-z])(?=[^"''\s]*[A-Z])(?=[^"''\s]*[0-9])[^"''\s]{12,}|(?=[^"''\s]*[0-9])(?=[^"''\s]*[A-Za-z])[A-Za-z0-9+/=_-]{32,})["'']'
+      # value: a known vendor prefix (Django's "django-insecure-" included), a
+      # mixed-case-plus-digit literal of 12+ characters, a 32+ character
+      # base64/hex-like literal with a digit, or a 32+ character literal with
+      # a lowercase letter, a digit and punctuation and no "/" (a generated
+      # Django SECRET_KEY; Codex review on #140).
+      - pattern-regex: '\b\w*(?i:secret|token|api_?key)\w*\s*=\s*["''](?![A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+["''])(?:(?:sk|pk|rk)[-_](?:live|test)[-_][^"''\s]{6,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}|(?:AKIA|ASIA)[A-Z0-9]{16}|AIza[0-9A-Za-z_-]{30,}|glpat-[A-Za-z0-9_-]{20,}|django-insecure-[^"''\s]{20,}|(?=[^"''\s]*[a-z])(?=[^"''\s]*[0-9])(?=[^"''\s]*[!@#$%^&*()=+])[^"''\s/]{32,}|(?=[^"''\s]*[a-z])(?=[^"''\s]*[A-Z])(?=[^"''\s]*[0-9])[^"''\s]{12,}|(?=[^"''\s]*[0-9])(?=[^"''\s]*[A-Za-z])[A-Za-z0-9+/=_-]{32,})["'']'
 
   - id: l9.baseline.python.tls-verify-disabled
     languages: [python]

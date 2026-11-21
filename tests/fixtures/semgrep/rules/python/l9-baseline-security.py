@@ -92,12 +92,25 @@ def credential_values():
     # ruleid: l9.baseline.python.hardcoded-credential
     API_KEY = "Example0Example0Example"
     # ruleid: l9.baseline.python.hardcoded-credential
-    signing_secret = "0123456789abcdef0123456789abcdef0123"
+    signing_secret = "0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a"
     # ruleid: l9.baseline.python.hardcoded-credential
     db_password = "Hunter22hunter"
     # ruleid: l9.baseline.python.hardcoded-credential
     client(api_key="Example0Example0Example")
-    return secret, aws_secret_token, API_KEY, signing_secret, db_password
+    # Codex review on #140: a lowercase, punctuation-bearing Django key.
+    # ruleid: l9.baseline.python.hardcoded-credential
+    SECRET_KEY = "django-insecure-a1!a1!a1!a1!a1!a1!a1!a1!"
+    # ruleid: l9.baseline.python.hardcoded-credential
+    app_secret = "a1!a1!a1!a1!a1!a1!a1!a1!a1!a1!a1!a1!a1!a1!"
+    return (
+        secret,
+        aws_secret_token,
+        API_KEY,
+        signing_secret,
+        db_password,
+        SECRET_KEY,
+        app_secret,
+    )
 
 
 def credential_names():
@@ -117,4 +130,13 @@ def credential_names():
     password = ""
     # ok: l9.baseline.python.hardcoded-credential
     token_header = "Authorization"
-    return ENV_AGENTS_DOOR_SECRET, ENV_CLIENT_SECRET, INVENTORY_LOGIN_SECRET
+    return (
+        ENV_AGENTS_DOOR_SECRET,
+        ENV_CLIENT_SECRET,
+        INVENTORY_LOGIN_SECRET,
+        AWS_SM_LOGIN_SECRET,
+        AGENT_WRITE_TOKEN,
+        ENV_PASSWORD,
+        password,
+        token_header,
+    )
