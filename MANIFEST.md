@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 406
+Files: 410
 
 ## Contents
 
@@ -315,6 +315,7 @@ Files: 406
 - `tests/contracts/test_schema_conformance.py`
 - `tests/execution/test_profiles.py`
 - `tests/execution/test_selection.py`
+- `tests/fixtures/semgrep/core-semgrep-policy-v4.json`
 - `tests/fixtures/semgrep/harvest/cursor/sample.pyfixture`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/data/bad_cron.xml`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.py`
@@ -338,6 +339,8 @@ Files: 406
 - `tests/fixtures/semgrep/report-error-warn-parse.json`
 - `tests/fixtures/semgrep/report-error-warn.json`
 - `tests/fixtures/semgrep/report-errors.json`
+- `tests/fixtures/semgrep/report-policy-advisory-cg-44843122770.json`
+- `tests/fixtures/semgrep/report-policy-advisory-cg-44843122770.provenance.yaml`
 - `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.json`
 - `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.provenance.yaml`
 - `tests/fixtures/semgrep/report-timeout-captured.json`
@@ -376,6 +379,7 @@ Files: 406
 - `tests/integration/test_sdk_validation_observation.py`
 - `tests/integration/test_versioning.py`
 - `tests/invariants/test_ci_provider_invariants.py`
+- `tests/pipeline/test_core_policy_advisory_end_to_end.py`
 - `tests/pipeline/test_lifecycle.py`
 - `tests/pipeline/test_runner.py`
 - `tests/pipeline/test_semgrep_execution_path.py`
