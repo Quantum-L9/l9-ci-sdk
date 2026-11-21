@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 416
+Files: 422
 
 ## Contents
 
@@ -99,6 +99,7 @@ Files: 416
 - `docs/adr/0019-rule-precision-saas-and-usage-counts.md`
 - `docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md`
 - `docs/adr/0021-scoped-consumer-rulepack-binding.md`
+- `docs/adr/0022-registry-rule-supersession-at-covered-sites.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -210,6 +211,7 @@ Files: 416
 - `l9_ci/integration/versioning.py`
 - `l9_ci/pipeline/__init__.py`
 - `l9_ci/pipeline/lifecycle.py`
+- `l9_ci/pipeline/overlaps.py`
 - `l9_ci/pipeline/runner.py`
 - `l9_ci/pipeline/semgrep.py`
 - `l9_ci/policy/__init__.py`
@@ -237,6 +239,7 @@ Files: 416
 - `l9_ci/rulesets/semgrep/composition.py`
 - `l9_ci/rulesets/semgrep/harvest.py`
 - `l9_ci/rulesets/semgrep/identity-map.yaml`
+- `l9_ci/rulesets/semgrep/overlaps.py`
 - `l9_ci/rulesets/semgrep/packs.yaml`
 - `l9_ci/rulesets/semgrep/packs/python-portable/l9-python-portable.yml`
 - `l9_ci/rulesets/semgrep/profiles.yaml`
@@ -246,6 +249,7 @@ Files: 416
 - `l9_ci/rulesets/semgrep/python/l9-logging.yml`
 - `l9_ci/rulesets/semgrep/python/l9-routing.yml`
 - `l9_ci/rulesets/semgrep/python/l9-transport.yml`
+- `l9_ci/rulesets/semgrep/rule-overlaps.yaml`
 - `l9_ci/rulesets/semgrep/scan-scope.yaml`
 - `l9_ci/rulesets/semgrep/scope.py`
 - `l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml`
@@ -352,6 +356,7 @@ Files: 416
 - `tests/fixtures/semgrep/report-timeout-captured.provenance.yaml`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
+- `tests/fixtures/semgrep/rules/overlaps/shell_true_forms.pyfixture`
 - `tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py`
 - `tests/fixtures/semgrep/rules/python/l9-baseline-security.py`
 - `tests/fixtures/semgrep/rules/python/l9-file-permissions.pyfixture`
@@ -414,6 +419,7 @@ Files: 416
 - `tests/rulesets/test_packaging.py`
 - `tests/rulesets/test_rulepack_composition.py`
 - `tests/rulesets/test_semgrep_rule_fixtures.py`
+- `tests/rulesets/test_semgrep_rule_overlaps.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/rulesets/test_semgrep_scan_scope.py`
 - `tests/rulesets/test_semgrep_target_suffixes.py`

@@ -6,7 +6,7 @@ import functools
 import hashlib
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -40,6 +40,7 @@ from l9_ci.providers import ProviderExecutionRequest, ProviderNormalizationConte
 from l9_ci.providers.semgrep import require_supported_semgrep_version
 from l9_ci.repository import build_repository_snapshot
 
+from .overlaps import supersede_findings
 from .lifecycle import ProviderAcquisitionMode, resolve_provider
 from .runner import execute_and_normalize
 
@@ -117,6 +118,10 @@ class SemgrepPipelineRequest:
     waivers_path: Path | None = None
     repository: str | None = None
     waiver_date: date | None = None
+    # Registry rules a packaged L9 rule supersedes in this composition; their
+    # findings are withdrawn only where the L9 rule reported the same call.
+    # Registry rule ID -> packaged L9 rule ID (rule-overlaps.yaml).
+    superseded_rules: Mapping[str, str] = field(default_factory=dict)
     # The declared scope record (``l9.semgrep-scan-scope/v1``) of a required
     # run. When set it is carried into the bundle's coverage with the
     # provider's own ``paths.scanned``, so scope evidence travels with the
@@ -261,11 +266,14 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         evidence_count=len(normalization.evidence),
         limits=request.limits,
     )
+    findings = normalization.findings
+    limitations = normalization.limitations
+    if request.superseded_rules:
+        findings, superseded = supersede_findings(findings, request.superseded_rules)
+        limitations = tuple(sorted((*limitations, *superseded)))
     if request.strict:
         unresolved = tuple(
-            finding
-            for finding in normalization.findings
-            if finding.canonical_rule_id is None
+            finding for finding in findings if finding.canonical_rule_id is None
         )
         if unresolved:
             raise ValueError(describe_unresolved_identity(unresolved))
@@ -274,11 +282,11 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
     if request.policy_path:
         policy = FindingPolicy.load(request.policy_path)
         classifications = classify_findings(
-            normalization.findings,
+            findings,
             policy,
             strict=request.strict,
         ).classifications
-    elif request.strict and normalization.findings:
+    elif request.strict and findings:
         raise ValueError("strict mode requires a policy for non-empty findings")
 
     waiver_limitations: tuple[str, ...] = ()
@@ -294,7 +302,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         if not request.repository:
             raise ValueError("a waiver ledger requires the repository identity")
         application = apply_waivers(
-            normalization.findings,
+            findings,
             classifications,
             FindingWaiverLedger.load(request.waivers_path),
             repository=request.repository,
@@ -306,7 +314,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         classifications = application.classifications
         waiver_limitations = application.limitations
 
-    bundle_findings = normalization.findings
+    bundle_findings = findings
     if request.remediation_map_path is not None:
         remediation_map = RemediationMap.load(request.remediation_map_path)
         bundle_findings = apply_remediation_classes(bundle_findings, remediation_map)
@@ -342,7 +350,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         limitations=tuple(
             sorted(
                 {
-                    *normalization.limitations,
+                    *limitations,
                     *framework_limitations,
                     *waiver_limitations,
                 }
