@@ -210,15 +210,13 @@ def test_cursor_governance_canary_timeouts_are_incomplete_not_complete() -> None
     assert coverage.status is CoverageStatus.PARTIAL
     assert (coverage.files_considered, coverage.files_analyzed) == (3, 2)
     pairs = [item for item in coverage.limitations if item.startswith("incomplete")]
+    template = (
+        "incomplete analysis: rule python.lang.security.audit.{0}.{0} did not "
+        "finish on environment/program-execution/scripts/run_campaign.py (Timeout)"
+    )
     assert pairs == [
-        "incomplete analysis: rule python.lang.security.audit."
-        "dangerous-subprocess-use-tainted-env-args."
-        "dangerous-subprocess-use-tainted-env-args did not finish on "
-        "environment/program-execution/scripts/run_campaign.py (Timeout)",
-        "incomplete analysis: rule python.lang.security.audit."
-        "dangerous-system-call-tainted-env-args."
-        "dangerous-system-call-tainted-env-args did not finish on "
-        "environment/program-execution/scripts/run_campaign.py (Timeout)",
+        template.format("dangerous-subprocess-use-tainted-env-args"),
+        template.format("dangerous-system-call-tainted-env-args"),
     ]
     assert _gate_status_for_required(normalization) is GateStatus.INCOMPLETE
 
