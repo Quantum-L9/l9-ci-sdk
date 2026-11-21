@@ -16,7 +16,7 @@ updated: 2026-07-27
 | Self-CI default Python | `3.12` | `.github/workflows/l9-self-ci.yml` |
 | SDK runtime | `1.0.0` | `l9_ci.__version__` |
 | Artifact protocol | `l9.finding-bundle/v1` | `.l9/compatibility.yaml` |
-| Schema version | `1.0.0` | `.l9/compatibility.yaml` |
+| Schema version | `1.1.0` (1.1.0 adds optional `coverage[].scan_scope`) | `.l9/compatibility.yaml` |
 | JSON Schema | Draft 2020-12 | `.l9/tool-stack.yaml` |
 | `jsonschema` | `>=4.18,<5` | `requirements.txt` |
 | `referencing` | `>=0.30,<1` | `requirements.txt` |

@@ -22,6 +22,7 @@ gate scan tests/). Like the other real-Semgrep tests these skip without a
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -112,6 +113,7 @@ def repository(tmp_path: Path) -> Path:
             "src/suppressed.py": _BAD_SUPPRESSED,
             "src/clean.py": _CLEAN,
             "tests/test_bad.py": _BAD,
+            "vendor/bad.py": _BAD,
         },
     )
 
@@ -125,8 +127,10 @@ def test_required_run_reports_nosemgrep_lines_and_ignores_consumer_semgrepignore
     assert ("src/bad.py", 1) in found
     # Known-bad nosem: the annotated line still yields its finding.
     assert ("src/suppressed.py", 1) in found
+    # Known-bad test path: tests/ is in required scope and follows the rule.
+    assert ("tests/test_bad.py", 1) in found
     # Known-good: a clean line yields nothing; a declared exclusion stays out.
-    assert not any(path in {"src/clean.py", "tests/test_bad.py"} for path, _ in found)
+    assert not any(path in {"src/clean.py", "vendor/bad.py"} for path, _ in found)
 
 
 @_needs_semgrep
@@ -153,8 +157,31 @@ def test_required_run_writes_schema_valid_scope_evidence(
         "honored": False,
     }
     assert {item["pattern"]: item["count"] for item in evidence["excluded"]} == {
-        "directory_names:tests": 1
+        "directory_names:vendor": 1
     }
+    # The same record travels inside the finding bundle, with the provider's
+    # own paths.scanned (CTO decision 4: scope evidence lives in the bundle).
+    bundle = json.loads((out / "bundle.json").read_text("utf-8"))
+    assert bundle["schema_version"] == "1.1.0"
+    (coverage,) = bundle["coverage"]
+    assert coverage["scan_scope"]["declared"] == evidence
+    raw = json.loads((out / "raw" / "report.json").read_text("utf-8"))
+    scanned = sorted(raw["paths"]["scanned"])
+    assert "tests/test_bad.py" in scanned
+    assert coverage["scan_scope"]["paths_scanned"] == {
+        "count": len(scanned),
+        "sha256": hashlib.sha256("\n".join(scanned).encode("utf-8")).hexdigest(),
+    }
+
+
+@_needs_semgrep
+def test_non_required_bundle_carries_no_scan_scope(
+    repository: Path, tmp_path: Path
+) -> None:
+    out = tmp_path / "plain"
+    _findings(repository, out, required=False)
+    bundle = json.loads((out / "bundle.json").read_text("utf-8"))
+    assert "scan_scope" not in bundle["coverage"][0]
 
 
 # --- JavaScript planned through the TypeScript pack (Cursor-Governance P0) ----
@@ -218,7 +245,7 @@ def test_required_typescript_instance_completes_on_in_scope_javascript(
         {
             "web/app.js": "module.exports = function add(a, b) { return a + b; };\n",
             "web/util.ts": "export const y: number = 1;\n",
-            "tests/fixture.js": "module.exports = {};\n",
+            "vendor/lib.js": "module.exports = {};\n",
         },
     )
     bundle, raw, gate = _required_typescript_run(root, tmp_path / "out")
@@ -233,12 +260,12 @@ def test_required_typescript_instance_completes_on_in_scope_javascript(
 def test_typescript_instance_on_test_fixtures_only_cannot_complete(
     tmp_path: Path,
 ) -> None:
-    """Why the inventory must not plan it: JS only under tests/ scans nothing."""
+    """Why the inventory must not plan it: JS only under vendor/ scans nothing."""
     root = _repository(
         tmp_path / "repo",
         {
             "ops/app.py": "x = 1\n",
-            "ops/scripts/tests/fixtures/run_workflow.js": "module.exports = {};\n",
+            "ops/vendor/run_workflow.js": "module.exports = {};\n",
         },
     )
     bundle, raw, gate = _required_typescript_run(root, tmp_path / "out")
