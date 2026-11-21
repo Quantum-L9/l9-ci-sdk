@@ -29,7 +29,7 @@
 # repository without a `.semgrepignore` keeps its previous scope, plus the SDK
 # runtime the CLI already excluded.
 schema: l9.semgrep-scan-scope-policy/v1
-version: 1.0.0
+version: 1.1.0
 include:
   source: git-tracked
 exclude:
@@ -37,6 +37,8 @@ exclude:
     # SDK runtime provisioned into the scanned tree by Core `provision-sdk`.
     - .l9/runtime
   directory_names:
+    # Archived code (CTO decision 2026-11-21): see reasons below.
+    - _archived
     # Common large or third-party paths (Semgrep default).
     - node_modules
     - build
@@ -61,3 +63,12 @@ exclude:
   file_globs:
     - "*.min.js"
     - "*_test.go"
+# Why an entry is excluded, keyed by its evidence label (<kind>:<pattern>).
+# Every reason is copied into the scope evidence next to its exclusion count.
+reasons:
+  "directory_names:_archived": >-
+    Archived code at any depth (**/_archived/**) is kept for history and is
+    never imported, executed or deployed. Central decision (CTO, 2026-11-21),
+    after Cursor-Governance run 44848823829 reported 9 of 29 blocking findings
+    under commands/_archived/ and execution-governance/_archived/. This is a
+    declared org-wide scope entry, not a consumer ignore.

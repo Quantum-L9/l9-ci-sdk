@@ -90,7 +90,12 @@
             "maxItems": 50,
             "items": { "type": "string", "minLength": 1 }
           },
-          "truncated": { "type": "boolean" }
+          "truncated": { "type": "boolean" },
+          "reason": {
+            "description": "The policy's declared reason for this exclusion, when it declares one.",
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     }

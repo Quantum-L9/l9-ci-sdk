@@ -184,3 +184,19 @@ semgrep = [
 ]
 
 Do not make the Semgrep Python package a mandatory SDK dependency when import-only mode is used.
+
+## Archived code is out of required scope
+
+Scan-scope policy 1.1.0 excludes every directory named `_archived` at any depth
+(`**/_archived/**`) from required runs. Archived code is kept for history and
+is never imported, executed or deployed. This is a central decision (CTO,
+2026-11-21), not a consumer ignore. It was taken after Cursor-Governance run
+44848823829 reported 9 of its 29 blocking findings under
+`commands/_archived/` and `execution-governance/_archived/`.
+
+The policy's `reasons` map names each exclusion that has a declared reason by
+its evidence label. The scope evidence copies that reason next to the
+exclusion's exact count (`excluded[].reason`, schema 1.2.0). A reason that
+names no declared entry, or an empty reason, fails the policy closed.
+Witnesses are in `tests/rulesets/test_semgrep_scan_scope.py` (archived code).
+
