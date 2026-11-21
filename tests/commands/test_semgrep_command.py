@@ -120,8 +120,6 @@ def test_build_run_config_arguments_defaults_to_registry_plus_packaged_ruleset()
         "p/python",
         "--config",
         str(ruleset_dir("python")),
-        "--exclude-rule",
-        "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
     )
 
 
@@ -159,8 +157,6 @@ def test_build_run_config_arguments_appends_extra_config_after_defaults() -> Non
         "custom-rules.yaml",
         "--config",
         "p/security-audit",
-        "--exclude-rule",
-        "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
     )
 
 
@@ -254,8 +250,6 @@ def test_run_execution_arguments_carry_both_configs_and_exclusions() -> None:
         "p/python",
         "--config",
         str(ruleset_dir("python")),
-        "--exclude-rule",
-        "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
         "--exclude",
         ".l9/runtime",
     )

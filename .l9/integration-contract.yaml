@@ -96,6 +96,21 @@ CLI:
         not, because they still hold an excluded rule. This command resolves;
         it does not scan, and it does not change what `l9-ci semgrep run`
         scans.
+    semgrep_run:
+      syntax: >-
+        l9-ci semgrep run --language LANG --output BUNDLE [--root ROOT]
+        [--profile PROFILE] [--no-registry-config] [--extra-config CONFIG]
+        [--policy PATH] [--identity-map PATH] [--required] [--format json]
+      description: >-
+        Execute Semgrep and normalize its report into one canonical bundle. A
+        required run scans the declared scan scope and writes scan-scope
+        evidence beside the raw report (l9.semgrep-scan-scope/v1,
+        schema_version 1.2.0). When the run composes both the registry and the
+        packaged L9 ruleset, both run; a registry finding that a superseding
+        packaged rule covers at the same call is withdrawn after the scan, its
+        evidence and a limitation are kept, and the evidence records
+        `rule_overlaps` (ADR 0022). A registry finding no packaged finding
+        covers is never withdrawn.
     semgrep_normalize:
       syntax: >-
         l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT

@@ -27,6 +27,7 @@ from l9_ci.commands.semgrep_scope import (
 )
 from l9_ci.rulesets.semgrep.overlaps import (
     RULE_OVERLAPS_SCHEMA,
+    RuleOverlap,
     packaged_rule_overlaps,
 )
 from l9_ci.rulesets.semgrep.scope import (
@@ -245,17 +246,20 @@ def _build_run_config_arguments(args: argparse.Namespace) -> tuple[str, ...]:
         arguments.extend(("--config", str(ruleset_dir(args.language))))
     for extra_config in args.extra_config:
         arguments.extend(("--config", extra_config))
-    for rule_id in _superseded_rule_ids(args):
-        arguments.extend(("--exclude-rule", rule_id))
     return tuple(arguments)
 
 
-def _superseded_rule_ids(args: argparse.Namespace) -> tuple[str, ...]:
-    """Registry rules a packaged L9 rule supersedes in this composition.
+def _active_rule_overlaps(args: argparse.Namespace) -> tuple[RuleOverlap, ...]:
+    """Supersessions that apply to this run's composition.
 
-    Only when the run composes both the registry ruleset and the packaged L9
-    ruleset for the language; see l9_ci/rulesets/semgrep/rule-overlaps.yaml.
+    Only a `semgrep run` that composes both the registry ruleset and the
+    packaged L9 ruleset for the language; see
+    l9_ci/rulesets/semgrep/rule-overlaps.yaml. Both rules still run: the
+    pipeline withdraws a registry finding only where the L9 rule reported the
+    same call.
     """
+    if not hasattr(args, "profile") or not hasattr(args, "language"):
+        return ()
     profile = resolve_profile(args.profile or default_profile_name())
     if not (
         profile.include_registry_ruleset
@@ -263,19 +267,20 @@ def _superseded_rule_ids(args: argparse.Namespace) -> tuple[str, ...]:
         and not args.no_registry_config
     ):
         return ()
-    return packaged_rule_overlaps().superseded_rule_ids(args.language)
+    return packaged_rule_overlaps().for_language(args.language)
 
 
 def _rule_overlap_evidence(args: argparse.Namespace) -> dict[str, Any] | None:
-    superseded = _superseded_rule_ids(args)
-    if not superseded:
+    active = _active_rule_overlaps(args)
+    if not active:
         return None
     overlaps = packaged_rule_overlaps()
     return {
         "schema": RULE_OVERLAPS_SCHEMA,
         "version": overlaps.version,
         "sha256": overlaps.sha256,
-        "superseded": [item.to_dict() for item in overlaps.for_language(args.language)],
+        "applied": "covered_sites_only",
+        "superseded": [item.to_dict() for item in active],
     }
 
 
@@ -370,6 +375,11 @@ def _request(
         ),
         execution_arguments=execution_arguments,
         execution_targets=execution_targets,
+        superseded_rules={
+            rule: item.rule_id
+            for item in _active_rule_overlaps(args)
+            for rule in item.supersedes
+        },
     )
 
 

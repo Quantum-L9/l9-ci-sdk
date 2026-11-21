@@ -41,12 +41,13 @@
       "const": "disabled"
     },
     "rule_overlaps": {
-      "description": "Registry rules this run skipped (--exclude-rule) because a packaged L9 rule supersedes them; present only when both rulesets were composed.",
+      "description": "Registry rules a packaged L9 rule supersedes in this run; present only when both rulesets were composed. Both rules run; a registry finding is withdrawn only where the L9 rule reported the same call, and its evidence is kept.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema", "version", "sha256", "superseded"],
+      "required": ["schema", "version", "sha256", "applied", "superseded"],
       "properties": {
         "schema": { "const": "l9.semgrep-rule-overlaps/v1" },
+        "applied": { "const": "covered_sites_only" },
         "version": { "type": "string", "minLength": 1 },
         "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "superseded": {

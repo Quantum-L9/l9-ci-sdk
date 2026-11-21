@@ -2,10 +2,13 @@
 # Registry rules that an SDK-packaged L9 rule supersedes.
 #
 # When one `l9-ci semgrep run` composes both the community registry ruleset and
-# the packaged L9 ruleset for a language (profile l9-standard), a registry rule
-# listed here is skipped with Semgrep's `--exclude-rule`. The L9 rule stays as
-# the canonical rule, so one site is reported once, under its L9 canonical ID,
-# rather than twice. Observed on Cursor-Governance (run 44848823829): 12 of 29
+# the packaged L9 ruleset for a language (profile l9-standard), both rules run.
+# After the scan, a finding of a registry rule listed here is withdrawn only
+# where its superseding L9 rule reported the same call; its evidence is kept
+# and the bundle records the withdrawal (ADR 0022). The L9 rule stays as the
+# canonical rule, so one site is reported once, under its L9 canonical ID,
+# rather than twice. A registry finding no L9 finding covers stays: the
+# registry ruleset is unpinned and may match more than this witness saw. Observed on Cursor-Governance (run 44848823829): 12 of 29
 # blocking findings were six shell=True call sites reported by both rules.
 #
 # An entry is admitted only when the L9 rule matches every site the registry

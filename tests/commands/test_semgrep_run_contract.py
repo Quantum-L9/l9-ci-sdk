@@ -59,9 +59,6 @@ def test_run_cli_preserves_public_command_and_builds_execute_request(
         "p/python",
         "--config",
         str(ruleset_dir("python")),
-        # The registry rule the packaged L9 rule supersedes (rule-overlaps.yaml).
-        "--exclude-rule",
-        "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
         "--exclude",
         ".l9/runtime",
     )
@@ -94,9 +91,6 @@ def test_run_cli_default_profile_matches_omitted_profile(
         "p/python",
         "--config",
         str(ruleset_dir("python")),
-        # The registry rule the packaged L9 rule supersedes (rule-overlaps.yaml).
-        "--exclude-rule",
-        "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
         "--exclude",
         ".l9/runtime",
     )

@@ -1,9 +1,17 @@
 """Registry rules superseded by SDK-packaged L9 rules (``rule-overlaps.yaml``).
 
 A run that composes both the community registry ruleset and the packaged L9
-ruleset skips each superseded registry rule with ``--exclude-rule``, so one site
-is reported once, under its L9 canonical rule. See the packaged file for the
-admission rule and the witness.
+ruleset reports one site once, under its L9 canonical rule. Both rules run; the
+registry finding is withdrawn after the scan, and only where the superseding L9
+rule reported the same call (same file, registry start line inside the L9
+span). The registry evidence record is kept and the bundle says what was
+withdrawn (``l9_ci.pipeline.overlaps``).
+
+Nothing is excluded before the scan. The registry ruleset (``p/python``) is
+fetched unpinned, so a later revision of a superseded rule may match a site the
+packaged L9 rule does not; that finding has no covering L9 finding and stays
+(Codex review on #143). See the packaged file for the admission rule and the
+witness.
 """
 
 from __future__ import annotations
@@ -51,6 +59,14 @@ class RuleOverlaps:
 
     def for_language(self, language: str) -> tuple[RuleOverlap, ...]:
         return tuple(item for item in self.overlaps if item.language == language)
+
+    def supersessions(self, language: str) -> dict[str, str]:
+        """Registry rule ID -> the packaged L9 rule ID that supersedes it."""
+        return {
+            rule: item.rule_id
+            for item in self.for_language(language)
+            for rule in item.supersedes
+        }
 
     def superseded_rule_ids(self, language: str) -> tuple[str, ...]:
         return tuple(

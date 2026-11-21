@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 410
+Files: 412
 
 ## Contents
 
@@ -99,6 +99,7 @@ Files: 410
 - `docs/adr/0019-rule-precision-saas-and-usage-counts.md`
 - `docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md`
 - `docs/adr/0021-scoped-consumer-rulepack-binding.md`
+- `docs/adr/0022-registry-rule-supersession-at-covered-sites.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -208,6 +209,7 @@ Files: 410
 - `l9_ci/integration/versioning.py`
 - `l9_ci/pipeline/__init__.py`
 - `l9_ci/pipeline/lifecycle.py`
+- `l9_ci/pipeline/overlaps.py`
 - `l9_ci/pipeline/runner.py`
 - `l9_ci/pipeline/semgrep.py`
 - `l9_ci/policy/__init__.py`

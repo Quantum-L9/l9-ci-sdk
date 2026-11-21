@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from l9_ci.artifacts import validate_bundle, write_bundle_atomic
@@ -25,6 +26,7 @@ from l9_ci.providers import ProviderExecutionRequest, ProviderNormalizationConte
 from l9_ci.providers.semgrep import require_supported_semgrep_version
 from l9_ci.repository import build_repository_snapshot
 
+from .overlaps import supersede_findings
 from .lifecycle import ProviderAcquisitionMode, resolve_provider
 from .runner import execute_and_normalize
 
@@ -56,6 +58,10 @@ class SemgrepPipelineRequest:
     execution_arguments: tuple[str, ...] = ()
     execution_targets: tuple[str, ...] = ()
     remediation_map_path: Path | None = None
+    # Registry rules a packaged L9 rule supersedes in this composition; their
+    # findings are withdrawn only where the L9 rule reported the same call.
+    # Registry rule ID -> packaged L9 rule ID (rule-overlaps.yaml).
+    superseded_rules: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,11 +154,14 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         evidence_count=len(normalization.evidence),
         limits=request.limits,
     )
+    findings = normalization.findings
+    limitations = normalization.limitations
+    if request.superseded_rules:
+        findings, superseded = supersede_findings(findings, request.superseded_rules)
+        limitations = tuple(sorted((*limitations, *superseded)))
     if request.strict:
         unresolved = tuple(
-            finding
-            for finding in normalization.findings
-            if finding.canonical_rule_id is None
+            finding for finding in findings if finding.canonical_rule_id is None
         )
         if unresolved:
             raise ValueError(describe_unresolved_identity(unresolved))
@@ -161,14 +170,14 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
     if request.policy_path:
         policy = FindingPolicy.load(request.policy_path)
         classifications = classify_findings(
-            normalization.findings,
+            findings,
             policy,
             strict=request.strict,
         ).classifications
-    elif request.strict and normalization.findings:
+    elif request.strict and findings:
         raise ValueError("strict mode requires a policy for non-empty findings")
 
-    bundle_findings = normalization.findings
+    bundle_findings = findings
     if request.remediation_map_path is not None:
         remediation_map = RemediationMap.load(request.remediation_map_path)
         bundle_findings = apply_remediation_classes(bundle_findings, remediation_map)
@@ -195,7 +204,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         classifications=classifications,
         provider_failures=normalization.failures,
         coverage=(normalization.coverage,),
-        limitations=normalization.limitations,
+        limitations=limitations,
     )
     if request.generated_at is not None:
         bundle = replace(bundle, generated_at=request.generated_at)

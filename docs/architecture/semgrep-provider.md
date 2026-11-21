@@ -188,12 +188,17 @@ Do not make the Semgrep Python package a mandatory SDK dependency when import-on
 ## Superseded registry rules
 
 When a run composes both the community registry ruleset and the packaged L9
-ruleset (profile `l9-standard`), each registry rule that a packaged L9 rule
-supersedes is skipped with `--exclude-rule`. The registry of supersessions is
+ruleset (profile `l9-standard`), both rulesets run. After the scan, a finding
+of a registry rule that a packaged L9 rule supersedes is withdrawn only where
+the L9 rule reported the same call (same file, registry start line inside the
+L9 span); its evidence stays in the bundle and a limitation names every site
+(ADR 0022). The registry of supersessions is
 [`l9_ci/rulesets/semgrep/rule-overlaps.yaml`](../../l9_ci/rulesets/semgrep/rule-overlaps.yaml)
 (`l9.semgrep-rule-overlaps/v1`). The L9 rule stays canonical, so one site is
-reported once, under its L9 canonical ID. A required run records the
-supersessions in its scope evidence (`rule_overlaps`, schema 1.2.0).
+reported once, under its L9 canonical ID. Nothing is excluded before the scan:
+`p/python` is unpinned, and a registry finding no L9 finding covers is kept. A
+required run records the supersessions in its scope evidence (`rule_overlaps`,
+`applied: covered_sites_only`, schema 1.2.0).
 
 An entry is admitted only when the L9 rule matches every site the registry
 rule matches. `tests/rulesets/test_semgrep_rule_overlaps.py` runs both rules

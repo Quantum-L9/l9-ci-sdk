@@ -292,6 +292,7 @@ def test_required_run_disables_nosem_and_scans_the_declared_scope(
     assert record["files_in_scope"] == 2
     # The default profile composes both rulesets, so the superseded registry
     # rule is recorded with the L9 rule that replaces it.
+    assert record["rule_overlaps"]["applied"] == "covered_sites_only"
     assert record["rule_overlaps"]["superseded"] == [
         {
             "language": "python",

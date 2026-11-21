@@ -3,10 +3,11 @@
 Cursor-Governance run 44848823829 reported each shell=True call site twice:
 once by l9.baseline.python.subprocess-shell-true and once by the registry rule
 python.lang.security.audit.subprocess-shell-true. A run that composes both
-rulesets now skips the registry rule, so a site is reported once, under its L9
-canonical ID. The registry rule may be skipped only because the L9 rule matches
-every site it matches. The real-Semgrep tests below check that on every
-shell=True form.
+rulesets now reports a site once, under its L9 canonical ID: both rules run, and
+the registry finding is withdrawn only where the L9 rule reported the same call.
+A registry finding no L9 finding covers stays, so a later revision of the
+unpinned registry rule cannot hide a site (Codex review on #143). The
+real-Semgrep tests below check the supersession on every shell=True form.
 """
 
 from __future__ import annotations
@@ -20,7 +21,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from l9_ci.commands.semgrep import _build_run_config_arguments
+from l9_ci.artifacts import load_and_validate_bundle
+from l9_ci.commands.semgrep import _active_rule_overlaps, _build_run_config_arguments
+from l9_ci.pipeline import SemgrepPipelineRequest, run_semgrep_pipeline
 from l9_ci.rulesets.semgrep import ruleset_dir
 from l9_ci.rulesets.semgrep.overlaps import (
     RuleOverlapError,
@@ -58,17 +61,21 @@ def test_every_superseding_rule_is_packaged_with_its_canonical_id() -> None:
         assert rule["metadata"]["l9"]["canonical_rule_id"] == item.canonical_rule_id
 
 
-def test_the_registry_rule_is_skipped_only_when_both_rulesets_compose() -> None:
-    standard = _build_run_config_arguments(_build_run_namespace(output="b.json"))
-    assert ("--exclude-rule", REGISTRY_RULE) == standard[-2:]
-    baseline = _build_run_config_arguments(
-        _build_run_namespace(output="b.json", profile="l9-baseline")
-    )
-    assert "--exclude-rule" not in baseline
-    no_registry = _build_run_config_arguments(
-        _build_run_namespace(output="b.json", no_registry_config=True)
-    )
-    assert "--exclude-rule" not in no_registry
+def test_supersession_applies_only_when_both_rulesets_compose() -> None:
+    standard = _build_run_namespace(output="b.json")
+    (active,) = _active_rule_overlaps(standard)
+    assert active.supersedes == (REGISTRY_RULE,)
+    for namespace in (
+        _build_run_namespace(output="b.json", profile="l9-baseline"),
+        _build_run_namespace(output="b.json", no_registry_config=True),
+    ):
+        assert _active_rule_overlaps(namespace) == ()
+
+
+def test_no_rule_is_excluded_before_the_scan() -> None:
+    """The unpinned registry rule always runs; nothing is excluded up front."""
+    arguments = _build_run_config_arguments(_build_run_namespace(output="b.json"))
+    assert "--exclude-rule" not in arguments
 
 
 @pytest.mark.parametrize(
@@ -131,16 +138,84 @@ def test_the_l9_rule_matches_every_site_the_registry_rule_matches(
     assert len(l9) == len(registry) + 1
 
 
+def _composed_report(tmp_path: Path) -> Path:
+    target = tmp_path / "repo" / "shell_true_forms.py"
+    target.parent.mkdir(parents=True)
+    target.write_text(FORMS.read_text(encoding="utf-8"), encoding="utf-8")
+    completed = subprocess.run(
+        [
+            "semgrep",
+            "scan",
+            "--metrics=off",
+            "--json",
+            "--config",
+            f"r/{REGISTRY_RULE}",
+            "--config",
+            str(ruleset_dir("python")),
+            "--",
+            "shell_true_forms.py",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=target.parent,
+    )
+    assert completed.returncode == 0, completed.stderr[-2000:]
+    report = tmp_path / "report.json"
+    report.write_text(completed.stdout, encoding="utf-8")
+    return report
+
+
+def _bundle(tmp_path: Path, report: Path):  # type: ignore[no-untyped-def]
+    output = tmp_path / "bundle.json"
+    run_semgrep_pipeline(
+        SemgrepPipelineRequest(
+            report_path=report,
+            repository_root=(tmp_path / "repo").resolve(),
+            snapshot_id="snapshot-1",
+            SDK_version="2.0.0-test",
+            output_path=output,
+            provider_version="1.171.0",
+            generated_at="2026-11-21T00:00:00Z",
+            superseded_rules=packaged_rule_overlaps().supersessions("python"),
+        )
+    )
+    return load_and_validate_bundle(output)
+
+
 @_needs_semgrep
 def test_the_composed_run_reports_each_site_once(tmp_path: Path) -> None:
-    both = _scan(
-        tmp_path,
-        "--config",
-        f"r/{REGISTRY_RULE}",
-        "--config",
-        str(ruleset_dir("python")),
-        "--exclude-rule",
-        REGISTRY_RULE,
+    report = _composed_report(tmp_path)
+    results = json.loads(report.read_text(encoding="utf-8"))["results"]
+    registry = _spans(results, REGISTRY_RULE)
+    assert len(registry) == 6  # both rules ran: nothing was excluded
+    bundle = _bundle(tmp_path, report)
+    rules = [finding.provider_rule_id for finding in bundle.findings]
+    assert all(rule.endswith(L9_RULE) for rule in rules)
+    assert len(rules) == 7
+    # The withdrawn registry results stay as evidence, and the bundle says so.
+    assert len(bundle.evidence) == 7 + len(registry)
+    (note,) = [i for i in bundle.limitations if i.startswith("registry rule")]
+    assert f"{len(registry)} finding(s) withdrawn" in note
+
+
+@_needs_semgrep
+def test_a_registry_finding_no_l9_finding_covers_stays(tmp_path: Path) -> None:
+    """Known-bad drift: the registry rule reports a site the L9 rule does not.
+
+    The report is the real composed report with one registry result moved to a
+    line no L9 finding spans, standing in for a later revision of the unpinned
+    registry rule that matches more than the packaged L9 rule.
+    """
+    report = _composed_report(tmp_path)
+    document = json.loads(report.read_text(encoding="utf-8"))
+    drifted = next(
+        dict(item) for item in document["results"] if item["check_id"] == REGISTRY_RULE
     )
-    assert _spans(both, REGISTRY_RULE) == []
-    assert len(_spans(both, L9_RULE)) == 7
+    drifted["start"] = {**drifted["start"], "line": 1}
+    drifted["end"] = {**drifted["end"], "line": 1}
+    document["results"].append(drifted)
+    report.write_text(json.dumps(document), encoding="utf-8")
+    bundle = _bundle(tmp_path, report)
+    kept = [f for f in bundle.findings if f.provider_rule_id == REGISTRY_RULE]
+    assert [f.locations[0].start_line for f in kept] == [1]
