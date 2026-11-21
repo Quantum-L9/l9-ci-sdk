@@ -27,7 +27,11 @@ packages:
     - Severity
     - SnapshotDescriptor
     - SourceLocation
+    - SUBJECT_CAP
+    - cap_subjects
+    - format_subjects
     - normalize_repository_path
+    - subject_reason
   l9_ci.repository:
     - DEFAULT_MANIFEST_PATH
     - GitRepositoryState
@@ -111,6 +115,8 @@ packages:
     - GATE_RESULT_SCHEMA_VERSION
     - GateResult
     - GateStatus
+    - ReasonCode
+    - ReasonDetail
     - evaluate_gate
   l9_ci.integration:
     - AGENT_REVIEW_PAYLOAD_PROTOCOL

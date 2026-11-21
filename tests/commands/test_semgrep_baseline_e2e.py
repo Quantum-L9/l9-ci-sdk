@@ -194,6 +194,8 @@ def test_tracked_changes_make_the_base_comparison_unknown(tmp_path: Path) -> Non
     assert {status for status, _ in _statuses(bundle).values()} == {"unknown"}
     (failure,) = bundle.provider_failures
     assert "clean working tree" in failure.message
+    # L9-SIGNAL-001: the refusal names the file that differs.
+    assert failure.message.endswith("clean working tree: src/a.py")
     assert evaluate_gate(bundle).status is GateStatus.INCOMPLETE
 
 

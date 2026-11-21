@@ -155,7 +155,12 @@ CLI:
       description: >-
         Evaluate one validated canonical bundle and emit the SDK technical
         gate-result artifact. This result may be enforced by Core during the
-        pre-Assurance transition but is not an organization Assurance decision.
+        pre-Assurance transition but is not an organization Assurance decision. Every
+        reason names its subjects (rule ID at path:line per finding, provider
+        ID with failure type and message, coverage status and limitations),
+        sorted and capped at 20 with "(+N more)"; reason_details carries each
+        reason as {code, subjects, omitted} (gate-result schema_version 1.1.0,
+        ADR 0025).
     observation_build:
       syntax: >-
         l9-ci observation build --repository OWNER/NAME --revision SHA

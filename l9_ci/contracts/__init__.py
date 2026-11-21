@@ -18,6 +18,7 @@ from .evidence import Confidence, EvidenceRecord, Severity
 from .failure import ProviderFailure, ProviderFailureType
 from .finding import Finding
 from .source import SourceLocation, normalize_repository_path
+from .subjects import SUBJECT_CAP, cap_subjects, format_subjects, subject_reason
 from .version import SemanticVersion
 
 __all__ = [
@@ -40,5 +41,9 @@ __all__ = [
     "Severity",
     "SnapshotDescriptor",
     "SourceLocation",
+    "SUBJECT_CAP",
+    "cap_subjects",
+    "format_subjects",
     "normalize_repository_path",
+    "subject_reason",
 ]

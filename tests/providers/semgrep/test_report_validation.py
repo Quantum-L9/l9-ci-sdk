@@ -33,4 +33,4 @@ def test_wrong_root_shapes_are_rejected() -> None:
         }
     )
     assert not result.valid
-    assert "results must be an array" in result.errors
+    assert "results must be an array: got dict" in result.errors

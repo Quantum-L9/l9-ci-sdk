@@ -39,14 +39,16 @@ def validate_semgrep_report(
     errors: list[str] = []
     results = payload.get("results")
     if not isinstance(results, Sequence) or isinstance(results, str | bytes):
-        errors.append("results must be an array")
+        errors.append(f"results must be an array: got {type(results).__name__}")
         results = []
     report_errors = payload.get("errors", [])
     if not isinstance(report_errors, Sequence) or isinstance(
         report_errors,
         str | bytes,
     ):
-        errors.append("errors must be an array when present")
+        errors.append(
+            f"errors must be an array when present: got {type(report_errors).__name__}"
+        )
     for index, result in enumerate(results):
         prefix = f"results[{index}]"
         if not isinstance(result, Mapping):

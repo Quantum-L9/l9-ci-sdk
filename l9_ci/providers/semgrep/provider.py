@@ -18,6 +18,11 @@ from l9_ci.contracts import (
     Severity,
     SourceLocation,
 )
+from l9_ci.contracts.subjects import (
+    strip_absolute_paths,
+    subject_reason,
+    text_tail,
+)
 from l9_ci.identity import RuleIdentityMap, resolve_rule_identity
 from l9_ci.providers import (
     NetworkRequirement,
@@ -101,9 +106,15 @@ class SemgrepProvider:
     ) -> Sequence[str]:
         errors: list[str] = []
         if not repository_root.exists():
-            errors.append("repository root does not exist")
+            errors.append(
+                "repository root does not exist: "
+                + strip_absolute_paths(str(repository_root))
+            )
         elif not repository_root.is_dir():
-            errors.append("repository root is not a directory")
+            errors.append(
+                "repository root is not a directory: "
+                + strip_absolute_paths(str(repository_root))
+            )
         version = self.detect_version()
         if version is not None:
             try:
@@ -231,7 +242,7 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=provider_version,
                 failure_type=ProviderFailureType.TIMEOUT,
-                message="Semgrep execution timed out",
+                message=f"Semgrep execution timed out: {text_tail(result.stderr)}",
                 required=required,
                 fatal=required,
             )
@@ -240,7 +251,10 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=provider_version,
                 failure_type=ProviderFailureType.OUTPUT_LIMIT_EXCEEDED,
-                message="Semgrep output exceeded the configured limit",
+                message=(
+                    "Semgrep output exceeded the configured limit "
+                    f"(exit {result.exit_code}): {text_tail(result.stderr)}"
+                ),
                 required=required,
                 fatal=required,
                 exit_code=result.exit_code,
@@ -250,7 +264,10 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=provider_version,
                 failure_type=ProviderFailureType.REPORT_MISSING,
-                message="Semgrep did not produce a report",
+                message=(
+                    f"Semgrep did not produce a report (exit {result.exit_code}): "
+                    f"{text_tail(result.stderr)}"
+                ),
                 required=required,
                 fatal=required,
                 exit_code=result.exit_code,
@@ -260,7 +277,10 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=provider_version,
                 failure_type=ProviderFailureType.EXECUTION_ERROR,
-                message="Semgrep exited unsuccessfully",
+                message=(
+                    f"Semgrep exited unsuccessfully with code {result.exit_code}: "
+                    f"{text_tail(result.stderr)}"
+                ),
                 required=required,
                 fatal=required,
                 exit_code=result.exit_code,
@@ -274,11 +294,16 @@ class SemgrepProvider:
         try:
             payload = json.loads(report_path.read_text(encoding="utf-8"))
         except FileNotFoundError as exc:
-            raise ValueError(f"Semgrep report not found: {report_path}") from exc
+            raise ValueError(f"Semgrep report not found: …/{report_path.name}") from exc
         except json.JSONDecodeError as exc:
-            raise ValueError(f"Semgrep report is not valid JSON: {exc.msg}") from exc
+            raise ValueError(
+                f"Semgrep report is not valid JSON: …/{report_path.name}: {exc.msg}"
+            ) from exc
         if not isinstance(payload, Mapping):
-            raise ValueError("Semgrep report root must be an object")
+            raise ValueError(
+                f"Semgrep report root must be an object: …/{report_path.name} holds "
+                f"{type(payload).__name__}"
+            )
         return payload
 
     def validate_report_shape(
@@ -298,7 +323,9 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=context.provider_version,
                 failure_type=ProviderFailureType.REPORT_MALFORMED,
-                message="Semgrep report failed structural validation",
+                message=subject_reason(
+                    "Semgrep report failed structural validation", validation.errors
+                ),
                 required=context.required,
                 fatal=context.required,
                 diagnostics={"errors": list(validation.errors)},
@@ -540,7 +567,9 @@ def _coverage_paths(
         if not scanned:
             limitations.append(
                 "Semgrep report paths did not include a verified, non-empty "
-                "scanned inventory; coverage cannot be confirmed complete."
+                "scanned inventory; coverage cannot be confirmed complete: "
+                f"paths.scanned was a {type(scanned_raw).__name__} with no usable "
+                f"path, paths.skipped named {len(skipped)}"
             )
             return scanned | skipped, scanned, tuple(limitations), False
         return scanned | skipped, scanned, tuple(limitations), True
@@ -551,7 +580,8 @@ def _coverage_paths(
     }
     limitations.append(
         "Semgrep report did not expose verified paths.scanned coverage; "
-        "coverage was derived from finding paths only."
+        "coverage was derived from finding paths only: "
+        f"{len(finding_paths)} finding path(s)"
     )
     return finding_paths, finding_paths, tuple(limitations), False
 
