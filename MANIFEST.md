@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 410
+Files: 414
 
 ## Contents
 
@@ -156,6 +156,7 @@ Files: 410
 - `l9_ci/baseline/schemas.py`
 - `l9_ci/capabilities/__init__.py`
 - `l9_ci/capabilities/detector.py`
+- `l9_ci/capabilities/frameworks.py`
 - `l9_ci/capabilities/inventory.py`
 - `l9_ci/capabilities/model.py`
 - `l9_ci/cli/__init__.py`
@@ -290,6 +291,7 @@ Files: 410
 - `tests/biome/test_biome_scan.py`
 - `tests/capabilities/__init__.py`
 - `tests/capabilities/test_detector.py`
+- `tests/capabilities/test_framework_rule_applicability.py`
 - `tests/capabilities/test_inventory.py`
 - `tests/capabilities/test_inventory_scan_scope.py`
 - `tests/capabilities/trees.py`
@@ -341,6 +343,8 @@ Files: 410
 - `tests/fixtures/semgrep/report-errors.json`
 - `tests/fixtures/semgrep/report-policy-advisory-cg-44843122770.json`
 - `tests/fixtures/semgrep/report-policy-advisory-cg-44843122770.provenance.yaml`
+- `tests/fixtures/semgrep/report-sdk-provider-subprocess-injection.json`
+- `tests/fixtures/semgrep/report-sdk-provider-subprocess-injection.provenance.yaml`
 - `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.json`
 - `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.provenance.yaml`
 - `tests/fixtures/semgrep/report-timeout-captured.json`
