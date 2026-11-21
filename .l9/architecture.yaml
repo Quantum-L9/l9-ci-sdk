@@ -81,6 +81,7 @@ layers:
     responsibility:
       - public SDK composition flows
       - provider lifecycle composition
+      - registry-rule supersession at covered sites (ADR 0022)
     may_depend_on: [contracts, repository, capabilities, execution, providers, identity, policy, artifacts, integration]
   integration:
     package: l9_ci.integration
@@ -111,6 +112,7 @@ layers:
     responsibility:
       - versioned SDK-packaged provider rule files
       - packaged provider identity maps
+      - registry-rule supersession declarations (rule-overlaps.yaml, ADR 0022)
       - source-tree and wheel path resolution
     may_depend_on: [Python standard library]
     must_not_depend_on: [providers, policy, gates, pipeline, integration]

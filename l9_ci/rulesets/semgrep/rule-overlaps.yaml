@@ -1,0 +1,33 @@
+---
+# Registry rules that an SDK-packaged L9 rule supersedes.
+#
+# When one `l9-ci semgrep run` composes both the community registry ruleset and
+# the packaged L9 ruleset for a language (profile l9-standard), both rules run.
+# After the scan, a finding of a registry rule listed here is withdrawn only
+# where its superseding L9 rule reported the same call; its evidence is kept
+# and the bundle records the withdrawal (ADR 0022). The L9 rule stays as the
+# canonical rule, so one site is reported once, under its L9 canonical ID,
+# rather than twice. A registry finding no L9 finding covers stays: the
+# registry ruleset is unpinned and may match more than this witness saw. Observed on Cursor-Governance (run 44848823829): 12 of 29
+# blocking findings were six shell=True call sites reported by both rules.
+#
+# An entry is admitted only when the L9 rule matches every site the registry
+# rule matches. The real-Semgrep witness is
+# tests/rulesets/test_semgrep_rule_overlaps.py, which runs both rules over the
+# same fixture. Never list a registry rule here to silence it: that is the
+# finding policy's job.
+schema: l9.semgrep-rule-overlaps/v1
+version: 1.0.0
+overlaps:
+  - language: python
+    rule_id: l9.baseline.python.subprocess-shell-true
+    canonical_rule_id: L9-PYTHON-SUBPROCESS-SHELL-TRUE
+    supersedes:
+      - python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+    reason: >-
+      The registry rule matches subprocess.$FUNC(..., shell=True, ...) except a
+      literal-string command and reports the `True` token. The L9 rule matches
+      run, call, Popen, check_call and check_output with shell=True, including
+      literal-string commands, and reports the whole call. Those five are the
+      subprocess functions that take `shell`, so every registry match is also an
+      L9 match on the same call.

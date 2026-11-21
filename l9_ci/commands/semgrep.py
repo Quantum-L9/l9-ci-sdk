@@ -26,6 +26,11 @@ from l9_ci.commands.semgrep_scope import (
     scope_evidence_path,
     write_scope_evidence,
 )
+from l9_ci.rulesets.semgrep.overlaps import (
+    RULE_OVERLAPS_SCHEMA,
+    RuleOverlap,
+    packaged_rule_overlaps,
+)
 from l9_ci.rulesets.semgrep.scope import (
     REQUIRED_RULE_TIMEOUT_SECONDS,
     REQUIRED_RULE_TIMEOUT_THRESHOLD,
@@ -245,6 +250,41 @@ def _build_run_config_arguments(args: argparse.Namespace) -> tuple[str, ...]:
     return tuple(arguments)
 
 
+def _active_rule_overlaps(args: argparse.Namespace) -> tuple[RuleOverlap, ...]:
+    """Supersessions that apply to this run's composition.
+
+    Only a `semgrep run` that composes both the registry ruleset and the
+    packaged L9 ruleset for the language; see
+    l9_ci/rulesets/semgrep/rule-overlaps.yaml. Both rules still run: the
+    pipeline withdraws a registry finding only where the L9 rule reported the
+    same call.
+    """
+    if not hasattr(args, "profile") or not hasattr(args, "language"):
+        return ()
+    profile = resolve_profile(args.profile or default_profile_name())
+    if not (
+        profile.include_registry_ruleset
+        and profile.include_l9_ruleset
+        and not args.no_registry_config
+    ):
+        return ()
+    return packaged_rule_overlaps().for_language(args.language)
+
+
+def _rule_overlap_evidence(args: argparse.Namespace) -> dict[str, Any] | None:
+    active = _active_rule_overlaps(args)
+    if not active:
+        return None
+    overlaps = packaged_rule_overlaps()
+    return {
+        "schema": RULE_OVERLAPS_SCHEMA,
+        "version": overlaps.version,
+        "sha256": overlaps.sha256,
+        "applied": "covered_sites_only",
+        "superseded": [item.to_dict() for item in active],
+    }
+
+
 # The SDK provisions its own runtime -- a detached checkout plus a virtualenv of
 # third-party dependencies -- INTO the repository under analysis. Core's
 # `provision-sdk` defaults to `.l9/runtime/sdk` and refuses to place it outside
@@ -337,6 +377,11 @@ def _request(
         ),
         execution_arguments=execution_arguments,
         execution_targets=execution_targets,
+        superseded_rules={
+            rule: item.rule_id
+            for item in _active_rule_overlaps(args)
+            for rule in item.supersedes
+        },
         scan_scope=scan_scope,
         detected_frameworks=_detected_frameworks(args.root.resolve()),
     )
@@ -411,7 +456,11 @@ def handle_run(args: argparse.Namespace) -> int:
         if scope is not None:
             # Written before Semgrep runs, so a failed run still records the
             # scope it was given.
-            write_scope_evidence(scope, scope_evidence_path(raw_output))
+            write_scope_evidence(
+                scope,
+                scope_evidence_path(raw_output),
+                rule_overlaps=_rule_overlap_evidence(args),
+            )
             execution_arguments += _REQUIRED_RUN_ARGUMENTS
             execution_targets = scope.targets
             scan_scope = scope.to_dict()
