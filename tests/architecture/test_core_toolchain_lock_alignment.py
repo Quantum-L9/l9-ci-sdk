@@ -36,8 +36,8 @@ MIRROR = ROOT / ".l9" / "core-toolchain-lock.json"
 MIRROR_SOURCE = {
     "repository": "Quantum-L9/l9-ci-core",
     "path": ".github/actions/install-consumer-ci/toolchain-lock.json",
-    "revision": "10464765252b0c4a564b4db05bc537827be24c8f",
-    "sha256": "7588407c45783fcc0a3062b5c80ac6fc7c33758e46dc287214b8967dec11ca4e",
+    "revision": "acb734630f4da1e56ac7d7f4e54a437b6de4ae75",
+    "sha256": "4f1b5398098780f4a3c9cd416d6a724615c280e15a0719e719fa0a9210b013e2",
 }
 
 # Workflow environment variables that pin a lock-owned tool.
