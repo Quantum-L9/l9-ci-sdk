@@ -8,6 +8,7 @@ from .bundle import (
     SnapshotDescriptor,
 )
 from .classification import (
+    BaselineStatus,
     FindingClassification,
     ResolutionStatus,
     RuleMode,
@@ -20,6 +21,7 @@ from .source import SourceLocation, normalize_repository_path
 from .version import SemanticVersion
 
 __all__ = [
+    "BaselineStatus",
     "Confidence",
     "Coverage",
     "CoverageStatus",

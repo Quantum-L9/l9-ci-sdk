@@ -14,6 +14,20 @@ class RuleMode(StrEnum):
     UNRESOLVED = "unresolved"
 
 
+class BaselineStatus(StrEnum):
+    """Where a finding stands against a declared baseline commit (ADR 0023).
+
+    ``new``: absent at the baseline, introduced by the change under analysis.
+    ``pre_existing``: already present at the baseline commit.
+    ``unknown``: the baseline could not be resolved or scanned completely, so
+    the finding is neither; it keeps its policy mode and the gate fails closed.
+    """
+
+    NEW = "new"
+    PRE_EXISTING = "pre_existing"
+    UNKNOWN = "unknown"
+
+
 class ResolutionStatus(StrEnum):
     EXPLICIT = "explicit"
     DEFAULTED = "defaulted"
@@ -31,6 +45,7 @@ class FindingClassification:
     policy_key: str | None = None
     policy_version: str | None = None
     waiver_id: str | None = None
+    baseline_status: BaselineStatus | None = None
 
     def __post_init__(self) -> None:
         if not self.finding_id.strip():
@@ -59,6 +74,8 @@ class FindingClassification:
             value = getattr(self, key)
             if value is not None:
                 payload[key] = value
+        if self.baseline_status is not None:
+            payload["baseline_status"] = self.baseline_status.value
         return payload
 
     @classmethod
@@ -71,4 +88,9 @@ class FindingClassification:
             policy_key=payload.get("policy_key"),
             policy_version=payload.get("policy_version"),
             waiver_id=payload.get("waiver_id"),
+            baseline_status=(
+                BaselineStatus(str(payload["baseline_status"]))
+                if payload.get("baseline_status") is not None
+                else None
+            ),
         )

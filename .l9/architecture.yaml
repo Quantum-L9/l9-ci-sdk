@@ -82,6 +82,7 @@ layers:
       - public SDK composition flows
       - provider lifecycle composition
       - registry-rule supersession at covered sites (ADR 0022)
+      - new or pre-existing classification against a baseline commit (ADR 0023)
     may_depend_on: [contracts, repository, capabilities, execution, providers, identity, policy, artifacts, integration]
   integration:
     package: l9_ci.integration

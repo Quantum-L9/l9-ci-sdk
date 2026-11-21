@@ -100,7 +100,8 @@ CLI:
       syntax: >-
         l9-ci semgrep run --language LANG --output BUNDLE [--root ROOT]
         [--profile PROFILE] [--no-registry-config] [--extra-config CONFIG]
-        [--policy PATH] [--identity-map PATH] [--required] [--format json]
+        [--policy PATH] [--identity-map PATH] [--required]
+        [--baseline-commit SHA] [--format json]
       description: >-
         Execute Semgrep and normalize its report into one canonical bundle. A
         required run scans the declared scan scope and writes scan-scope
@@ -110,7 +111,14 @@ CLI:
         packaged rule covers at the same call is withdrawn after the scan, its
         evidence and a limitation are kept, and the evidence records
         `rule_overlaps` (ADR 0022). A registry finding no packaged finding
-        covers is never withdrawn.
+        covers is never withdrawn. With --baseline-commit (a full
+        commit ID, normally the merge-base; requires --policy) the scan runs a
+        second time with Semgrep's own --baseline-commit and each
+        classification carries baseline_status (finding-bundle schema_version
+        1.2.0, ADR 0023): new keeps its policy mode, pre_existing reports a
+        blocking mode as advisory, and an unresolvable commit, tracked changes
+        or a failed or incomplete baseline scan make every finding unknown
+        with a required fatal provider failure, so the gate fails closed.
     semgrep_normalize:
       syntax: >-
         l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT

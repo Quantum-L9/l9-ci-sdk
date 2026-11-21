@@ -86,6 +86,39 @@ def is_git_repository(root: Path) -> bool:
     return completed.returncode == 0 and completed.stdout.strip() == "true"
 
 
+def resolve_commit(root: Path, revision: str) -> str | None:
+    """The full commit ID ``revision`` names in ``root``'s repository, or ``None``.
+
+    ``None`` when the object is absent (an unknown hash, or a shallow clone that
+    does not hold it) or is not a commit.
+    """
+    completed = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            "--end-of-options",
+            f"{revision}^{{commit}}",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=_git_subprocess_env(),
+    )
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
+
+
+def tracked_changes(root: Path) -> tuple[str, ...]:
+    """Tracked paths whose working-tree or index content differs from HEAD."""
+    output = _run_git(root, "status", "--porcelain=v1", "--untracked-files=no")
+    return tuple(sorted(line[3:] for line in output.splitlines() if line.strip()))
+
+
 def _run_git(root: Path, *arguments: str) -> str:
     completed = subprocess.run(
         ["git", "-C", str(root), *arguments],

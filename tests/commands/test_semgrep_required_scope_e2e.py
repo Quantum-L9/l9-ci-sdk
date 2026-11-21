@@ -162,7 +162,7 @@ def test_required_run_writes_schema_valid_scope_evidence(
     # The same record travels inside the finding bundle, with the provider's
     # own paths.scanned (CTO decision 4: scope evidence lives in the bundle).
     bundle = json.loads((out / "bundle.json").read_text("utf-8"))
-    assert bundle["schema_version"] == "1.1.0"
+    assert bundle["schema_version"] == "1.2.0"
     (coverage,) = bundle["coverage"]
     assert coverage["scan_scope"]["declared"] == evidence
     raw = json.loads((out / "raw" / "report.json").read_text("utf-8"))

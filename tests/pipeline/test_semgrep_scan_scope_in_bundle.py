@@ -58,7 +58,7 @@ def test_required_bundle_carries_declared_scope_and_paths_scanned(
     declared = _declared()
     output = _run(tmp_path, scan_scope=declared, report=FIXTURE)
     bundle = load_and_validate_bundle(output)
-    assert bundle.schema_version == FINDING_BUNDLE_SCHEMA_VERSION == "1.1.0"
+    assert bundle.schema_version == FINDING_BUNDLE_SCHEMA_VERSION == "1.2.0"
     (coverage,) = bundle.coverage
     assert coverage.scan_scope is not None
     assert coverage.scan_scope["declared"] == declared

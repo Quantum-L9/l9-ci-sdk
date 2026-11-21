@@ -13,7 +13,7 @@ from .failure import ProviderFailure
 from .finding import Finding
 
 FINDING_BUNDLE_PROTOCOL = "l9.finding-bundle/v1"
-FINDING_BUNDLE_SCHEMA_VERSION = "1.1.0"
+FINDING_BUNDLE_SCHEMA_VERSION = "1.2.0"
 
 
 def _canonicalize(value: Any) -> Any:
