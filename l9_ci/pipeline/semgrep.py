@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import Any
 
 from l9_ci.artifacts import validate_bundle, write_bundle_atomic
 from l9_ci.contracts import (
+    Coverage,
     Finding,
     FindingBundle,
     FindingClassification,
     ProviderRun,
     SnapshotDescriptor,
+    SourceLocation,
 )
 from l9_ci.identity import RuleIdentityMap, describe_unresolved_identity
 from l9_ci.integration import (
@@ -104,6 +109,11 @@ class SemgrepPipelineRequest:
     # findings are withdrawn only where the L9 rule reported the same call.
     # Registry rule ID -> packaged L9 rule ID (rule-overlaps.yaml).
     superseded_rules: Mapping[str, str] = field(default_factory=dict)
+    # The declared scope record (``l9.semgrep-scan-scope/v1``) of a required
+    # run. When set it is carried into the bundle's coverage with the
+    # provider's own ``paths.scanned``, so scope evidence travels with the
+    # findings it qualifies.
+    scan_scope: Mapping[str, Any] | None = None
     # Frameworks detected in the repository under analysis (name -> detected).
     # When set, a finding from a framework-scoped registry rule whose framework
     # is not detected is withheld: its evidence is kept and the bundle records
@@ -123,6 +133,41 @@ def _supported_version(raw: str) -> str:
     except ValueError as exc:
         raise UnsupportedProviderVersionError(str(exc)) from exc
     return raw.strip()
+
+
+def _paths_scanned(report_path: Path) -> dict[str, Any] | None:
+    """Summarise the report's ``paths.scanned``; ``None`` when it is unreadable.
+
+    A missing report, a non-object payload or a ``paths.scanned`` that is not a
+    list of strings yields ``None``: the bundle then states that the scanned
+    inventory is unknown rather than inventing one. Coverage status is decided
+    by the provider, not here.
+    """
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    paths = report.get("paths") if isinstance(report, dict) else None
+    scanned = paths.get("scanned") if isinstance(paths, dict) else None
+    if not isinstance(scanned, list) or not all(
+        isinstance(path, str) for path in scanned
+    ):
+        return None
+    normalized = sorted({SourceLocation(path).normalized_path for path in scanned})
+    digest = hashlib.sha256("\n".join(normalized).encode("utf-8")).hexdigest()
+    return {"count": len(normalized), "sha256": digest}
+
+
+def _with_scan_scope(
+    coverage: Coverage, scan_scope: Mapping[str, Any], report_path: Path
+) -> Coverage:
+    return replace(
+        coverage,
+        scan_scope={
+            "declared": dict(scan_scope),
+            "paths_scanned": _paths_scanned(report_path),
+        },
+    )
 
 
 def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResult:
@@ -257,7 +302,13 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         findings=bundle_findings,
         classifications=classifications,
         provider_failures=normalization.failures,
-        coverage=(normalization.coverage,),
+        coverage=(
+            normalization.coverage
+            if request.scan_scope is None
+            else _with_scan_scope(
+                normalization.coverage, request.scan_scope, request.report_path
+            ),
+        ),
         limitations=tuple(sorted({*limitations, *framework_limitations})),
     )
     if request.generated_at is not None:

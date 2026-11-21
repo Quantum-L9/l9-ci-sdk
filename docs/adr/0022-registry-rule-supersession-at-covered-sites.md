@@ -43,15 +43,14 @@ finding from a required run with nothing recorded.
 
 - `rule_overlaps` is a new optional property of `l9.semgrep-scan-scope/v1`
   evidence, so the change is additive within the major (COMPAT-002): schema
-  version 1.1.0 -> 1.2.0. A tolerant reader ignores it; no field is removed or
+  version 1.2.0 -> 1.3.0. A tolerant reader ignores it; no field is removed or
   renamed and no identity input changes.
 - The finding bundle protocol and schema are unchanged. A withdrawn registry
   finding is absent from `findings`, which a reader already handles; its
   evidence and a limitation stay, so no evidence is lost (AGENTS.md section 5:
   missing required evidence is never equivalent to PASS).
-- The archived-scope change (#142) also moves scan-scope evidence from 1.1.0
-  to 1.2.0 for a different additive field. Whichever of the two merges second
-  takes 1.3.0 when it merges the base; the two fields do not interact.
+- The archived-scope change (#142, `excluded[].reason`) merged first and took
+  1.2.0, so this change takes 1.3.0. The two fields do not interact.
 
 ## Consequences
 

@@ -136,9 +136,14 @@ provider required. A required run differs from any other run in three ways
    only while expanding a folder scan root, never to an explicit file, so
    neither a consumer `.semgrepignore` nor the built-in list applies.
 
-   `tests/`, `test/` and `testsuite/` stay out of required scope by an explicit
-   policy entry, matching the default that applied before. Bringing tests into
-   scope is an organization policy decision and an edit to that list.
+   Test paths are **in** required scope (policy 1.1.0; CTO decision
+   2026-11-20, B1+B2, CI_CONFIG_FINDINGS row 3: scope is declared, not a tool
+   default). Semgrep's default list drops `test/`, `tests/` and `testsuite/`;
+   the policy does not. A finding under a test path follows its rule's mode
+   like any other finding. It has no special exemption. Required rules accept
+   no inline `nosemgrep` and no consumer `.semgrepignore`. A required finding is
+   waived only in the central waiver/baseline ledger, with owner, reason and
+   expiry. A consumer cannot waive its own findings.
 3. **Declared analysis budget.** Semgrep's defaults give each rule 5 s per
    file and, after 3 timeouts on one file, silently skip every remaining rule
    on it. A required run passes `--timeout 30 --timeout-threshold 0`
@@ -156,7 +161,23 @@ the policy version and digest, the tracked and in-scope file counts, a digest
 of the in-scope path list, every exclusion with its exact count and a bounded
 sample, any consumer `.semgrepignore` found (`honored: false`), `nosem: disabled` and
 the `analysis_budget` (schema 1.1.0). Core already uploads the raw-report directory, so the record
-reaches the analysis artifact set. It is written before Semgrep starts.
+reaches the analysis artifact set. It is written before Semgrep starts, so a
+run that never produces a bundle still records what it was given.
+
+The same record also travels **inside the finding bundle** (finding bundle
+1.1.0), so a reader of the bundle can judge coverage without a side file.
+`coverage[].scan_scope` holds:
+
+- `declared`: the `l9.semgrep-scan-scope/v1` record above, byte-for-byte
+  equal to the side file;
+- `paths_scanned`: the count and SHA-256 of the provider's own `paths.scanned`
+  (sorted and repository-relative). It is `null` when the run produced no
+  readable report, so an unknown scanned inventory is never presented as an
+  empty one.
+
+The field is present only for a `--required` run. Coverage status is still
+decided by the provider. Witness:
+`tests/pipeline/test_semgrep_scan_scope_in_bundle.py`.
 
 A required run fails closed, before Semgrep starts, when the root is not a Git
 work tree, when the scope is empty, or when the explicit targets would exceed
@@ -185,6 +206,21 @@ semgrep = [
 
 Do not make the Semgrep Python package a mandatory SDK dependency when import-only mode is used.
 
+## Archived code is out of required scope
+
+Scan-scope policy 1.1.0 excludes every directory named `_archived` at any depth
+(`**/_archived/**`) from required runs. Archived code is kept for history and
+is never imported, executed or deployed. This is a central decision (CTO,
+2026-11-21), not a consumer ignore. It was taken after Cursor-Governance run
+44848823829 reported 9 of its 29 blocking findings under
+`commands/_archived/` and `execution-governance/_archived/`.
+
+The policy's `reasons` map names each exclusion that has a declared reason by
+its evidence label. The scope evidence copies that reason next to the
+exclusion's exact count (`excluded[].reason`, schema 1.2.0). A reason that
+names no declared entry, or an empty reason, fails the policy closed.
+Witnesses are in `tests/rulesets/test_semgrep_scan_scope.py` (archived code).
+
 ## Superseded registry rules
 
 When a run composes both the community registry ruleset and the packaged L9
@@ -198,7 +234,7 @@ L9 span); its evidence stays in the bundle and a limitation names every site
 reported once, under its L9 canonical ID. Nothing is excluded before the scan:
 `p/python` is unpinned, and a registry finding no L9 finding covers is kept. A
 required run records the supersessions in its scope evidence (`rule_overlaps`,
-`applied: covered_sites_only`, schema 1.2.0).
+`applied: covered_sites_only`, schema 1.3.0).
 
 An entry is admitted only when the L9 rule matches every site the registry
 rule matches. `tests/rulesets/test_semgrep_rule_overlaps.py` runs both rules

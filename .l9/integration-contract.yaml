@@ -105,7 +105,7 @@ CLI:
         Execute Semgrep and normalize its report into one canonical bundle. A
         required run scans the declared scan scope and writes scan-scope
         evidence beside the raw report (l9.semgrep-scan-scope/v1,
-        schema_version 1.2.0). When the run composes both the registry and the
+        schema_version 1.3.0). When the run composes both the registry and the
         packaged L9 ruleset, both run; a registry finding that a superseding
         packaged rule covers at the same call is withdrawn after the scan, its
         evidence and a limitation are kept, and the evidence records
