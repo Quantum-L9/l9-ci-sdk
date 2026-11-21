@@ -63,8 +63,9 @@ def test_every_superseding_rule_is_packaged_with_its_canonical_id() -> None:
 
 def test_supersession_applies_only_when_both_rulesets_compose() -> None:
     standard = _build_run_namespace(output="b.json")
-    (active,) = _active_rule_overlaps(standard)
-    assert active.supersedes == (REGISTRY_RULE,)
+    active = _active_rule_overlaps(standard)
+    assert len(active) == 1
+    assert active[0].supersedes == (REGISTRY_RULE,)
     for namespace in (
         _build_run_namespace(output="b.json", profile="l9-baseline"),
         _build_run_namespace(output="b.json", no_registry_config=True),
