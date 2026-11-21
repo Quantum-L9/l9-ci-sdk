@@ -39,9 +39,13 @@ FRAMEWORK_RULE_PREFIXES: Mapping[str, tuple[str, ...]] = {
 
 
 def _framework_applicability(
-    findings: tuple[Finding, ...], detected: Mapping[str, bool]
+    findings: tuple[Finding, ...], detected: Mapping[str, bool | None]
 ) -> tuple[tuple[Finding, ...], tuple[str, ...]]:
-    """Withhold findings of rules whose framework is not in the repository."""
+    """Withhold findings of rules whose framework is known to be absent.
+
+    Only an explicit ``False`` withholds. ``None`` (detection could not read a
+    candidate file) and a framework the mapping does not name keep the finding.
+    """
     kept: list[Finding] = []
     withheld: dict[tuple[str, str], list[str]] = {}
     for finding in findings:
@@ -53,7 +57,7 @@ def _framework_applicability(
             ),
             None,
         )
-        if framework is None or detected.get(framework, False):
+        if framework is None or detected.get(framework) is not False:
             kept.append(finding)
             continue
         location = finding.locations[0] if finding.locations else None
@@ -99,7 +103,7 @@ class SemgrepPipelineRequest:
     # When set, a finding from a framework-scoped registry rule whose framework
     # is not detected is withheld: its evidence is kept and the bundle records
     # why (FRAMEWORK_RULE_PREFIXES).
-    detected_frameworks: Mapping[str, bool] | None = None
+    detected_frameworks: Mapping[str, bool | None] | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -339,7 +339,7 @@ def _request(
     )
 
 
-def _detected_frameworks(root: Path) -> dict[str, bool] | None:
+def _detected_frameworks(root: Path) -> dict[str, bool | None] | None:
     """Frameworks in use under ``root``; ``None`` when they cannot be read.
 
     ``None`` keeps every framework-scoped finding: an unreadable repository

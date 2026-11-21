@@ -47,6 +47,17 @@ def _tree(root: Path, files: dict[str, str]) -> Path:
             {"manage.py": "import os\nfrom django.core.management import x\n"},
             ["manage.py"],
         ),
+        # Codex review on #141: a PEP 508 direct reference names Django too.
+        (
+            {"requirements.txt": "django @ https://example.invalid/django.tar.gz\n"},
+            ["requirements.txt"],
+        ),
+        (
+            {
+                "pyproject.toml": '[project]\ndependencies = ["django@ git+https://x/y"]\n'
+            },
+            ["pyproject.toml"],
+        ),
     ],
 )
 def test_django_is_detected_from_its_declaration(
@@ -74,7 +85,35 @@ def test_django_is_not_detected_without_its_declaration(
     assert detect_django(root).detected is False
 
 
-def _bundle(tmp_path: Path, detected: dict[str, bool] | None):  # type: ignore[no-untyped-def]
+def test_an_unreadable_declaration_makes_detection_unknown(tmp_path: Path) -> None:
+    """Codex review on #141: a file the SDK cannot read is not "no Django"."""
+    root = _tree(tmp_path / "repo", {"README.md": "x\n"})
+    outside = tmp_path / "outside.txt"
+    outside.write_text("Django>=4.2\n", encoding="utf-8")
+    (root / "requirements.txt").symlink_to(outside)
+    detection = detect_django(root, ("README.md", "requirements.txt"))
+    assert detection.detected is None
+    assert detection.unreadable == ("requirements.txt",)
+
+
+def test_an_oversized_declaration_makes_detection_unknown(tmp_path: Path) -> None:
+    root = _tree(
+        tmp_path / "repo", {"requirements.txt": "# pad\n" * 200_000 + "Django\n"}
+    )
+    assert detect_django(root, ("requirements.txt",)).detected is None
+
+
+def test_evidence_elsewhere_outweighs_an_unreadable_file(tmp_path: Path) -> None:
+    root = _tree(
+        tmp_path / "repo",
+        {"requirements.txt": "Django>=4.2\n", "setup.cfg": "# pad\n" * 200_000},
+    )
+    detection = detect_django(root, ("requirements.txt", "setup.cfg"))
+    assert detection.detected is True
+    assert detection.unreadable == ("setup.cfg",)
+
+
+def _bundle(tmp_path: Path, detected: dict[str, bool | None] | None):  # type: ignore[no-untyped-def]
     output = tmp_path / "bundle.json"
     run_semgrep_pipeline(
         SemgrepPipelineRequest(
@@ -115,6 +154,13 @@ def test_unknown_framework_state_withholds_nothing(tmp_path: Path) -> None:
     """Known-good fail-safe: when detection could not run, every finding stays."""
     bundle = _bundle(tmp_path, None)
     assert len(bundle.findings) == 1
+
+
+def test_an_unknown_detection_withholds_nothing(tmp_path: Path) -> None:
+    """Known-good fail-safe: unknown for one framework keeps its findings."""
+    bundle = _bundle(tmp_path, {"django": None})
+    assert len(bundle.findings) == 1
+    assert not [i for i in bundle.limitations if i.startswith("framework rule")]
 
 
 def test_this_sdk_is_not_a_django_project() -> None:
