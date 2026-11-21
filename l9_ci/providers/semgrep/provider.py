@@ -28,6 +28,8 @@ from l9_ci.providers import (
     ProviderNormalizationResult,
     ProviderState,
 )
+from l9_ci.providers.spi import END_OF_OPTIONS
+
 from .identities import (
     build_evidence_id,
     build_finding_fingerprint,
@@ -126,8 +128,12 @@ class SemgrepProvider:
             "--json-output",
             str(request.output_path),
             *request.arguments,
-            # Explicit file targets (a required run's declared scope) are never
+            # Every target follows the end-of-options marker, so a target
+            # name taken from the repository under analysis is always a path
+            # to Semgrep, never an option, whatever it starts with. Explicit
+            # file targets (a required run's declared scope) are never
             # filtered by .semgrepignore; "." is expanded through it.
+            END_OF_OPTIONS,
             *(request.targets or (".",)),
         )
 
@@ -144,12 +150,22 @@ class SemgrepProvider:
         }
         environment.update(request.environment)
         try:
-            # `command` is the argv sequence built by build_execution_plan: a
-            # resolved semgrep executable plus the caller's already-parsed
-            # argument list. It is passed as a list with no shell, so there is
-            # no shell metacharacter interpretation to inject through, and the
-            # environment is reduced to a fixed allowlist above.
-            # nosemgrep: python.django.security.injection.command.subprocess-injection.subprocess-injection
+            # `command` is the argv list built by build_execution_plan:
+            #   - the resolved semgrep executable, "scan" and --json-output;
+            #   - the caller's options (SDK-built --config, --exclude, budget
+            #     and nosem flags, plus any --extra-config the CLI caller
+            #     passed);
+            #   - END_OF_OPTIONS, then the scan targets.
+            # Targets may come from the repository under analysis (tracked
+            # file names). ProviderExecutionRequest refuses NUL, an absolute
+            # or parent-relative target, a leading "-" and a stray "--" in
+            # the options; the declared scope rewrites "-x" to "./-x"; and
+            # the end-of-options marker keeps any target from being read as
+            # an option. It runs as a list with no shell, and the
+            # environment is reduced to a fixed allowlist above. Required
+            # central runs disable inline suppressions, so none is used here
+            # (the waiver for the Django `request`-parameter heuristic that
+            # matches this method is a central decision).
             completed = subprocess.run(
                 command,
                 cwd=request.repository_root,
