@@ -77,3 +77,44 @@ def must_still_catch(cursor, user, request, query):
     cursor.execute(query % (user,))
     # ruleid: l9.baseline.python.sql-string-format
     cursor.execute(query.format(user))
+
+
+# --- l9.baseline.python.hardcoded-credential (L9-PYTHON-HARDCODED-CREDENTIAL) ---
+# A credential is a VALUE. Every ok line below reproduces a false positive from
+# Cursor-Governance run 44848823829 (an environment variable NAME, a
+# secret-store PATH, an MCP tool NAME); every ruleid line is a secret-shaped
+# literal. The values are documentation examples, not credentials.
+def credential_values():
+    # ruleid: l9.baseline.python.hardcoded-credential
+    secret = "sk-live-EXAMPLE-NOT-A-KEY-0000"
+    # ruleid: l9.baseline.python.hardcoded-credential
+    aws_secret_token = "AKIAIOSFODNN7EXAMPLE"
+    # ruleid: l9.baseline.python.hardcoded-credential
+    API_KEY = "Example0Example0Example"
+    # ruleid: l9.baseline.python.hardcoded-credential
+    signing_secret = "0123456789abcdef0123456789abcdef0123"
+    # ruleid: l9.baseline.python.hardcoded-credential
+    db_password = "Hunter22hunter"
+    # ruleid: l9.baseline.python.hardcoded-credential
+    client(api_key="Example0Example0Example")
+    return secret, aws_secret_token, API_KEY, signing_secret, db_password
+
+
+def credential_names():
+    # ok: l9.baseline.python.hardcoded-credential
+    ENV_AGENTS_DOOR_SECRET = "L9_MEMORY_AGENTS_DOOR_SECRET"
+    # ok: l9.baseline.python.hardcoded-credential
+    ENV_CLIENT_SECRET = "L9_INFISICAL_CLIENT_SECRET"
+    # ok: l9.baseline.python.hardcoded-credential
+    INVENTORY_LOGIN_SECRET = "cursor-governance/infisical-login"
+    # ok: l9.baseline.python.hardcoded-credential
+    AWS_SM_LOGIN_SECRET = "openclaw-igorbot/infisical-cursor-governance"
+    # ok: l9.baseline.python.hardcoded-credential
+    AGENT_WRITE_TOKEN = "memory.write_agent"
+    # ok: l9.baseline.python.hardcoded-credential
+    ENV_PASSWORD = "SERVICE_DB_PASSWORD"
+    # ok: l9.baseline.python.hardcoded-credential
+    password = ""
+    # ok: l9.baseline.python.hardcoded-credential
+    token_header = "Authorization"
+    return ENV_AGENTS_DOOR_SECRET, ENV_CLIENT_SECRET, INVENTORY_LOGIN_SECRET

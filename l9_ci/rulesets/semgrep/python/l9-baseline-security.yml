@@ -118,9 +118,22 @@ rules:
       mode: shadow
       category: security
       autofix_safe: false
-    patterns:
-      - pattern-regex: '(?i)(password|passwd|api_key|secret|token)\s*=\s*["''][^"'']{4,}["'']'
-      - pattern-not-regex: '(?i)(password|passwd|api_key|secret|token)\s*=\s*["'']["'']'
+    # A credential is a VALUE, not a name. The rule fires only when the
+    # assigned literal looks like a secret, never on an ALL_CAPS environment
+    # variable name, a secret-store path or a dotted identifier that merely
+    # sits in a variable called *_SECRET / *_TOKEN (Cursor-Governance run
+    # 44848823829, 6 of 7 hits; CTO 2026-11-21). Fixture:
+    # tests/fixtures/semgrep/rules/python/l9-baseline-security.py.
+    pattern-either:
+      # An environment variable name is an ALL_CAPS literal with at least one
+      # underscore; a vendor key such as AKIA... has none and stays in scope.
+      # A password-named variable: any literal of 6+ characters without
+      # whitespace, "/" or "." that is not an environment variable name.
+      - pattern-regex: '\b\w*(?i:passw(?:or)?d)\w*\s*=\s*["''](?![A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+["''])[^"''\s/.]{6,}["'']'
+      # A secret-, token- or api-key-named variable holding a secret-shaped
+      # value: a known vendor prefix, a mixed-case-plus-digit literal of 12+
+      # characters, or a 32+ character base64/hex-like literal with a digit.
+      - pattern-regex: '\b\w*(?i:secret|token|api_?key)\w*\s*=\s*["''](?![A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+["''])(?:(?:sk|pk|rk)[-_](?:live|test)[-_][^"''\s]{6,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}|(?:AKIA|ASIA)[A-Z0-9]{16}|AIza[0-9A-Za-z_-]{30,}|glpat-[A-Za-z0-9_-]{20,}|(?=[^"''\s]*[a-z])(?=[^"''\s]*[A-Z])(?=[^"''\s]*[0-9])[^"''\s]{12,}|(?=[^"''\s]*[0-9])(?=[^"''\s]*[A-Za-z])[A-Za-z0-9+/=_-]{32,})["'']'
 
   - id: l9.baseline.python.tls-verify-disabled
     languages: [python]
