@@ -199,4 +199,3 @@ its evidence label. The scope evidence copies that reason next to the
 exclusion's exact count (`excluded[].reason`, schema 1.2.0). A reason that
 names no declared entry, or an empty reason, fails the policy closed.
 Witnesses are in `tests/rulesets/test_semgrep_scan_scope.py` (archived code).
-
