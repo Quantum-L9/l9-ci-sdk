@@ -95,6 +95,7 @@ jobs:
             tests/commands/test_semgrep_required_scope_e2e.py \
             tests/commands/test_semgrep_consumer_run_e2e.py \
             tests/rulesets/test_semgrep_rule_overlaps.py \
+            tests/rulesets/test_semgrep_rule_precision.py \
             tests/commands/test_semgrep_baseline_e2e.py
       - name: critical gate evaluator 100% branch coverage
         id: gate_evaluator_cov

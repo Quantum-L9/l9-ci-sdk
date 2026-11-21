@@ -1,0 +1,27 @@
+# Registry rules whose finding is withheld where the code declares the
+# non-security use the rule cannot see.
+#
+# The community registry rule for SHA-1 flags every hashlib.sha1(...) call,
+# including hashlib.sha1(..., usedforsecurity=False): Python's own declaration
+# that the digest is not used for security, as when SHA-1 computes a git
+# object ID, which the git object format requires. The registry MD5 rule
+# already excludes that keyword; the SHA-1 rule does not (verified against
+# Semgrep 1.171.0 and the rule source, 2026-11-21). The SDK applies the same
+# exclusion centrally (ADR 0024).
+#
+# After the scan, a finding of a rule listed here is withheld only when the
+# call that starts on the finding's line passes `<keyword>=False` as a literal.
+# The evidence is kept and the bundle names every withheld site. A file that
+# cannot be read or parsed, a variable instead of the literal False, or no
+# matching call keeps the finding. This is precision, never a waiver: a
+# consumer cannot add entries.
+schema: l9.semgrep-rule-precision/v1
+version: 1.0.0
+precisions:
+  - language: python
+    rule_id: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+    not_when_keyword_false: usedforsecurity
+    reason: >-
+      usedforsecurity=False declares a non-security digest (for example a git
+      object ID). The registry MD5 rule already excludes it; the SHA-1 rule
+      does not.

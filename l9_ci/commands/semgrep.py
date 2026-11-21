@@ -39,6 +39,7 @@ from l9_ci.rulesets.semgrep.overlaps import (
     RuleOverlap,
     packaged_rule_overlaps,
 )
+from l9_ci.rulesets.semgrep.precision import packaged_rule_precisions
 from l9_ci.rulesets.semgrep.scope import (
     REQUIRED_RULE_TIMEOUT_SECONDS,
     REQUIRED_RULE_TIMEOUT_THRESHOLD,
@@ -447,6 +448,11 @@ def _request(
         waivers_path=getattr(args, "waivers", None),
         repository=getattr(args, "repository", None),
         waiver_date=getattr(args, "waiver_date", None),
+        precision_keywords=(
+            packaged_rule_precisions().keywords(args.language)
+            if hasattr(args, "language")
+            else {}
+        ),
         baseline_commit=getattr(args, "baseline_commit", None),
         superseded_rules={
             rule: item.rule_id

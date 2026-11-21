@@ -119,6 +119,11 @@ CLI:
         blocking mode as advisory, and an unresolvable commit, tracked changes
         or a failed or incomplete baseline scan make every finding unknown
         with a required fatal provider failure, so the gate fails closed.
+        A finding of a registry rule
+        declared in rule-precision.yaml is withheld where its call passes the
+        declared keyword as the literal False (hashlib.sha1(...,
+        usedforsecurity=False), ADR 0024); its evidence and a limitation are
+        kept, and anything unprovable keeps the finding.
     semgrep_normalize:
       syntax: >-
         l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT

@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 435
+Files: 441
 
 ## Contents
 
@@ -101,6 +101,7 @@ Files: 435
 - `docs/adr/0021-scoped-consumer-rulepack-binding.md`
 - `docs/adr/0022-registry-rule-supersession-at-covered-sites.md`
 - `docs/adr/0023-findings-classified-against-a-baseline-commit.md`
+- `docs/adr/0024-registry-rule-precision-for-declared-non-security-use.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -214,6 +215,7 @@ Files: 435
 - `l9_ci/pipeline/baseline.py`
 - `l9_ci/pipeline/lifecycle.py`
 - `l9_ci/pipeline/overlaps.py`
+- `l9_ci/pipeline/precision.py`
 - `l9_ci/pipeline/runner.py`
 - `l9_ci/pipeline/semgrep.py`
 - `l9_ci/policy/__init__.py`
@@ -245,6 +247,7 @@ Files: 435
 - `l9_ci/rulesets/semgrep/overlaps.py`
 - `l9_ci/rulesets/semgrep/packs.yaml`
 - `l9_ci/rulesets/semgrep/packs/python-portable/l9-python-portable.yml`
+- `l9_ci/rulesets/semgrep/precision.py`
 - `l9_ci/rulesets/semgrep/profiles.yaml`
 - `l9_ci/rulesets/semgrep/python/l9-baseline-security.yml`
 - `l9_ci/rulesets/semgrep/python/l9-file-permissions.yml`
@@ -253,6 +256,7 @@ Files: 435
 - `l9_ci/rulesets/semgrep/python/l9-routing.yml`
 - `l9_ci/rulesets/semgrep/python/l9-transport.yml`
 - `l9_ci/rulesets/semgrep/rule-overlaps.yaml`
+- `l9_ci/rulesets/semgrep/rule-precision.yaml`
 - `l9_ci/rulesets/semgrep/scan-scope.yaml`
 - `l9_ci/rulesets/semgrep/scope.py`
 - `l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml`
@@ -367,6 +371,7 @@ Files: 435
 - `tests/fixtures/semgrep/rules.yaml`
 - `tests/fixtures/semgrep/rules/overlaps/shell_true_forms.pyfixture`
 - `tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py`
+- `tests/fixtures/semgrep/rules/precision/sha1_forms.pyfixture`
 - `tests/fixtures/semgrep/rules/python/l9-baseline-security.py`
 - `tests/fixtures/semgrep/rules/python/l9-file-permissions.pyfixture`
 - `tests/fixtures/semgrep/rules/python/l9-handler-signature.py`
@@ -433,6 +438,7 @@ Files: 435
 - `tests/rulesets/test_semgrep_consumer_rulepack.py`
 - `tests/rulesets/test_semgrep_rule_fixtures.py`
 - `tests/rulesets/test_semgrep_rule_overlaps.py`
+- `tests/rulesets/test_semgrep_rule_precision.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/rulesets/test_semgrep_scan_scope.py`
 - `tests/rulesets/test_semgrep_target_suffixes.py`

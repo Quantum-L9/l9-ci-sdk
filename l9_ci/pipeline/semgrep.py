@@ -51,6 +51,7 @@ from l9_ci.repository.git import resolve_commit, tracked_changes
 
 from .baseline import apply_baseline
 from .overlaps import supersede_findings
+from .precision import withhold_declared_non_security
 from .lifecycle import ProviderAcquisitionMode, resolve_provider
 from .runner import execute_and_normalize
 
@@ -142,6 +143,9 @@ class SemgrepPipelineRequest:
     # is not detected is withheld: its evidence is kept and the bundle records
     # why (FRAMEWORK_RULE_PREFIXES).
     detected_frameworks: Mapping[str, bool | None] | None = None
+    # Registry rule ID -> keyword (rule-precision.yaml, ADR 0024): a finding of
+    # that rule is withheld where its call passes ``keyword=False`` literally.
+    precision_keywords: Mapping[str, str] = field(default_factory=dict)
     # A baseline commit (ADR 0023): the scan runs a second time with Semgrep's
     # ``--baseline-commit`` and each finding is classified new, pre-existing or
     # unknown. Requires execute mode and a finding policy.
@@ -339,6 +343,14 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
             normalization.findings, request.detected_frameworks
         )
         normalization = replace(normalization, findings=applicable)
+    precision_limitations: tuple[str, ...] = ()
+    if request.precision_keywords:
+        precise, precision_limitations = withhold_declared_non_security(
+            normalization.findings,
+            request.repository_root,
+            request.precision_keywords,
+        )
+        normalization = replace(normalization, findings=precise)
 
     validate_record_counts(
         finding_count=len(normalization.findings),
@@ -462,6 +474,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
                     *limitations,
                     *framework_limitations,
                     *waiver_limitations,
+                    *precision_limitations,
                     *baseline_limitations,
                 }
             )

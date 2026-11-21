@@ -30,6 +30,7 @@ updated: 2026-10-15
 | [0021](0021-scoped-consumer-rulepack-binding.md) | Consumer-declared Semgrep rulepacks run as a separate, path-scoped, add-only execution | Accepted (CTO, 2026-11-20) |
 | [0022](0022-registry-rule-supersession-at-covered-sites.md) | A packaged L9 rule supersedes a registry rule only at the sites it covers | Accepted |
 | [0023](0023-findings-classified-against-a-baseline-commit.md) | Findings are classified new or pre-existing against a baseline commit | Accepted |
+| [0024](0024-registry-rule-precision-for-declared-non-security-use.md) | A registry finding is withheld where the code declares a non-security use | Accepted |
 
 ## Ledger rules
 

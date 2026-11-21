@@ -308,3 +308,16 @@ failed or incomplete baseline scan make every finding `unknown` with a required
 fatal provider failure, so the gate fails closed. Witnesses:
 `tests/commands/test_semgrep_baseline_e2e.py` (real Semgrep) and
 `tests/pipeline/test_baseline_classification.py`.
+
+## Declared non-security use
+
+The registry SHA-1 rule flags every `hashlib.sha1(...)` call, including
+`usedforsecurity=False`, which the registry MD5 rule already excludes. The
+packaged
+[`l9_ci/rulesets/semgrep/rule-precision.yaml`](../../l9_ci/rulesets/semgrep/rule-precision.yaml)
+(`l9.semgrep-rule-precision/v1`) applies that exclusion centrally (ADR 0024).
+After the scan, such a finding is withheld only where the call on its line
+passes the keyword as the literal `False`, read from the Python syntax tree.
+The evidence is kept and the bundle names every withheld site; an unreadable
+file, a variable or `True` keeps the finding. Witnesses:
+`tests/rulesets/test_semgrep_rule_precision.py`.
