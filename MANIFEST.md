@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 426
+Files: 431
 
 ## Contents
 
@@ -110,6 +110,7 @@ Files: 426
 - `docs/architecture/core-integration.md`
 - `docs/architecture/deterministic-serialization.md`
 - `docs/architecture/execution-profiles.md`
+- `docs/architecture/finding-waivers.md`
 - `docs/architecture/gate-evaluation.md`
 - `docs/architecture/governance-evidence-layer.md`
 - `docs/architecture/operational-controls.md`
@@ -217,6 +218,7 @@ Files: 426
 - `l9_ci/policy/classifier.py`
 - `l9_ci/policy/model.py`
 - `l9_ci/policy/remediation.py`
+- `l9_ci/policy/waivers.py`
 - `l9_ci/providers/__init__.py`
 - `l9_ci/providers/defaults.py`
 - `l9_ci/providers/metadata.py`
@@ -260,6 +262,7 @@ Files: 426
 - `l9_ci/schemas/v1/evidence-report.schema.json`
 - `l9_ci/schemas/v1/finding-bundle.schema.json`
 - `l9_ci/schemas/v1/finding-classification.schema.json`
+- `l9_ci/schemas/v1/finding-waivers.schema.json`
 - `l9_ci/schemas/v1/finding.schema.json`
 - `l9_ci/schemas/v1/gate-result.schema.json`
 - `l9_ci/schemas/v1/observation.schema.json`
@@ -374,6 +377,7 @@ Files: 426
 - `tests/fixtures/semgrep/runtime/results.json`
 - `tests/fixtures/semgrep/skipped-only.json`
 - `tests/fixtures/semgrep/source/src/example.py`
+- `tests/fixtures/semgrep/waived-provider-source.pyfixture`
 - `tests/fixtures/semgrep/zero-findings-empty-scanned.json`
 - `tests/fixtures/semgrep/zero-findings-no-paths.json`
 - `tests/gates/test_evaluator.py`
@@ -401,6 +405,7 @@ Files: 426
 - `tests/pipeline/test_semgrep_scan_scope_in_bundle.py`
 - `tests/pipeline/test_semgrep_version_policy.py`
 - `tests/policy/test_classifier.py`
+- `tests/policy/test_finding_waivers.py`
 - `tests/policy/test_remediation.py`
 - `tests/providers/__init__.py`
 - `tests/providers/semgrep/__init__.py`

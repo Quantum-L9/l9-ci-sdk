@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +28,13 @@ from l9_ci.integration import (
     validate_redaction,
     validate_report_size,
 )
-from l9_ci.policy import FindingPolicy, classify_findings
+from l9_ci.policy import (
+    FindingPolicy,
+    FindingWaiverLedger,
+    apply_waivers,
+    classify_findings,
+)
+from l9_ci.policy import source_sha256 as waiver_source_sha256
 from l9_ci.policy.remediation import RemediationMap, apply_remediation_classes
 from l9_ci.providers import ProviderExecutionRequest, ProviderNormalizationContext
 from l9_ci.providers.semgrep import require_supported_semgrep_version
@@ -105,6 +113,11 @@ class SemgrepPipelineRequest:
     execution_arguments: tuple[str, ...] = ()
     execution_targets: tuple[str, ...] = ()
     remediation_map_path: Path | None = None
+    # Central finding waivers (l9.finding-waivers/v1). Applied after policy
+    # classification, for ``repository`` on day ``waiver_date``.
+    waivers_path: Path | None = None
+    repository: str | None = None
+    waiver_date: date | None = None
     # Registry rules a packaged L9 rule supersedes in this composition; their
     # findings are withdrawn only where the L9 rule reported the same call.
     # Registry rule ID -> packaged L9 rule ID (rule-overlaps.yaml).
@@ -276,6 +289,31 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
     elif request.strict and findings:
         raise ValueError("strict mode requires a policy for non-empty findings")
 
+    waiver_limitations: tuple[str, ...] = ()
+    if request.waivers_path is not None:
+        ledger_path = request.waivers_path.resolve()
+        if ledger_path.is_relative_to(request.repository_root.resolve()):
+            raise ValueError(
+                "the waiver ledger must live outside the repository under "
+                "analysis: a consumer cannot waive its own findings"
+            )
+        if not request.policy_path:
+            raise ValueError("a waiver ledger requires a finding policy")
+        if not request.repository:
+            raise ValueError("a waiver ledger requires the repository identity")
+        application = apply_waivers(
+            findings,
+            classifications,
+            FindingWaiverLedger.load(request.waivers_path),
+            repository=request.repository,
+            on=request.waiver_date or datetime.now(tz=UTC).date(),
+            source_digest=functools.partial(
+                waiver_source_sha256, request.repository_root.resolve()
+            ),
+        )
+        classifications = application.classifications
+        waiver_limitations = application.limitations
+
     bundle_findings = findings
     if request.remediation_map_path is not None:
         remediation_map = RemediationMap.load(request.remediation_map_path)
@@ -309,7 +347,15 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
                 normalization.coverage, request.scan_scope, request.report_path
             ),
         ),
-        limitations=tuple(sorted({*limitations, *framework_limitations})),
+        limitations=tuple(
+            sorted(
+                {
+                    *limitations,
+                    *framework_limitations,
+                    *waiver_limitations,
+                }
+            )
+        ),
     )
     if request.generated_at is not None:
         bundle = replace(bundle, generated_at=request.generated_at)
