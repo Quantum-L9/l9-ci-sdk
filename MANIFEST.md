@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 422
+Files: 427
 
 ## Contents
 
@@ -237,6 +237,7 @@ Files: 422
 - `l9_ci/rulesets/__init__.py`
 - `l9_ci/rulesets/semgrep/__init__.py`
 - `l9_ci/rulesets/semgrep/composition.py`
+- `l9_ci/rulesets/semgrep/consumer.py`
 - `l9_ci/rulesets/semgrep/harvest.py`
 - `l9_ci/rulesets/semgrep/identity-map.yaml`
 - `l9_ci/rulesets/semgrep/overlaps.py`
@@ -271,6 +272,7 @@ Files: 422
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
 - `l9_ci/schemas/v1/rulepack-composition.schema.json`
 - `l9_ci/schemas/v1/sarif-log.schema.json`
+- `l9_ci/schemas/v1/semgrep-consumer-rulepack-evidence.schema.json`
 - `l9_ci/schemas/v1/semgrep-scan-scope.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
 - `lint/check_action_pins.py`
@@ -300,6 +302,7 @@ Files: 422
 - `tests/capabilities/test_detector.py`
 - `tests/capabilities/test_framework_rule_applicability.py`
 - `tests/capabilities/test_inventory.py`
+- `tests/capabilities/test_inventory_consumer_target.py`
 - `tests/capabilities/test_inventory_scan_scope.py`
 - `tests/capabilities/trees.py`
 - `tests/cli/test_exit_codes.py`
@@ -310,6 +313,7 @@ Files: 422
 - `tests/commands/test_manifest_cli.py`
 - `tests/commands/test_observation_cli.py`
 - `tests/commands/test_semgrep_command.py`
+- `tests/commands/test_semgrep_consumer_run_e2e.py`
 - `tests/commands/test_semgrep_required_scope_e2e.py`
 - `tests/commands/test_semgrep_run_contract.py`
 - `tests/compatibility/fixtures/finding-bundle-v1-bad-summary.json`
@@ -418,6 +422,7 @@ Files: 422
 - `tests/rulesets/test_packaged_rule_metadata_shape.py`
 - `tests/rulesets/test_packaging.py`
 - `tests/rulesets/test_rulepack_composition.py`
+- `tests/rulesets/test_semgrep_consumer_rulepack.py`
 - `tests/rulesets/test_semgrep_rule_fixtures.py`
 - `tests/rulesets/test_semgrep_rule_overlaps.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`

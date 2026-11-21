@@ -57,6 +57,18 @@ Rules the inventory holds:
   a required `language:typescript` instance was planned, scanned nothing and
   ended `incomplete`. Witness:
   `tests/capabilities/test_inventory_scan_scope.py`.
+- A consumer rulepack declaration (`.l9/semgrep-consumer-rules.yaml`,
+  ADR 0021) is reported as `semgrep consumer:<owner>` only under
+  `l9-ci providers inventory --consumer-rules`, because Core's planner accepts
+  only `language:` and `framework:` targets today.
+  - It is `applicable` when at least one tracked file is admitted by a
+    declared rule's own `paths` and languages.
+  - It is `not_applicable` when no tracked file is.
+  - It is `failed` (`consumer:invalid-declaration`) when the declaration does
+    not validate.
+  - Without a declaration, no consumer target is reported.
+  - Consumer coverage never counts toward a language's central coverage.
+  - Witness: `tests/capabilities/test_inventory_consumer_target.py`.
 - Framework-scoped registry rules (`python.django.*`) apply only where their
   framework is used (CTO, 2026-11-21). `l9_ci/capabilities/frameworks.py`
   detects Django from a tracked dependency declaration naming the package

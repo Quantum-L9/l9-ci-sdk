@@ -22,6 +22,7 @@ EXPECTED_SCHEMAS = {
     "rulepack-composition.schema.json",
     "semgrep-scan-scope.schema.json",
     "finding-waivers.schema.json",
+    "semgrep-consumer-rulepack-evidence.schema.json",
 }
 
 
