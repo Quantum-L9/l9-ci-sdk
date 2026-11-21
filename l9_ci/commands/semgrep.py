@@ -21,9 +21,16 @@ from l9_ci.rulesets.semgrep import (
     resolve_profile,
     ruleset_dir,
 )
+from l9_ci.rulesets.semgrep.consumer import (
+    CONSUMER_DECLARATION_PATH,
+    ConsumerRulepackError,
+    load_consumer_declaration,
+)
 from l9_ci.commands.semgrep_scope import (
+    consumer_evidence_path,
     resolve_scan_scope,
     scope_evidence_path,
+    write_evidence_record,
     write_scope_evidence,
 )
 from l9_ci.rulesets.semgrep.overlaps import (
@@ -161,6 +168,33 @@ def register_semgrep_commands(
     )
     _add_common_arguments(run)
     run.set_defaults(handler=handle_run)
+
+    consumer = semgrep_subparsers.add_parser(
+        "consumer-run",
+        help=(
+            "Execute the repository's declared consumer rulepack "
+            "(.l9/semgrep-consumer-rules.yaml, ADR 0021) as its own run, "
+            "separate from every central run, and normalize the report"
+        ),
+    )
+    consumer.add_argument(
+        "--raw-output",
+        type=Path,
+        help=(
+            "Path where the raw Semgrep JSON report is written "
+            "(default: <output stem>.raw.json); the consumer record is "
+            "written beside it as <stem>.consumer.json"
+        ),
+    )
+    consumer.add_argument("--output", required=True, type=Path)
+    consumer.add_argument("--timeout-seconds", type=int, default=300)
+    consumer.add_argument(
+        "--output-size-limit-bytes",
+        type=int,
+        default=50_000_000,
+    )
+    _add_common_arguments(consumer)
+    consumer.set_defaults(handler=handle_consumer_run)
 
     compose = semgrep_subparsers.add_parser(
         "compose",
@@ -439,6 +473,71 @@ def handle_normalize(args: argparse.Namespace) -> int:
             identity_map_path=args.identity_map or default_identity_map_path(),
         ),
         default=ExitCode.PROVIDER_REPORT_FAILURE,
+    )
+
+
+def handle_consumer_run(args: argparse.Namespace) -> int:
+    """Run only the consumer-declared rules, as their own execution.
+
+    The central run, its bundle, scope and gate are untouched. The consumer
+    run loads nothing but the declared rule files, keeps the consumer's own
+    ``.semgrepignore`` and inline ``nosemgrep``, and runs under the same
+    analysis budget as a required central run. Its record
+    (``l9.semgrep-consumer-rulepack-evidence/v1``) names the owner, the
+    declaration and every rule file by SHA-256, and is written before Semgrep
+    starts. ``--required`` marks the provider required in the bundle; it does
+    not apply the central scan scope.
+    """
+    raw_output = args.raw_output or args.output.with_name(
+        f"{args.output.stem}.raw.json"
+    )
+    root = args.root.resolve()
+    try:
+        declaration = load_consumer_declaration(root)
+        if declaration is None:
+            raise ConsumerRulepackError(
+                f"{root} has no consumer rulepack declaration "
+                f"({CONSUMER_DECLARATION_PATH})"
+            )
+        record = declaration.to_evidence()
+        record["analysis_budget"] = {
+            "timeout_seconds": REQUIRED_RULE_TIMEOUT_SECONDS,
+            "timeout_threshold": REQUIRED_RULE_TIMEOUT_THRESHOLD,
+            "on_timeout": "incomplete",
+        }
+        write_evidence_record(record, consumer_evidence_path(raw_output))
+        execution_arguments: tuple[str, ...] = ()
+        for config in declaration.config_paths(root):
+            execution_arguments += ("--config", str(config))
+        execution_arguments += _build_run_exclusion_arguments() + (
+            "--timeout",
+            str(REQUIRED_RULE_TIMEOUT_SECONDS),
+            "--timeout-threshold",
+            str(REQUIRED_RULE_TIMEOUT_THRESHOLD),
+        )
+    except ConsumerRulepackError as exc:
+        return emit_error(
+            exc,
+            output_format=OutputFormat(args.format),
+            default=ExitCode.INVALID_ARGUMENTS,
+        )
+    except Exception as exc:
+        return emit_error(
+            exc,
+            output_format=OutputFormat(args.format),
+            default=ExitCode.PROVIDER_EXECUTION_FAILURE,
+        )
+    return _execute_request(
+        args,
+        _request(
+            args,
+            report_path=raw_output,
+            execute=True,
+            provider_version=None,
+            identity_map_path=args.identity_map or default_identity_map_path(),
+            execution_arguments=execution_arguments,
+        ),
+        default=ExitCode.PROVIDER_EXECUTION_FAILURE,
     )
 
 

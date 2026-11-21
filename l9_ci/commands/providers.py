@@ -15,6 +15,11 @@ from l9_ci.commands.errors import emit_error
 from l9_ci.commands.semgrep import SDK_version
 from l9_ci.providers import ProviderRegistry, SemgrepProvider
 from l9_ci.rulesets.semgrep import SUPPORTED_LANGUAGES, ruleset_dir
+from l9_ci.rulesets.semgrep.consumer import (
+    CONSUMER_DECLARATION_PATH,
+    ConsumerRulepackError,
+    load_consumer_declaration,
+)
 from l9_ci.rulesets.semgrep.scope import packaged_scan_scope_policy
 
 
@@ -56,6 +61,17 @@ def register_provider_commands(
             "also record whether each provider executable is available on "
             "this machine; without it the record is a pure function of the "
             "snapshot and reports executables as not_probed"
+        ),
+    )
+    inventory_parser.add_argument(
+        "--consumer-rules",
+        action="store_true",
+        help=(
+            "also report the repository's consumer rulepack declaration "
+            "(.l9/semgrep-consumer-rules.yaml, ADR 0021) as a "
+            "semgrep consumer:<owner> target; off by default because a "
+            "planner that does not yet know the consumer target scope would "
+            "reject the record"
         ),
     )
     inventory_parser.add_argument("--output", type=Path, default=None)
@@ -177,15 +193,69 @@ def default_analysis_targets(
     return tuple(targets)
 
 
+def consumer_analysis_target(
+    root: Path,
+    *,
+    executable: str = "not_probed",
+    executable_version: str | None = None,
+) -> AnalysisTarget | None:
+    """Declare ``root``'s consumer rulepack as a target; ``None`` without one.
+
+    A declaration that does not validate is still declared, with its error
+    as ``invalid_reason``, so the inventory reports it ``failed`` rather than
+    dropping it. Nothing is executed.
+    """
+    try:
+        declaration = load_consumer_declaration(root)
+    except ConsumerRulepackError as exc:
+        return AnalysisTarget(
+            provider_id="semgrep",
+            scope="consumer",
+            name="invalid-declaration",
+            languages=("consumer",),
+            rulepack=CONSUMER_DECLARATION_PATH,
+            rulepack_resolved=False,
+            executable=executable,
+            executable_version=executable_version,
+            invalid_reason=f"consumer rulepack declaration is invalid: {exc}",
+        )
+    if declaration is None:
+        return None
+    languages = tuple(
+        sorted({language for rule in declaration.rules for language in rule.languages})
+    )
+    return AnalysisTarget(
+        provider_id="semgrep",
+        scope="consumer",
+        name=declaration.target_name,
+        languages=languages,
+        rulepack=declaration.path,
+        rulepack_resolved=True,
+        executable=executable,
+        executable_version=executable_version,
+        file_filter=lambda path: any(rule.matches(path) for rule in declaration.rules),
+    )
+
+
 def handle_inventory(args: argparse.Namespace) -> int:
     try:
         root = args.root.resolve()
+        targets = default_analysis_targets(
+            root,
+            probe_executables=args.probe_executables,
+        )
+        if getattr(args, "consumer_rules", False):
+            central = targets[0] if targets else None
+            consumer = consumer_analysis_target(
+                root,
+                executable=central.executable if central else "not_probed",
+                executable_version=central.executable_version if central else None,
+            )
+            if consumer is not None:
+                targets = (*targets, consumer)
         inventory = build_capability_inventory(
             root,
-            targets=default_analysis_targets(
-                root,
-                probe_executables=args.probe_executables,
-            ),
+            targets=targets,
             SDK_version=SDK_version(),
         )
         payload = inventory.to_dict()
