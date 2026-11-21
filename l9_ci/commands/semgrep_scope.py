@@ -8,8 +8,8 @@ of tracked files, the work-tree file checks and the atomic evidence write.
 from __future__ import annotations
 
 import os
-import tempfile
 from collections.abc import Mapping
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -56,9 +56,21 @@ def consumer_evidence_path(raw_report: Path) -> Path:
     return raw_report.with_name(f"{raw_report.stem}.consumer.json")
 
 
-def write_scope_evidence(scope: ScanScope, destination: Path) -> None:
-    """Write ``scope`` as canonical JSON, atomically."""
-    write_evidence_record(scope.to_dict(), destination)
+def write_scope_evidence(
+    scope: ScanScope,
+    destination: Path,
+    *,
+    rule_overlaps: Mapping[str, Any] | None = None,
+) -> None:
+    """Write ``scope`` as canonical JSON, atomically.
+
+    ``rule_overlaps`` records the registry rules a packaged L9 rule supersedes
+    in this run (``rule-overlaps.yaml``, ADR 0022).
+    """
+    payload = scope.to_dict()
+    if rule_overlaps is not None:
+        payload["rule_overlaps"] = dict(rule_overlaps)
+    write_evidence_record(payload, destination)
 
 
 def write_evidence_record(payload: Mapping[str, Any], destination: Path) -> None:
