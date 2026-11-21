@@ -10,7 +10,7 @@ version_axes:
     current: l9.finding-bundle/v1
     compatibility: explicit_major_version
   schema_version:
-    current: "1.0.0"
+    current: "1.1.0"
     compatibility: additive_changes_only_within_major
 rules:
   - id: COMPAT-001

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 from datetime import date
+from typing import Any
 from pathlib import Path
 
 from l9_ci.capabilities import detect_frameworks
@@ -331,6 +332,7 @@ def _request(
     identity_map_path: Path | None,
     execution_arguments: tuple[str, ...] = (),
     execution_targets: tuple[str, ...] = (),
+    scan_scope: dict[str, Any] | None = None,
 ) -> SemgrepPipelineRequest:
     return SemgrepPipelineRequest(
         report_path=report_path,
@@ -359,6 +361,7 @@ def _request(
         waivers_path=getattr(args, "waivers", None),
         repository=getattr(args, "repository", None),
         waiver_date=getattr(args, "waiver_date", None),
+        scan_scope=scan_scope,
         detected_frameworks=_detected_frameworks(args.root.resolve()),
     )
 
@@ -426,6 +429,7 @@ def handle_run(args: argparse.Namespace) -> int:
         _build_run_config_arguments(args) + _build_run_exclusion_arguments()
     )
     execution_targets: tuple[str, ...] = ()
+    scan_scope: dict[str, Any] | None = None
     try:
         scope = _resolve_required_scope(args)
         if scope is not None:
@@ -434,6 +438,7 @@ def handle_run(args: argparse.Namespace) -> int:
             write_scope_evidence(scope, scope_evidence_path(raw_output))
             execution_arguments += _REQUIRED_RUN_ARGUMENTS
             execution_targets = scope.targets
+            scan_scope = scope.to_dict()
     except Exception as exc:
         return emit_error(
             exc,
@@ -450,6 +455,7 @@ def handle_run(args: argparse.Namespace) -> int:
             identity_map_path=args.identity_map or default_identity_map_path(),
             execution_arguments=execution_arguments,
             execution_targets=execution_targets,
+            scan_scope=scan_scope,
         ),
         default=ExitCode.PROVIDER_EXECUTION_FAILURE,
     )

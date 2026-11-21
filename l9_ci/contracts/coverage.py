@@ -23,6 +23,10 @@ class Coverage:
     files_considered: int
     files_analyzed: int
     limitations: tuple[str, ...]
+    # The declared scan scope of a required run and what the provider reported
+    # it scanned (``l9.semgrep-scan-scope/v1`` plus ``paths_scanned``). Present
+    # only for a required Semgrep run; see docs/architecture/semgrep-provider.md.
+    scan_scope: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not self.provider_id.strip():
@@ -36,13 +40,16 @@ class Coverage:
         object.__setattr__(self, "limitations", tuple(self.limitations))
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "provider_id": self.provider_id,
             "status": self.status.value,
             "files_considered": self.files_considered,
             "files_analyzed": self.files_analyzed,
             "limitations": list(self.limitations),
         }
+        if self.scan_scope is not None:
+            payload["scan_scope"] = dict(self.scan_scope)
+        return payload
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "Coverage":
@@ -52,4 +59,7 @@ class Coverage:
             files_considered=int(payload["files_considered"]),
             files_analyzed=int(payload["files_analyzed"]),
             limitations=tuple(str(item) for item in payload.get("limitations", [])),
+            scan_scope=(
+                dict(payload["scan_scope"]) if "scan_scope" in payload else None
+            ),
         )
