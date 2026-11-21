@@ -72,8 +72,9 @@ def test_packaged_policy_declares_include_and_every_exclusion() -> None:
     policy = packaged_scan_scope_policy()
     assert policy.source == "git-tracked"
     assert policy.anchored_paths == (".l9/runtime",)
-    # Test paths are excluded by an explicit, recorded policy decision.
-    assert {"test", "tests", "testsuite"} <= set(policy.directory_names)
+    # Test paths are in required scope (CTO decision 2026-11-20, B1+B2).
+    assert not {"test", "tests", "testsuite"} & set(policy.directory_names)
+    assert policy.version == "1.1.0"
     assert policy.names == (".semgrep",)
     assert policy.file_globs == ("*.min.js", "*_test.go")
 
@@ -82,8 +83,8 @@ def test_packaged_policy_declares_include_and_every_exclusion() -> None:
     ("path", "label"),
     [
         (".l9/runtime/sdk/venv/lib/x.py", "anchored_paths:.l9/runtime"),
-        ("tests/test_a.py", "directory_names:tests"),
-        ("pkg/test/a.py", "directory_names:test"),
+        ("vendor/lib/a.py", "directory_names:vendor"),
+        ("pkg/build/a.py", "directory_names:build"),
         ("node_modules/x/index.js", "directory_names:node_modules"),
         (".semgrep/rules.py", "names:.semgrep"),
         ("app/static/app.min.js", "file_globs:*.min.js"),
@@ -98,6 +99,10 @@ def test_declared_exclusions_name_their_policy_entry(path: str, label: str) -> N
     "path",
     [
         "src/app.py",
+        "tests/test_a.py",
+        "pkg/test/a.py",
+        "testsuite/case.py",
+        "ops/scripts/tests/fixtures/run_workflow.js",
         "tests.py",  # a file named like a test directory is not one
         "contest/a.py",  # a directory name is matched whole, not by substring
         ".l9/contracts/policy.yaml",  # only the runtime subtree of .l9 is excluded
@@ -148,7 +153,7 @@ def test_consumer_semgrepignore_cannot_narrow_the_required_scope(
     )
     scope = resolve_scan_scope(root, packaged_scan_scope_policy())
     assert "src/app.py" in scope.targets
-    assert "tests/test_app.py" not in scope.targets
+    assert "tests/test_app.py" in scope.targets
     assert scope.consumer_semgrepignore_files == (".semgrepignore",)
     evidence = scope.to_dict()
     assert evidence["consumer_semgrepignore"] == {
@@ -165,15 +170,16 @@ def test_scope_is_tracked_files_minus_declared_exclusions(tmp_path: Path) -> Non
             "src/app.py": "x = 1\n",
             "src/lib/util.py": "x = 1\n",
             "tests/test_app.py": "x = 1\n",
+            "vendor/dep.py": "x = 1\n",
             ".semgrep/rule.py": "x = 1\n",
         },
     )
     (root / "untracked.py").write_text("x = 1\n", encoding="utf-8")
     scope = resolve_scan_scope(root, packaged_scan_scope_policy())
-    assert scope.targets == ("src/app.py", "src/lib/util.py")
-    assert scope.files_tracked == 4
+    assert scope.targets == ("src/app.py", "src/lib/util.py", "tests/test_app.py")
+    assert scope.files_tracked == 5
     assert dict(scope.excluded) == {
-        "directory_names:tests": ("tests/test_app.py",),
+        "directory_names:vendor": ("vendor/dep.py",),
         "names:.semgrep": (".semgrep/rule.py",),
     }
 
@@ -200,7 +206,7 @@ def test_non_git_root_fails_closed(tmp_path: Path) -> None:
 
 
 def test_empty_scope_fails_closed(tmp_path: Path) -> None:
-    root = _repository(tmp_path / "repo", {"tests/test_a.py": "x\n"})
+    root = _repository(tmp_path / "repo", {"vendor/a.py": "x\n"})
     with pytest.raises(ScanScopeError, match="empty"):
         resolve_scan_scope(root, packaged_scan_scope_policy())
 
@@ -234,7 +240,7 @@ def test_scope_evidence_is_schema_valid_and_deterministic(tmp_path: Path) -> Non
         "timeout_threshold": 0,
         "on_timeout": "incomplete",
     }
-    assert payload["files_in_scope"] == 2  # src/a.py and .semgrepignore itself
+    assert payload["files_in_scope"] == 3  # src/a.py, tests/test_a.py, .semgrepignore
     assert scope_evidence_path(Path("raw/report.json")) == Path("raw/report.scope.json")
 
 
@@ -286,9 +292,9 @@ def test_required_run_disables_nosem_and_scans_the_declared_scope(
     arguments = list(request.execution_arguments)
     assert arguments[arguments.index("--timeout") + 1] == "30"
     assert arguments[arguments.index("--timeout-threshold") + 1] == "0"
-    assert request.execution_targets == (".semgrepignore", "src/a.py")
+    assert request.execution_targets == (".semgrepignore", "src/a.py", "tests/t.py")
     evidence = tmp_path / "out" / "raw" / "report.scope.json"
-    assert json.loads(evidence.read_text(encoding="utf-8"))["files_in_scope"] == 2
+    assert json.loads(evidence.read_text(encoding="utf-8"))["files_in_scope"] == 3
 
 
 def test_non_required_run_keeps_semgrep_scope_and_nosem(

@@ -26,6 +26,36 @@
       "items": {
         "type": "string"
       }
+    },
+    "scan_scope": {
+      "description": "Required Semgrep runs only (finding bundle 1.1.0): the declared scan scope the run was given and the paths the provider reported scanning.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["declared", "paths_scanned"],
+      "properties": {
+        "declared": {
+          "$ref": "semgrep-scan-scope.schema.json"
+        },
+        "paths_scanned": {
+          "description": "The provider's own paths.scanned inventory; null when the run produced no readable report.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["count", "sha256"],
+              "properties": {
+                "count": { "type": "integer", "minimum": 0 },
+                "sha256": {
+                  "description": "SHA-256 of the newline-joined, sorted, repository-relative paths.scanned list.",
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          ]
+        }
+      }
     }
   }
 }

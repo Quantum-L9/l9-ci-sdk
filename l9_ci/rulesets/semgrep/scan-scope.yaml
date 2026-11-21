@@ -25,9 +25,15 @@
 #   file_globs       a file whose base name matches this fnmatch glob
 #
 # The exclusions reproduce Semgrep's documented built-in default list
-# (semgrepignore v2 reference, "Default Semgrepignore patterns"), so a
-# repository without a `.semgrepignore` keeps its previous scope, plus the SDK
-# runtime the CLI already excluded.
+# (semgrepignore v2 reference, "Default Semgrepignore patterns"), plus the SDK
+# runtime the CLI already excluded, minus the default's test paths.
+#
+# Test paths are IN scope (CTO decision 2026-11-20, lane L1-CANARY-FIXES B1+B2,
+# CI_CONFIG_FINDINGS row 3: required scope is declared, not a tool default).
+# Semgrep's default list drops `test/`, `tests/` and `testsuite/`; this policy
+# does not. A finding under a test path follows its rule's mode like any other.
+# Waiving one is a central waiver/baseline ledger entry with owner, reason and
+# expiry, never a consumer `.semgrepignore` or inline `nosemgrep`.
 schema: l9.semgrep-scan-scope-policy/v1
 version: 1.1.0
 include:
@@ -50,13 +56,6 @@ exclude:
     - .npm
     - .yarn
     - .semgrep_logs
-    # Test paths. Decision 2026-11-20, lane L1f: kept OUT of required central
-    # scope, matching the Semgrep default that applied before. Holding test
-    # code to every required rule is an organization policy call, raised with
-    # the CTO; changing it is an edit to this list only.
-    - test
-    - tests
-    - testsuite
   names:
     # Semgrep rule folder (Semgrep default): rule definitions, not code.
     - .semgrep

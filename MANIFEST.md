@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 410
+Files: 411
 
 ## Contents
 
@@ -385,6 +385,7 @@ Files: 410
 - `tests/pipeline/test_semgrep_execution_path.py`
 - `tests/pipeline/test_semgrep_pipeline.py`
 - `tests/pipeline/test_semgrep_release_path.py`
+- `tests/pipeline/test_semgrep_scan_scope_in_bundle.py`
 - `tests/pipeline/test_semgrep_version_policy.py`
 - `tests/policy/test_classifier.py`
 - `tests/policy/test_remediation.py`
