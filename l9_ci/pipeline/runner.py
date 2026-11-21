@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from l9_ci.contracts.subjects import (
+    display_path,
+    strip_absolute_paths,
+    subject_reason,
+)
 from l9_ci.contracts import (
     Coverage,
     CoverageStatus,
@@ -70,7 +75,8 @@ def execute_and_normalize(
                     provider,
                     context,
                     ProviderFailureType.NOT_INSTALLED,
-                    f"{provider.metadata.display_name} is not installed",
+                    f"{provider.metadata.display_name} is not installed: no "
+                    f"`{provider.metadata.provider_id}` executable on PATH",
                 ),
             ),
         )
@@ -83,7 +89,8 @@ def execute_and_normalize(
                     provider,
                     context,
                     ProviderFailureType.CONFIGURATION_ERROR,
-                    f"{provider.metadata.display_name} version could not be detected",
+                    f"{provider.metadata.display_name} version could not be "
+                    f"detected from `{provider.metadata.provider_id} --version`",
                 ),
             ),
         )
@@ -99,7 +106,10 @@ def execute_and_normalize(
                     provider,
                     context,
                     ProviderFailureType.CONFIGURATION_ERROR,
-                    f"{provider.metadata.display_name} configuration is invalid",
+                    subject_reason(
+                        f"{provider.metadata.display_name} configuration is invalid",
+                        configuration_errors,
+                    ),
                     diagnostics={"errors": list(configuration_errors)},
                 ),
             ),
@@ -115,7 +125,8 @@ def execute_and_normalize(
                     provider,
                     context,
                     ProviderFailureType.EXECUTION_ERROR,
-                    f"provider execution raised {type(exc).__name__}: {exc}",
+                    "provider execution raised "
+                    + strip_absolute_paths(f"{type(exc).__name__}: {exc}"),
                 ),
             ),
         )
@@ -135,7 +146,8 @@ def execute_and_normalize(
                     provider,
                     context,
                     ProviderFailureType.REPORT_MISSING,
-                    "provider produced no report",
+                    "provider produced no report at "
+                    + display_path(request.output_path, request.repository_root),
                 ),
             ),
         )
@@ -163,7 +175,9 @@ def execute_and_normalize(
                     provider,
                     context,
                     ProviderFailureType.REPORT_MALFORMED,
-                    "provider report failed structural validation",
+                    subject_reason(
+                        "provider report failed structural validation", shape_errors
+                    ),
                     diagnostics={"errors": list(shape_errors)},
                 ),
             ),
@@ -178,7 +192,8 @@ def execute_and_normalize(
                     provider,
                     context,
                     ProviderFailureType.NORMALIZATION_ERROR,
-                    f"normalization raised {type(exc).__name__}: {exc}",
+                    "normalization raised "
+                    + strip_absolute_paths(f"{type(exc).__name__}: {exc}"),
                 ),
             ),
         )

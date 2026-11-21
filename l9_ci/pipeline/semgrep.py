@@ -46,6 +46,7 @@ from l9_ci.providers import (
     ProviderNormalizationContext,
 )
 from l9_ci.providers.semgrep import require_supported_semgrep_version
+from l9_ci.contracts.subjects import subject_reason
 from l9_ci.repository import build_repository_snapshot
 from l9_ci.repository.git import resolve_commit, tracked_changes
 
@@ -224,12 +225,15 @@ def _baseline_new_fingerprints(
             "(unknown, or absent from a shallow clone)"
         )
     if resolved != request.baseline_commit:
-        return None, f"{request.baseline_commit} resolves to a different commit"
+        return None, (
+            f"{request.baseline_commit} resolves to a different commit: {resolved}"
+        )
     changed = tracked_changes(root)
     if changed:
-        return None, (
+        return None, subject_reason(
             f"{len(changed)} tracked file(s) differ from HEAD; the baseline "
-            "comparison needs a clean working tree"
+            "comparison needs a clean working tree",
+            changed,
         )
     report = request.report_path.with_name(f"{request.report_path.stem}.baseline.json")
     baseline = execute_and_normalize(
@@ -249,12 +253,17 @@ def _baseline_new_fingerprints(
         context=context,
     )
     if baseline.failures:
-        return None, "the baseline scan failed: " + "; ".join(
-            sorted(failure.message for failure in baseline.failures)
+        return None, subject_reason(
+            "the baseline scan failed",
+            (
+                f"{failure.failure_type.value}: {failure.message}"
+                for failure in baseline.failures
+            ),
         )
     if baseline.coverage.status is not CoverageStatus.COMPLETE:
-        return None, (
-            f"the baseline scan is incomplete (coverage {baseline.coverage.status})"
+        return None, subject_reason(
+            f"the baseline scan is incomplete (coverage {baseline.coverage.status})",
+            baseline.coverage.limitations or ("no limitation recorded",),
         )
     return frozenset(finding.fingerprint for finding in baseline.findings), None
 

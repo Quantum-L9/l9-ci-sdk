@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 441
+Files: 446
 
 ## Contents
 
@@ -102,6 +102,7 @@ Files: 441
 - `docs/adr/0022-registry-rule-supersession-at-covered-sites.md`
 - `docs/adr/0023-findings-classified-against-a-baseline-commit.md`
 - `docs/adr/0024-registry-rule-precision-for-declared-non-security-use.md`
+- `docs/adr/0025-every-reason-names-its-subjects.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -186,6 +187,7 @@ Files: 441
 - `l9_ci/contracts/failure.py`
 - `l9_ci/contracts/finding.py`
 - `l9_ci/contracts/source.py`
+- `l9_ci/contracts/subjects.py`
 - `l9_ci/contracts/version.py`
 - `l9_ci/execution/__init__.py`
 - `l9_ci/execution/profiles.py`
@@ -281,6 +283,7 @@ Files: 441
 - `l9_ci/schemas/v1/semgrep-consumer-rulepack-evidence.schema.json`
 - `l9_ci/schemas/v1/semgrep-scan-scope.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
+- `l9_ci/signal/__init__.py`
 - `lint/check_action_pins.py`
 - `lint/check_governance_json.py`
 - `lint/yamllint-data.yml`
@@ -390,6 +393,7 @@ Files: 441
 - `tests/fixtures/semgrep/zero-findings-no-paths.json`
 - `tests/gates/test_evaluator.py`
 - `tests/gates/test_gate_result_schema.py`
+- `tests/gates/test_reason_subjects.py`
 - `tests/governance/test_governance_layer.py`
 - `tests/governance/test_governance_schemas.py`
 - `tests/identity/test_diagnostics.py`
@@ -442,6 +446,7 @@ Files: 441
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/rulesets/test_semgrep_scan_scope.py`
 - `tests/rulesets/test_semgrep_target_suffixes.py`
+- `tests/signal/test_render_snippet.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`
 - `uv.lock`
