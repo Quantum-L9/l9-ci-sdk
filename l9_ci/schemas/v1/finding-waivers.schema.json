@@ -13,7 +13,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "owner", "reason", "created", "expires", "scope", "fingerprint", "source_sha256"],
+        "required": [
+          "id",
+          "owner",
+          "reason",
+          "created",
+          "expires",
+          "scope",
+          "fingerprint",
+          "source_sha256"
+        ],
         "properties": {
           "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
           "owner": { "type": "string", "minLength": 1 },
