@@ -294,3 +294,16 @@ with real Semgrep over every form. The first entry is
 `l9.baseline.python.subprocess-shell-true` superseding
 `python.lang.security.audit.subprocess-shell-true`. On Cursor-Governance run
 44848823829, 12 of 29 blocking findings were these duplicate pairs.
+
+## Declared non-security use
+
+The registry SHA-1 rule flags every `hashlib.sha1(...)` call, including
+`usedforsecurity=False`, which the registry MD5 rule already excludes. The
+packaged
+[`l9_ci/rulesets/semgrep/rule-precision.yaml`](../../l9_ci/rulesets/semgrep/rule-precision.yaml)
+(`l9.semgrep-rule-precision/v1`) applies that exclusion centrally (ADR 0024).
+After the scan, such a finding is withheld only where the call on its line
+passes the keyword as the literal `False`, read from the Python syntax tree.
+The evidence is kept and the bundle names every withheld site; an unreadable
+file, a variable or `True` keeps the finding. Witnesses:
+`tests/rulesets/test_semgrep_rule_precision.py`.

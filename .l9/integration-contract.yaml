@@ -110,7 +110,11 @@ CLI:
         packaged rule covers at the same call is withdrawn after the scan, its
         evidence and a limitation are kept, and the evidence records
         `rule_overlaps` (ADR 0022). A registry finding no packaged finding
-        covers is never withdrawn.
+        covers is never withdrawn. A finding of a registry rule
+        declared in rule-precision.yaml is withheld where its call passes the
+        declared keyword as the literal False (hashlib.sha1(...,
+        usedforsecurity=False), ADR 0024); its evidence and a limitation are
+        kept, and anything unprovable keeps the finding.
     semgrep_normalize:
       syntax: >-
         l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT

@@ -41,6 +41,7 @@ from l9_ci.providers.semgrep import require_supported_semgrep_version
 from l9_ci.repository import build_repository_snapshot
 
 from .overlaps import supersede_findings
+from .precision import withhold_declared_non_security
 from .lifecycle import ProviderAcquisitionMode, resolve_provider
 from .runner import execute_and_normalize
 
@@ -132,6 +133,9 @@ class SemgrepPipelineRequest:
     # is not detected is withheld: its evidence is kept and the bundle records
     # why (FRAMEWORK_RULE_PREFIXES).
     detected_frameworks: Mapping[str, bool | None] | None = None
+    # Registry rule ID -> keyword (rule-precision.yaml, ADR 0024): a finding of
+    # that rule is withheld where its call passes ``keyword=False`` literally.
+    precision_keywords: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -260,6 +264,14 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
             normalization.findings, request.detected_frameworks
         )
         normalization = replace(normalization, findings=applicable)
+    precision_limitations: tuple[str, ...] = ()
+    if request.precision_keywords:
+        precise, precision_limitations = withhold_declared_non_security(
+            normalization.findings,
+            request.repository_root,
+            request.precision_keywords,
+        )
+        normalization = replace(normalization, findings=precise)
 
     validate_record_counts(
         finding_count=len(normalization.findings),
@@ -353,6 +365,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
                     *limitations,
                     *framework_limitations,
                     *waiver_limitations,
+                    *precision_limitations,
                 }
             )
         ),
