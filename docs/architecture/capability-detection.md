@@ -57,6 +57,18 @@ Rules the inventory holds:
   a required `language:typescript` instance was planned, scanned nothing and
   ended `incomplete`. Witness:
   `tests/capabilities/test_inventory_scan_scope.py`.
+- Framework-scoped registry rules (`python.django.*`) apply only where their
+  framework is used (CTO, 2026-11-21). `l9_ci/capabilities/frameworks.py`
+  detects Django from a tracked dependency declaration naming the package
+  (`requirements*.txt`, `pyproject.toml`, `setup.cfg`, `setup.py`, `Pipfile`)
+  or a `manage.py` with Django's entry point.
+  - The Semgrep pipeline withholds a finding of a framework rule whose
+    framework is not detected.
+  - The evidence is kept, and the bundle's limitations name the rule, the
+    count and every location.
+  - When detection cannot run, nothing is withheld.
+  - This is applicability, not a waiver.
+  - Witness: `tests/capabilities/test_framework_rule_applicability.py`.
 - The executable is a fact about the machine, so it is `not_probed` unless
   the caller asks (`--probe-executables`).
 - The record carries no requiredness, enforcement mode or verdict. Core

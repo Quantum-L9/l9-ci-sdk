@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 413
+Files: 415
 
 ## Contents
 
@@ -157,6 +157,7 @@ Files: 413
 - `l9_ci/baseline/schemas.py`
 - `l9_ci/capabilities/__init__.py`
 - `l9_ci/capabilities/detector.py`
+- `l9_ci/capabilities/frameworks.py`
 - `l9_ci/capabilities/inventory.py`
 - `l9_ci/capabilities/model.py`
 - `l9_ci/cli/__init__.py`
@@ -293,6 +294,7 @@ Files: 413
 - `tests/biome/test_biome_scan.py`
 - `tests/capabilities/__init__.py`
 - `tests/capabilities/test_detector.py`
+- `tests/capabilities/test_framework_rule_applicability.py`
 - `tests/capabilities/test_inventory.py`
 - `tests/capabilities/test_inventory_scan_scope.py`
 - `tests/capabilities/trees.py`
