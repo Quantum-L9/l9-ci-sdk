@@ -1,0 +1,26 @@
+schema: l9.fixture-provenance/v1
+fixture: report-timeout-canary-cg-44840215113.json
+provider_id: semgrep
+verification_status: runtime_captured
+Semgrep_version: "1.171.0"
+capture_timestamp: "2026-11-20T23:56:48Z"
+# Derived from the raw report of Quantum-L9/Cursor-Governance Organization CI
+# run 44840215113 (artifact l9-semgrep-org-semgrep-44840215113-1,
+# raw/semgrep/org-semgrep/report.json, sha256 fbbeabea13ce88e8...240dc).
+# That run provisioned SDK dc783c64 (before #131), whose bundle reported
+# coverage "complete" and a passing gate despite these two timeouts.
+# The errors array is verbatim: two Timeout pairs, both on
+# environment/program-execution/scripts/run_campaign.py.
+# paths.scanned is trimmed from 876 to 3 entries (the timed-out file plus two
+# others), and results are dropped (125 findings unrelated to the timeouts).
+# The shape that matters, two rules timing out on one scanned file among
+# others, is unchanged. Re-serialized with sorted keys and an indent of 2.
+command:
+  - l9-ci
+  - semgrep
+  - run
+  - --language
+  - python
+  - --required
+output_checksum: "sha256:4a80f1dacfd06bf7b3933e64f781b7843d7613c97a8888bdf53d14f07a7879d5"
+redaction_reviewed_by: "lane L1-CANARY-FIXES author; repository-relative paths and rule IDs only, no secrets"
