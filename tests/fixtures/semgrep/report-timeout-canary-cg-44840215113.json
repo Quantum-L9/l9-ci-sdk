@@ -1,0 +1,29 @@
+{
+  "errors": [
+    {
+      "code": 2,
+      "level": "warn",
+      "message": "Timeout when running python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args on environment/program-execution/scripts/run_campaign.py:\n ",
+      "path": "environment/program-execution/scripts/run_campaign.py",
+      "rule_id": "python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args",
+      "type": "Timeout"
+    },
+    {
+      "code": 2,
+      "level": "warn",
+      "message": "Timeout when running python.lang.security.audit.dangerous-system-call-tainted-env-args.dangerous-system-call-tainted-env-args on environment/program-execution/scripts/run_campaign.py:\n ",
+      "path": "environment/program-execution/scripts/run_campaign.py",
+      "rule_id": "python.lang.security.audit.dangerous-system-call-tainted-env-args.dangerous-system-call-tainted-env-args",
+      "type": "Timeout"
+    }
+  ],
+  "paths": {
+    "scanned": [
+      "environment/program-execution/scripts/run_campaign.py",
+      "ops/__init__.py",
+      "ops/autonomy/__init__.py"
+    ]
+  },
+  "results": [],
+  "version": "1.171.0"
+}
