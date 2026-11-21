@@ -201,4 +201,3 @@ with real Semgrep over every form. The first entry is
 `l9.baseline.python.subprocess-shell-true` superseding
 `python.lang.security.audit.subprocess-shell-true`. On Cursor-Governance run
 44848823829, 12 of 29 blocking findings were these duplicate pairs.
-
