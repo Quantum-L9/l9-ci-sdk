@@ -44,7 +44,7 @@ from jsonschema import Draft202012Validator
 from l9_ci.repository import build_repository_snapshot
 
 CAPABILITY_INVENTORY_PROTOCOL = "l9.capability-inventory/v1"
-CAPABILITY_INVENTORY_SCHEMA_VERSION = "1.1.0"
+CAPABILITY_INVENTORY_SCHEMA_VERSION = "1.2.0"
 
 _SAMPLE_LIMIT = 5
 
@@ -173,7 +173,7 @@ class ManifestEvidence:
         }
 
 
-_TARGET_SCOPES = frozenset({"language", "framework"})
+_TARGET_SCOPES = frozenset({"language", "framework", "consumer"})
 _EXECUTABLE_STATES = frozenset({"available", "missing", "not_probed"})
 
 
@@ -199,6 +199,13 @@ class AnalysisTarget:
     ``not_applicable`` and the reason names the exclusions. The composition
     layer supplies the predicate, because this package must not import the
     scope policy (``l9_ci.rulesets``).
+
+    A ``consumer`` target (ADR 0021) is a consumer-declared rulepack. It is
+    not tied to a recognized language: ``file_filter`` decides which tracked
+    files its declared rules admit, and it applies when at least one does.
+    ``invalid_reason`` marks a declaration that failed validation; the target
+    is then ``failed`` with that reason. Consumer coverage never counts toward
+    a language's central coverage.
     """
 
     provider_id: str
@@ -213,10 +220,20 @@ class AnalysisTarget:
     scope_exclusion: Callable[[str], str | None] | None = field(
         default=None, compare=False, repr=False
     )
+    file_filter: Callable[[str], bool] | None = field(
+        default=None, compare=False, repr=False
+    )
+    invalid_reason: str | None = None
 
     def __post_init__(self) -> None:
         if self.scope not in _TARGET_SCOPES:
             raise ValueError(f"unknown analysis target scope {self.scope!r}")
+        if (
+            self.scope == "consumer"
+            and self.file_filter is None
+            and (self.invalid_reason is None)
+        ):
+            raise ValueError("a consumer target needs a file_filter or invalid_reason")
         if self.executable not in _EXECUTABLE_STATES:
             raise ValueError(f"unknown executable state {self.executable!r}")
         if not self.provider_id or not self.name or not self.languages:
@@ -524,6 +541,7 @@ def _analyzed_files(
     by_language: Mapping[str, tuple[str, ...]],
     frameworks: Mapping[str, FrameworkCapability],
     framework_files: Mapping[str, frozenset[str]],
+    all_files: Sequence[str] = (),
 ) -> tuple[frozenset[str], dict[str, tuple[str, ...]]]:
     """The files ``target`` would actually analyze, and those its scope drops.
 
@@ -533,6 +551,10 @@ def _analyzed_files(
     declared scan scope. Excluded files are returned grouped by the scope
     entry that excluded them.
     """
+    if target.scope == "consumer":
+        if target.file_filter is None:
+            return frozenset(), {}
+        return frozenset(path for path in all_files if target.file_filter(path)), {}
     candidates = [
         path for language in target.languages for path in by_language.get(language, ())
     ]
@@ -586,6 +608,17 @@ def _target_file_count(
             return 0, CapabilityState.NOT_APPLICABLE, framework.reason
         if framework.state is not CapabilityState.APPLICABLE:
             return 0, CapabilityState.FAILED, framework.reason
+    if target.scope == "consumer":
+        if target.invalid_reason is not None:
+            return 0, CapabilityState.FAILED, target.invalid_reason
+        if not analyzed:
+            return (
+                0,
+                CapabilityState.NOT_APPLICABLE,
+                f"no tracked file among {examined} examined file(s) is inside "
+                "the paths.include of any declared consumer rule",
+            )
+        return len(analyzed), None, ""
     if not analyzed and excluded:
         kind = " or ".join(target.languages)
         count = sum(len(paths) for paths in excluded.values())
@@ -765,18 +798,25 @@ def build_capability_inventory(
     framework_files = _framework_files(all_files, manifests)
     analyzed_by_target = {
         f"{target.provider_id} {target.target}": _analyzed_files(
-            target, by_language, by_framework, framework_files
+            target, by_language, by_framework, framework_files, all_files
         )
         for target in targets
     }
     prerequisites = _prerequisites(
         targets, analyzed_by_target, by_framework, len(all_files)
     )
-    analyzed = frozenset().union(*(files for files, _ in analyzed_by_target.values()))
+    # Consumer rules cover only their declared paths; they never make a
+    # language count as centrally analyzed.
+    central = [
+        analyzed_by_target[f"{target.provider_id} {target.target}"]
+        for target in targets
+        if target.scope != "consumer"
+    ]
+    analyzed = frozenset().union(*(files for files, _ in central))
     out_of_scope = (
         frozenset(
             path
-            for _, excluded in analyzed_by_target.values()
+            for _, excluded in central
             for paths in excluded.values()
             for path in paths
         )

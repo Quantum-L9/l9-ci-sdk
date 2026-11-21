@@ -51,6 +51,11 @@ def scope_evidence_path(raw_report: Path) -> Path:
     return raw_report.with_name(f"{raw_report.stem}.scope.json")
 
 
+def consumer_evidence_path(raw_report: Path) -> Path:
+    """Return the consumer record path beside ``raw_report``."""
+    return raw_report.with_name(f"{raw_report.stem}.consumer.json")
+
+
 def write_scope_evidence(
     scope: ScanScope,
     destination: Path,
@@ -59,12 +64,17 @@ def write_scope_evidence(
 ) -> None:
     """Write ``scope`` as canonical JSON, atomically.
 
-    ``rule_overlaps`` records the registry rules this run skipped because a
-    packaged L9 rule supersedes them (``rule-overlaps.yaml``).
+    ``rule_overlaps`` records the registry rules a packaged L9 rule supersedes
+    in this run (``rule-overlaps.yaml``, ADR 0022).
     """
     payload = scope.to_dict()
     if rule_overlaps is not None:
         payload["rule_overlaps"] = dict(rule_overlaps)
+    write_evidence_record(payload, destination)
+
+
+def write_evidence_record(payload: Mapping[str, Any], destination: Path) -> None:
+    """Write one evidence record as canonical JSON, atomically."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
@@ -72,7 +82,7 @@ def write_scope_evidence(
     temporary_path = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "wb") as handle:
-            handle.write(canonical_json_bytes(payload))
+            handle.write(canonical_json_bytes(dict(payload)))
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary_path, destination)
@@ -80,4 +90,10 @@ def write_scope_evidence(
         temporary_path.unlink(missing_ok=True)
 
 
-__all__ = ["resolve_scan_scope", "scope_evidence_path", "write_scope_evidence"]
+__all__ = [
+    "consumer_evidence_path",
+    "resolve_scan_scope",
+    "scope_evidence_path",
+    "write_evidence_record",
+    "write_scope_evidence",
+]

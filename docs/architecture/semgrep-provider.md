@@ -111,6 +111,32 @@ Identity resolution is unchanged by profile selection: L9-authored rules carry
 trusted `metadata.l9.canonical_rule_id`, and third-party registry rules resolve
 through the versioned SDK identity map.
 
+## Consumer rulepacks: `l9-ci semgrep consumer-run` (ADR 0021)
+
+A consumer opts its own rules into CI with `.l9/semgrep-consumer-rules.yaml`
+(`l9.semgrep-consumer-rulepack/v1`: `schema`, `owner`, `rule_files`, optional
+`rule_id_prefix`). `l9_ci/rulesets/semgrep/consumer.py` validates it before
+anything runs. Every rule must:
+
+- be namespaced under the prefix (default `l9.`) and not redefine a packaged
+  rule;
+- declare a non-empty `paths.include`;
+- carry `metadata.l9.canonical_rule_id` in `CONSUMER-<REPOSITORY>-<NAME>`;
+- use only allow-listed per-rule keys.
+
+A violation exits 2 before Semgrep starts and never touches a central run.
+
+`consumer-run` is a separate execution with its own bundle. It loads only the
+declared files, keeps the consumer's `.semgrepignore` and inline `nosemgrep`
+(consumer-owned rules keep consumer ignores), and runs under the required
+analysis budget. It writes `<stem>.consumer.json`
+(`l9.semgrep-consumer-rulepack-evidence/v1`) naming the owner, the declaration
+and every rule file by SHA-256. A Semgrep rule cannot suppress another rule's
+finding, so the central bundle, scope and gate are untouched. Witnesses:
+`tests/rulesets/test_semgrep_consumer_rulepack.py` and
+`tests/commands/test_semgrep_consumer_run_e2e.py` (real Semgrep, run by
+`.github/workflows/ci.yml`).
+
 ## Required central runs: `--disable-nosem` and the declared scan scope
 
 Core passes `--required` to `l9-ci semgrep run` when governance marks the
