@@ -294,7 +294,22 @@ def test_required_run_disables_nosem_and_scans_the_declared_scope(
     assert arguments[arguments.index("--timeout-threshold") + 1] == "0"
     assert request.execution_targets == (".semgrepignore", "src/a.py", "tests/t.py")
     evidence = tmp_path / "out" / "raw" / "report.scope.json"
-    assert json.loads(evidence.read_text(encoding="utf-8"))["files_in_scope"] == 3
+    record = json.loads(evidence.read_text(encoding="utf-8"))
+    assert record["files_in_scope"] == 3
+    # The default profile composes both rulesets, so the superseded registry
+    # rule is recorded with the L9 rule that replaces it.
+    assert record["rule_overlaps"]["applied"] == "covered_sites_only"
+    assert record["rule_overlaps"]["superseded"] == [
+        {
+            "language": "python",
+            "rule_id": "l9.baseline.python.subprocess-shell-true",
+            "canonical_rule_id": "L9-PYTHON-SUBPROCESS-SHELL-TRUE",
+            "supersedes": [
+                "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+            ],
+        }
+    ]
+    assert sorted(_schema_validator().iter_errors(record), key=str) == []
 
 
 def test_non_required_run_keeps_semgrep_scope_and_nosem(
