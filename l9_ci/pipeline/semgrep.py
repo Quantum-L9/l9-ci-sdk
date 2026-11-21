@@ -5,6 +5,7 @@ from __future__ import annotations
 import functools
 import hashlib
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
@@ -14,9 +15,12 @@ from typing import Any
 from l9_ci.artifacts import validate_bundle, write_bundle_atomic
 from l9_ci.contracts import (
     Coverage,
+    CoverageStatus,
     Finding,
     FindingBundle,
     FindingClassification,
+    ProviderFailure,
+    ProviderFailureType,
     ProviderRun,
     SnapshotDescriptor,
     SourceLocation,
@@ -36,10 +40,16 @@ from l9_ci.policy import (
 )
 from l9_ci.policy import source_sha256 as waiver_source_sha256
 from l9_ci.policy.remediation import RemediationMap, apply_remediation_classes
-from l9_ci.providers import ProviderExecutionRequest, ProviderNormalizationContext
+from l9_ci.providers import (
+    Provider,
+    ProviderExecutionRequest,
+    ProviderNormalizationContext,
+)
 from l9_ci.providers.semgrep import require_supported_semgrep_version
 from l9_ci.repository import build_repository_snapshot
+from l9_ci.repository.git import resolve_commit, tracked_changes
 
+from .baseline import apply_baseline
 from .overlaps import supersede_findings
 from .precision import withhold_declared_non_security
 from .lifecycle import ProviderAcquisitionMode, resolve_provider
@@ -136,6 +146,10 @@ class SemgrepPipelineRequest:
     # Registry rule ID -> keyword (rule-precision.yaml, ADR 0024): a finding of
     # that rule is withheld where its call passes ``keyword=False`` literally.
     precision_keywords: Mapping[str, str] = field(default_factory=dict)
+    # A baseline commit (ADR 0023): the scan runs a second time with Semgrep's
+    # ``--baseline-commit`` and each finding is classified new, pre-existing or
+    # unknown. Requires execute mode and a finding policy.
+    baseline_commit: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,7 +201,72 @@ def _with_scan_scope(
     )
 
 
+_BASELINE_COMMIT = re.compile(r"^[0-9a-f]{40}$|^[0-9a-f]{64}$")
+
+
+def _baseline_new_fingerprints(
+    provider: Provider,
+    request: SemgrepPipelineRequest,
+    context: ProviderNormalizationContext,
+) -> tuple[frozenset[str] | None, str | None]:
+    """Run the baseline scan; the fingerprints it reports, or why it cannot.
+
+    Fails closed: an unresolvable commit, tracked changes in the working tree
+    (Semgrep would compare them against the baseline without aborting), and a
+    baseline scan that failed or did not complete all return ``None``.
+    """
+    assert request.baseline_commit is not None
+    root = request.repository_root
+    resolved = resolve_commit(root, request.baseline_commit)
+    if resolved is None:
+        return None, (
+            f"commit {request.baseline_commit} is not in this repository "
+            "(unknown, or absent from a shallow clone)"
+        )
+    if resolved != request.baseline_commit:
+        return None, f"{request.baseline_commit} resolves to a different commit"
+    changed = tracked_changes(root)
+    if changed:
+        return None, (
+            f"{len(changed)} tracked file(s) differ from HEAD; the baseline "
+            "comparison needs a clean working tree"
+        )
+    report = request.report_path.with_name(f"{request.report_path.stem}.baseline.json")
+    baseline = execute_and_normalize(
+        provider,
+        request=ProviderExecutionRequest(
+            repository_root=root,
+            output_path=report,
+            timeout_seconds=request.timeout_seconds,
+            output_size_limit_bytes=request.output_size_limit_bytes,
+            arguments=(
+                *request.execution_arguments,
+                "--baseline-commit",
+                request.baseline_commit,
+            ),
+            targets=tuple(request.execution_targets),
+        ),
+        context=context,
+    )
+    if baseline.failures:
+        return None, "the baseline scan failed: " + "; ".join(
+            sorted(failure.message for failure in baseline.failures)
+        )
+    if baseline.coverage.status is not CoverageStatus.COMPLETE:
+        return None, (
+            f"the baseline scan is incomplete (coverage {baseline.coverage.status})"
+        )
+    return frozenset(finding.fingerprint for finding in baseline.findings), None
+
+
 def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResult:
+    if request.baseline_commit is not None:
+        if not _BASELINE_COMMIT.fullmatch(request.baseline_commit):
+            raise ValueError("baseline_commit must be a full lowercase commit ID")
+        if not request.execute:
+            raise ValueError("a baseline commit requires execute mode")
+        if not request.policy_path:
+            raise ValueError("a baseline commit requires a finding policy")
     identity_map = (
         RuleIdentityMap.load(request.identity_map_path)
         if request.identity_map_path
@@ -326,6 +405,36 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         classifications = application.classifications
         waiver_limitations = application.limitations
 
+    failures = tuple(normalization.failures)
+    baseline_limitations: tuple[str, ...] = ()
+    if request.baseline_commit is not None:
+        new_fingerprints, reason = _baseline_new_fingerprints(
+            provider, request, context
+        )
+        baseline_result = apply_baseline(
+            findings,
+            classifications,
+            baseline_commit=request.baseline_commit,
+            new_fingerprints=new_fingerprints,
+            unresolved_reason=reason,
+        )
+        classifications = baseline_result.classifications
+        baseline_limitations = baseline_result.limitations
+        if new_fingerprints is None:
+            # Fail closed: an unresolved baseline is a required failure whatever
+            # the run's own requiredness, so the gate is never PASS.
+            failures = (
+                *failures,
+                ProviderFailure(
+                    provider_id="semgrep",
+                    provider_version=provider_version,
+                    failure_type=ProviderFailureType.CONFIGURATION_ERROR,
+                    message=f"baseline {request.baseline_commit} unresolved: {reason}",
+                    required=True,
+                    fatal=True,
+                ),
+            )
+
     bundle_findings = findings
     if request.remediation_map_path is not None:
         remediation_map = RemediationMap.load(request.remediation_map_path)
@@ -351,7 +460,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         evidence=normalization.evidence,
         findings=bundle_findings,
         classifications=classifications,
-        provider_failures=normalization.failures,
+        provider_failures=failures,
         coverage=(
             normalization.coverage
             if request.scan_scope is None
@@ -366,6 +475,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
                     *framework_limitations,
                     *waiver_limitations,
                     *precision_limitations,
+                    *baseline_limitations,
                 }
             )
         ),

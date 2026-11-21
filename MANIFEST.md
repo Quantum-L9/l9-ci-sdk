@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 437
+Files: 441
 
 ## Contents
 
@@ -100,6 +100,7 @@ Files: 437
 - `docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md`
 - `docs/adr/0021-scoped-consumer-rulepack-binding.md`
 - `docs/adr/0022-registry-rule-supersession-at-covered-sites.md`
+- `docs/adr/0023-findings-classified-against-a-baseline-commit.md`
 - `docs/adr/0024-registry-rule-precision-for-declared-non-security-use.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
@@ -211,6 +212,7 @@ Files: 437
 - `l9_ci/integration/sarif.py`
 - `l9_ci/integration/versioning.py`
 - `l9_ci/pipeline/__init__.py`
+- `l9_ci/pipeline/baseline.py`
 - `l9_ci/pipeline/lifecycle.py`
 - `l9_ci/pipeline/overlaps.py`
 - `l9_ci/pipeline/precision.py`
@@ -316,6 +318,7 @@ Files: 437
 - `tests/commands/test_errors.py`
 - `tests/commands/test_manifest_cli.py`
 - `tests/commands/test_observation_cli.py`
+- `tests/commands/test_semgrep_baseline_e2e.py`
 - `tests/commands/test_semgrep_command.py`
 - `tests/commands/test_semgrep_consumer_run_e2e.py`
 - `tests/commands/test_semgrep_required_scope_e2e.py`
@@ -401,6 +404,7 @@ Files: 437
 - `tests/integration/test_sdk_validation_observation.py`
 - `tests/integration/test_versioning.py`
 - `tests/invariants/test_ci_provider_invariants.py`
+- `tests/pipeline/test_baseline_classification.py`
 - `tests/pipeline/test_core_policy_advisory_end_to_end.py`
 - `tests/pipeline/test_lifecycle.py`
 - `tests/pipeline/test_runner.py`
