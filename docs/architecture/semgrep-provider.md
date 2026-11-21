@@ -294,3 +294,17 @@ with real Semgrep over every form. The first entry is
 `l9.baseline.python.subprocess-shell-true` superseding
 `python.lang.security.audit.subprocess-shell-true`. On Cursor-Governance run
 44848823829, 12 of 29 blocking findings were these duplicate pairs.
+
+## Findings against a baseline commit
+
+`l9-ci semgrep run --baseline-commit SHA` classifies every finding as `new`,
+`pre_existing` or `unknown` against that commit (ADR 0023). The scan runs a
+second time with Semgrep's own `--baseline-commit`, which re-scans the
+baseline in a git worktree; a finding that moved lines or whose file was
+renamed stays pre-existing. A pre-existing finding with a blocking policy mode
+is reported as advisory, a new one keeps its mode, and the bundle states the
+counts. An unresolvable commit, tracked changes in the working tree, or a
+failed or incomplete baseline scan make every finding `unknown` with a required
+fatal provider failure, so the gate fails closed. Witnesses:
+`tests/commands/test_semgrep_baseline_e2e.py` (real Semgrep) and
+`tests/pipeline/test_baseline_classification.py`.

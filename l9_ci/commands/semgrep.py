@@ -188,6 +188,18 @@ def register_semgrep_commands(
         ),
     )
     _add_common_arguments(run)
+    run.add_argument(
+        "--baseline-commit",
+        default=None,
+        help=(
+            "Full commit ID of the baseline, normally the merge-base with the "
+            "target branch (ADR 0023). The scan runs again with Semgrep's "
+            "--baseline-commit; a finding present at the baseline is "
+            "pre_existing (blocking reported as advisory), one absent is new, "
+            "and an unresolvable or incomplete baseline fails closed. "
+            "Requires --policy"
+        ),
+    )
     run.set_defaults(handler=handle_run)
 
     consumer = semgrep_subparsers.add_parser(
@@ -435,6 +447,7 @@ def _request(
         waivers_path=getattr(args, "waivers", None),
         repository=getattr(args, "repository", None),
         waiver_date=getattr(args, "waiver_date", None),
+        baseline_commit=getattr(args, "baseline_commit", None),
         superseded_rules={
             rule: item.rule_id
             for item in _active_rule_overlaps(args)

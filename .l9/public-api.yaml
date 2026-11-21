@@ -8,6 +8,7 @@ metadata:
     versioned compatibility decisions.
 packages:
   l9_ci.contracts:
+    - BaselineStatus
     - Confidence
     - Coverage
     - CoverageStatus

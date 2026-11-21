@@ -30,6 +30,10 @@
     "waiver_id": {
       "type": "string",
       "minLength": 1
+    },
+    "baseline_status": {
+      "description": "Where the finding stands against the run's baseline commit (ADR 0023): new, pre_existing (blocking policy mode reported as advisory) or unknown (baseline unresolved; the gate fails closed). Absent when the run declared no baseline.",
+      "enum": ["new", "pre_existing", "unknown"]
     }
   },
   "allOf": [
