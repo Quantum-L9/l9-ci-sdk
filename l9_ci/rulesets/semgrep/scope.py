@@ -37,7 +37,17 @@ import yaml
 
 SCAN_SCOPE_POLICY_SCHEMA = "l9.semgrep-scan-scope-policy/v1"
 SCAN_SCOPE_EVIDENCE_SCHEMA = "l9.semgrep-scan-scope/v1"
-SCAN_SCOPE_EVIDENCE_SCHEMA_VERSION = "1.0.0"
+SCAN_SCOPE_EVIDENCE_SCHEMA_VERSION = "1.1.0"
+
+# Per-rule, per-file analysis budget of a required run (B5). Semgrep's defaults
+# are a 5 s timeout and a threshold of 3 timeouts per file, after which the
+# remaining rules on that file are skipped silently. A required run gives each
+# rule/file pair 30 s and never skips rules on a file because others timed out
+# (threshold 0 disables the cut-off). A pair that still times out under this
+# budget is not analysed, and the provider records it as incomplete coverage
+# (l9_ci/providers/semgrep/provider.py, ``_INCOMPLETE_ANALYSIS_ERROR_TYPES``).
+REQUIRED_RULE_TIMEOUT_SECONDS = 30
+REQUIRED_RULE_TIMEOUT_THRESHOLD = 0
 
 # The only include source the policy may declare: files tracked at the
 # analyzed snapshot. Untracked and ignored files are not product code.
@@ -123,6 +133,11 @@ class ScanScope:
             },
             "source": self.policy.source,
             "nosem": "disabled",
+            "analysis_budget": {
+                "timeout_seconds": REQUIRED_RULE_TIMEOUT_SECONDS,
+                "timeout_threshold": REQUIRED_RULE_TIMEOUT_THRESHOLD,
+                "on_timeout": "incomplete",
+            },
             "consumer_semgrepignore": {
                 "files": list(self.consumer_semgrepignore_files),
                 "honored": False,
@@ -288,6 +303,8 @@ __all__ = [
     "NOT_A_REGULAR_FILE",
     "SCAN_SCOPE_EVIDENCE_SCHEMA",
     "SCAN_SCOPE_EVIDENCE_SCHEMA_VERSION",
+    "REQUIRED_RULE_TIMEOUT_SECONDS",
+    "REQUIRED_RULE_TIMEOUT_THRESHOLD",
     "SCAN_SCOPE_POLICY_SCHEMA",
     "ScanScope",
     "ScanScopeError",

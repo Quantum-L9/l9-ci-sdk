@@ -24,7 +24,12 @@ from l9_ci.commands.semgrep_scope import (
     scope_evidence_path,
     write_scope_evidence,
 )
-from l9_ci.rulesets.semgrep.scope import ScanScope, packaged_scan_scope_policy
+from l9_ci.rulesets.semgrep.scope import (
+    REQUIRED_RULE_TIMEOUT_SECONDS,
+    REQUIRED_RULE_TIMEOUT_THRESHOLD,
+    ScanScope,
+    packaged_scan_scope_policy,
+)
 
 # One global registry ruleset per language, inherited by every downstream
 # consumer by default. A caller may opt out with --no-registry-config
@@ -269,7 +274,18 @@ def _build_run_exclusion_arguments() -> tuple[str, ...]:
 # one on a line carrying an inline `nosemgrep` comment: an annotation in the
 # consumer's tree must not silence a central rule. Waiving a finding is a
 # policy decision recorded in the finding policy, never a source comment.
-_REQUIRED_RUN_ARGUMENTS = ("--disable-nosem",)
+# It also runs under the declared analysis budget (B5): 30 s per rule and
+# file, with no per-file timeout threshold, so Semgrep never drops the
+# remaining rules on a file after a few timeouts. A pair that still times out
+# is incomplete coverage, recorded by the provider; the budget is written into
+# the scope evidence.
+_REQUIRED_RUN_ARGUMENTS = (
+    "--disable-nosem",
+    "--timeout",
+    str(REQUIRED_RULE_TIMEOUT_SECONDS),
+    "--timeout-threshold",
+    str(REQUIRED_RULE_TIMEOUT_THRESHOLD),
+)
 
 
 def _resolve_required_scope(args: argparse.Namespace) -> ScanScope | None:

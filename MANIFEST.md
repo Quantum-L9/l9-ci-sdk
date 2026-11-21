@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 404
+Files: 406
 
 ## Contents
 
@@ -338,6 +338,8 @@ Files: 404
 - `tests/fixtures/semgrep/report-error-warn-parse.json`
 - `tests/fixtures/semgrep/report-error-warn.json`
 - `tests/fixtures/semgrep/report-errors.json`
+- `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.json`
+- `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.provenance.yaml`
 - `tests/fixtures/semgrep/report-timeout-captured.json`
 - `tests/fixtures/semgrep/report-timeout-captured.provenance.yaml`
 - `tests/fixtures/semgrep/results.json`
