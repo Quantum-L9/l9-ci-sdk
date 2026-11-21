@@ -8,8 +8,10 @@ of tracked files, the work-tree file checks and the atomic evidence write.
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from l9_ci.artifacts.serializer import canonical_json_bytes
 from l9_ci.repository.git import inspect_git_repository, is_git_repository
@@ -49,8 +51,20 @@ def scope_evidence_path(raw_report: Path) -> Path:
     return raw_report.with_name(f"{raw_report.stem}.scope.json")
 
 
-def write_scope_evidence(scope: ScanScope, destination: Path) -> None:
-    """Write ``scope`` as canonical JSON, atomically."""
+def write_scope_evidence(
+    scope: ScanScope,
+    destination: Path,
+    *,
+    rule_overlaps: Mapping[str, Any] | None = None,
+) -> None:
+    """Write ``scope`` as canonical JSON, atomically.
+
+    ``rule_overlaps`` records the registry rules this run skipped because a
+    packaged L9 rule supersedes them (``rule-overlaps.yaml``).
+    """
+    payload = scope.to_dict()
+    if rule_overlaps is not None:
+        payload["rule_overlaps"] = dict(rule_overlaps)
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
@@ -58,7 +72,7 @@ def write_scope_evidence(scope: ScanScope, destination: Path) -> None:
     temporary_path = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "wb") as handle:
-            handle.write(canonical_json_bytes(scope.to_dict()))
+            handle.write(canonical_json_bytes(payload))
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary_path, destination)

@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 406
+Files: 410
 
 ## Contents
 
@@ -234,6 +234,7 @@ Files: 406
 - `l9_ci/rulesets/semgrep/composition.py`
 - `l9_ci/rulesets/semgrep/harvest.py`
 - `l9_ci/rulesets/semgrep/identity-map.yaml`
+- `l9_ci/rulesets/semgrep/overlaps.py`
 - `l9_ci/rulesets/semgrep/packs.yaml`
 - `l9_ci/rulesets/semgrep/packs/python-portable/l9-python-portable.yml`
 - `l9_ci/rulesets/semgrep/profiles.yaml`
@@ -243,6 +244,7 @@ Files: 406
 - `l9_ci/rulesets/semgrep/python/l9-logging.yml`
 - `l9_ci/rulesets/semgrep/python/l9-routing.yml`
 - `l9_ci/rulesets/semgrep/python/l9-transport.yml`
+- `l9_ci/rulesets/semgrep/rule-overlaps.yaml`
 - `l9_ci/rulesets/semgrep/scan-scope.yaml`
 - `l9_ci/rulesets/semgrep/scope.py`
 - `l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml`
@@ -344,6 +346,7 @@ Files: 406
 - `tests/fixtures/semgrep/report-timeout-captured.provenance.yaml`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
+- `tests/fixtures/semgrep/rules/overlaps/shell_true_forms.py`
 - `tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py`
 - `tests/fixtures/semgrep/rules/python/l9-baseline-security.py`
 - `tests/fixtures/semgrep/rules/python/l9-file-permissions.pyfixture`
@@ -404,6 +407,7 @@ Files: 406
 - `tests/rulesets/test_packaging.py`
 - `tests/rulesets/test_rulepack_composition.py`
 - `tests/rulesets/test_semgrep_rule_fixtures.py`
+- `tests/rulesets/test_semgrep_rule_overlaps.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/rulesets/test_semgrep_scan_scope.py`
 - `tests/rulesets/test_semgrep_target_suffixes.py`

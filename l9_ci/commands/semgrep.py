@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.metadata
+from typing import Any
 from pathlib import Path
 
 from l9_ci.cli import ExitCode, OutputFormat, render_success
@@ -23,6 +24,10 @@ from l9_ci.commands.semgrep_scope import (
     resolve_scan_scope,
     scope_evidence_path,
     write_scope_evidence,
+)
+from l9_ci.rulesets.semgrep.overlaps import (
+    RULE_OVERLAPS_SCHEMA,
+    packaged_rule_overlaps,
 )
 from l9_ci.rulesets.semgrep.scope import (
     REQUIRED_RULE_TIMEOUT_SECONDS,
@@ -240,7 +245,38 @@ def _build_run_config_arguments(args: argparse.Namespace) -> tuple[str, ...]:
         arguments.extend(("--config", str(ruleset_dir(args.language))))
     for extra_config in args.extra_config:
         arguments.extend(("--config", extra_config))
+    for rule_id in _superseded_rule_ids(args):
+        arguments.extend(("--exclude-rule", rule_id))
     return tuple(arguments)
+
+
+def _superseded_rule_ids(args: argparse.Namespace) -> tuple[str, ...]:
+    """Registry rules a packaged L9 rule supersedes in this composition.
+
+    Only when the run composes both the registry ruleset and the packaged L9
+    ruleset for the language; see l9_ci/rulesets/semgrep/rule-overlaps.yaml.
+    """
+    profile = resolve_profile(args.profile or default_profile_name())
+    if not (
+        profile.include_registry_ruleset
+        and profile.include_l9_ruleset
+        and not args.no_registry_config
+    ):
+        return ()
+    return packaged_rule_overlaps().superseded_rule_ids(args.language)
+
+
+def _rule_overlap_evidence(args: argparse.Namespace) -> dict[str, Any] | None:
+    superseded = _superseded_rule_ids(args)
+    if not superseded:
+        return None
+    overlaps = packaged_rule_overlaps()
+    return {
+        "schema": RULE_OVERLAPS_SCHEMA,
+        "version": overlaps.version,
+        "sha256": overlaps.sha256,
+        "superseded": [item.to_dict() for item in overlaps.for_language(args.language)],
+    }
 
 
 # The SDK provisions its own runtime -- a detached checkout plus a virtualenv of
@@ -390,7 +426,11 @@ def handle_run(args: argparse.Namespace) -> int:
         if scope is not None:
             # Written before Semgrep runs, so a failed run still records the
             # scope it was given.
-            write_scope_evidence(scope, scope_evidence_path(raw_output))
+            write_scope_evidence(
+                scope,
+                scope_evidence_path(raw_output),
+                rule_overlaps=_rule_overlap_evidence(args),
+            )
             execution_arguments += _REQUIRED_RUN_ARGUMENTS
             execution_targets = scope.targets
     except Exception as exc:

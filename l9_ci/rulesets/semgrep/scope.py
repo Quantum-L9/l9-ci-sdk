@@ -37,7 +37,7 @@ import yaml
 
 SCAN_SCOPE_POLICY_SCHEMA = "l9.semgrep-scan-scope-policy/v1"
 SCAN_SCOPE_EVIDENCE_SCHEMA = "l9.semgrep-scan-scope/v1"
-SCAN_SCOPE_EVIDENCE_SCHEMA_VERSION = "1.1.0"
+SCAN_SCOPE_EVIDENCE_SCHEMA_VERSION = "1.2.0"
 
 # Per-rule, per-file analysis budget of a required run (B5). Semgrep's defaults
 # are a 5 s timeout and a threshold of 3 timeouts per file, after which the
