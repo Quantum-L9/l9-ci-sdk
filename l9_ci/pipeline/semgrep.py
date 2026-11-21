@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 
 from l9_ci.artifacts import validate_bundle, write_bundle_atomic
 from l9_ci.contracts import (
+    Finding,
     FindingBundle,
     FindingClassification,
     ProviderRun,
@@ -27,6 +29,43 @@ from l9_ci.repository import build_repository_snapshot
 
 from .lifecycle import ProviderAcquisitionMode, resolve_provider
 from .runner import execute_and_normalize
+
+
+# Registry rule-ID prefixes that model one framework's conventions. A finding
+# from such a rule applies only to a repository using that framework.
+FRAMEWORK_RULE_PREFIXES: Mapping[str, tuple[str, ...]] = {
+    "django": ("python.django.",),
+}
+
+
+def _framework_applicability(
+    findings: tuple[Finding, ...], detected: Mapping[str, bool]
+) -> tuple[tuple[Finding, ...], tuple[str, ...]]:
+    """Withhold findings of rules whose framework is not in the repository."""
+    kept: list[Finding] = []
+    withheld: dict[tuple[str, str], list[str]] = {}
+    for finding in findings:
+        framework = next(
+            (
+                name
+                for name, prefixes in FRAMEWORK_RULE_PREFIXES.items()
+                if finding.provider_rule_id.startswith(prefixes)
+            ),
+            None,
+        )
+        if framework is None or detected.get(framework, False):
+            kept.append(finding)
+            continue
+        location = finding.locations[0] if finding.locations else None
+        where = f"{location.normalized_path}:{location.start_line}" if location else "?"
+        withheld.setdefault((framework, finding.provider_rule_id), []).append(where)
+    limitations = tuple(
+        f"framework rule {rule} not applicable: {framework} is not detected in "
+        f"this repository; {len(where)} finding(s) withheld, evidence kept "
+        f"({', '.join(sorted(where))})"
+        for (framework, rule), where in sorted(withheld.items())
+    )
+    return tuple(kept), limitations
 
 
 class UnsupportedProviderVersionError(ValueError):
@@ -56,6 +95,11 @@ class SemgrepPipelineRequest:
     execution_arguments: tuple[str, ...] = ()
     execution_targets: tuple[str, ...] = ()
     remediation_map_path: Path | None = None
+    # Frameworks detected in the repository under analysis (name -> detected).
+    # When set, a finding from a framework-scoped registry rule whose framework
+    # is not detected is withheld: its evidence is kept and the bundle records
+    # why (FRAMEWORK_RULE_PREFIXES).
+    detected_frameworks: Mapping[str, bool] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,6 +187,13 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
             )
         normalization = provider.normalize(report, context)
 
+    framework_limitations: tuple[str, ...] = ()
+    if request.detected_frameworks is not None:
+        applicable, framework_limitations = _framework_applicability(
+            normalization.findings, request.detected_frameworks
+        )
+        normalization = replace(normalization, findings=applicable)
+
     validate_record_counts(
         finding_count=len(normalization.findings),
         evidence_count=len(normalization.evidence),
@@ -195,7 +246,7 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
         classifications=classifications,
         provider_failures=normalization.failures,
         coverage=(normalization.coverage,),
-        limitations=normalization.limitations,
+        limitations=tuple(sorted({*normalization.limitations, *framework_limitations})),
     )
     if request.generated_at is not None:
         bundle = replace(bundle, generated_at=request.generated_at)
