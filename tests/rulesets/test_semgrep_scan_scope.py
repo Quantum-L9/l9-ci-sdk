@@ -352,3 +352,64 @@ def test_execution_request_rejects_non_repository_targets(
             output_size_limit_bytes=1,
             targets=(target,),
         )
+
+
+# --- archived code (CTO decision 2026-11-21) -------------------------------
+
+
+@pytest.mark.parametrize(
+    ("path", "excluded"),
+    [
+        ("commands/_archived/workflow-executors/gmp_executor.py", True),
+        ("execution-governance/_archived/api/governance-api.py", True),
+        ("_archived/x.py", True),
+        ("a/b/_archived/c/d.py", True),
+        ("archived/x.py", False),  # only the declared name, matched whole
+        ("commands/_archived_notes.py", False),  # a file, not a directory
+        ("ops/active.py", False),
+    ],
+)
+def test_archived_directories_are_declared_out_of_scope(
+    path: str, excluded: bool
+) -> None:
+    label = packaged_scan_scope_policy().exclusion_for(path)
+    assert (label == "directory_names:_archived") is excluded
+
+
+def test_the_archived_exclusion_carries_its_reason_into_the_evidence(
+    tmp_path: Path,
+) -> None:
+    root = _repository(
+        tmp_path / "repo",
+        {"src/a.py": "x\n", "commands/_archived/old.py": "x\n"},
+    )
+    evidence = resolve_scan_scope(root, packaged_scan_scope_policy()).to_dict()
+    (entry,) = evidence["excluded"]
+    assert entry["pattern"] == "directory_names:_archived"
+    assert entry["count"] == 1
+    assert "never imported, executed or deployed" in entry["reason"]
+    assert "CTO, 2026-11-21" in entry["reason"]
+    assert sorted(_schema_validator().iter_errors(evidence), key=str) == []
+
+
+@pytest.mark.parametrize(
+    ("reasons", "message"),
+    [
+        ({"directory_names:not-declared": "x"}, "names no declared entry"),
+        ({"directory_names:_archived": "  "}, "is empty"),
+        ("not a mapping", "must be a mapping"),
+    ],
+)
+def test_a_reason_must_name_a_declared_entry(
+    tmp_path: Path, reasons: object, message: str
+) -> None:
+    import yaml
+
+    from l9_ci.rulesets.semgrep.scope import scan_scope_policy_path
+
+    document = yaml.safe_load(scan_scope_policy_path().read_text(encoding="utf-8"))
+    document["reasons"] = reasons
+    path = tmp_path / "scan-scope.yaml"
+    path.write_text(yaml.safe_dump(document), encoding="utf-8")
+    with pytest.raises(ScanScopeError, match=message):
+        load_scan_scope_policy(path)
