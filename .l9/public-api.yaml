@@ -72,8 +72,14 @@ packages:
     - resolve_rule_identity
   l9_ci.policy:
     - ClassificationResult
+    - FINDING_WAIVERS_SCHEMA
     - FindingPolicy
+    - FindingWaiver
+    - FindingWaiverError
+    - FindingWaiverLedger
     - PolicyRule
+    - WaiverApplication
+    - apply_waivers
     - classify_findings
   l9_ci.execution:
     - PROFILES

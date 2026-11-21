@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 406
+Files: 413
 
 ## Contents
 
@@ -109,6 +109,7 @@ Files: 406
 - `docs/architecture/core-integration.md`
 - `docs/architecture/deterministic-serialization.md`
 - `docs/architecture/execution-profiles.md`
+- `docs/architecture/finding-waivers.md`
 - `docs/architecture/gate-evaluation.md`
 - `docs/architecture/governance-evidence-layer.md`
 - `docs/architecture/operational-controls.md`
@@ -214,6 +215,7 @@ Files: 406
 - `l9_ci/policy/classifier.py`
 - `l9_ci/policy/model.py`
 - `l9_ci/policy/remediation.py`
+- `l9_ci/policy/waivers.py`
 - `l9_ci/providers/__init__.py`
 - `l9_ci/providers/defaults.py`
 - `l9_ci/providers/metadata.py`
@@ -254,6 +256,7 @@ Files: 406
 - `l9_ci/schemas/v1/evidence-report.schema.json`
 - `l9_ci/schemas/v1/finding-bundle.schema.json`
 - `l9_ci/schemas/v1/finding-classification.schema.json`
+- `l9_ci/schemas/v1/finding-waivers.schema.json`
 - `l9_ci/schemas/v1/finding.schema.json`
 - `l9_ci/schemas/v1/gate-result.schema.json`
 - `l9_ci/schemas/v1/observation.schema.json`
@@ -315,6 +318,7 @@ Files: 406
 - `tests/contracts/test_schema_conformance.py`
 - `tests/execution/test_profiles.py`
 - `tests/execution/test_selection.py`
+- `tests/fixtures/semgrep/core-semgrep-policy-v4.json`
 - `tests/fixtures/semgrep/harvest/cursor/sample.pyfixture`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/data/bad_cron.xml`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.py`
@@ -338,6 +342,8 @@ Files: 406
 - `tests/fixtures/semgrep/report-error-warn-parse.json`
 - `tests/fixtures/semgrep/report-error-warn.json`
 - `tests/fixtures/semgrep/report-errors.json`
+- `tests/fixtures/semgrep/report-sdk-provider-subprocess-injection.json`
+- `tests/fixtures/semgrep/report-sdk-provider-subprocess-injection.provenance.yaml`
 - `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.json`
 - `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.provenance.yaml`
 - `tests/fixtures/semgrep/report-timeout-captured.json`
@@ -383,6 +389,7 @@ Files: 406
 - `tests/pipeline/test_semgrep_release_path.py`
 - `tests/pipeline/test_semgrep_version_policy.py`
 - `tests/policy/test_classifier.py`
+- `tests/policy/test_finding_waivers.py`
 - `tests/policy/test_remediation.py`
 - `tests/providers/__init__.py`
 - `tests/providers/semgrep/__init__.py`

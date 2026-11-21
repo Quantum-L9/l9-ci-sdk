@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.quantum-l9.dev/l9-ci-sdk/v1/finding-waivers.schema.json",
+  "title": "FindingWaivers",
+  "description": "Central finding-waiver ledger (l9.finding-waivers/v1). Each entry exempts exactly one finding of one repository from blocking the gate, until its expiry. Supplied by Core, never by the repository under analysis.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "waivers"],
+  "properties": {
+    "schema": { "const": "l9.finding-waivers/v1" },
+    "waivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "owner", "reason", "created", "expires", "scope", "fingerprint"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+          "owner": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 },
+          "created": { "type": "string", "format": "date" },
+          "expires": {
+            "description": "Last day the waiver applies; from the next day it stops applying automatically.",
+            "type": "string",
+            "format": "date"
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["repository", "provider_id", "provider_rule_id", "path"],
+            "properties": {
+              "repository": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$"
+              },
+              "provider_id": { "type": "string", "minLength": 1 },
+              "provider_rule_id": { "type": "string", "minLength": 1 },
+              "path": { "type": "string", "minLength": 1 }
+            }
+          },
+          "fingerprint": {
+            "description": "Finding.fingerprint of the one waived finding.",
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  }
+}
