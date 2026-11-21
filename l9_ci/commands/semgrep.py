@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.metadata
+from datetime import date
 from typing import Any
 from pathlib import Path
 
@@ -81,6 +82,26 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         "--dirty",
         action=argparse.BooleanOptionalAction,
         default=None,
+    )
+    parser.add_argument(
+        "--waivers",
+        type=Path,
+        default=None,
+        help=(
+            "Central finding-waiver ledger (l9.finding-waivers/v1). It must "
+            "live outside --root: a consumer cannot waive its own findings"
+        ),
+    )
+    parser.add_argument(
+        "--repository",
+        default=None,
+        help="Repository identity <owner>/<name>, required with --waivers",
+    )
+    parser.add_argument(
+        "--waiver-date",
+        type=date.fromisoformat,
+        default=None,
+        help="Day (YYYY-MM-DD) waiver expiry is judged on (default: today, UTC)",
     )
     parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -411,6 +432,9 @@ def _request(
         ),
         execution_arguments=execution_arguments,
         execution_targets=execution_targets,
+        waivers_path=getattr(args, "waivers", None),
+        repository=getattr(args, "repository", None),
+        waiver_date=getattr(args, "waiver_date", None),
         superseded_rules={
             rule: item.rule_id
             for item in _active_rule_overlaps(args)
