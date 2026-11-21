@@ -7,6 +7,7 @@ own once expired, and cannot be supplied by the repository under analysis.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import date
 from importlib.resources import files
@@ -31,8 +32,21 @@ RULE = (
 )
 PATH = "l9_ci/providers/semgrep/provider.py"
 FINGERPRINT = "f65ae3b056b2c34fdec05fa7b48591263a961da1b449dc86bd31491a14329b40"
-# SHA-256 of provider.py lines 153-161 (the subprocess.run(...) call) on main.
+# SHA-256 of provider.py lines 153-161 (the subprocess.run(...) call) at the
+# revision the report fixture was recorded against. The waived source is frozen
+# in WAIVED_SOURCE (provider.py as of 9af1a20) so these witnesses do not depend
+# on the live provider.py, which later changes move.
 SOURCE = "fa9045c80efeb3d4f6ff6a47d0c3414bbaa02ddbc456adc2c6bd619330f1b11a"
+WAIVED_SOURCE = FIXTURES / "waived-provider-source.pyfixture"
+
+
+def _waived_tree(directory: Path, text: str | None = None) -> Path:
+    """A repository root holding the waived provider.py at its recorded revision."""
+    target = directory / PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    source = WAIVED_SOURCE.read_text(encoding="utf-8") if text is None else text
+    target.write_text(source, encoding="utf-8")
+    return directory
 
 
 def _entry(**overrides: Any) -> dict[str, Any]:
@@ -78,7 +92,7 @@ def _run(
     run_semgrep_pipeline(
         SemgrepPipelineRequest(
             report_path=REPORT,
-            repository_root=(root or Path(".")).resolve(),
+            repository_root=(root or _waived_tree(tmp_path / "repo")).resolve(),
             snapshot_id="snapshot-1",
             SDK_version="2.0.0-test",
             output_path=output,
@@ -92,6 +106,14 @@ def _run(
         )
     )
     return load_and_validate_bundle(output)
+
+
+def test_the_frozen_source_is_the_waived_span() -> None:
+    """The frozen provider.py still hashes to the digest the ledger entry names."""
+    lines = WAIVED_SOURCE.read_text(encoding="utf-8").splitlines()
+    span = "\n".join(lines[152:161])
+    assert "subprocess.run(" in span
+    assert hashlib.sha256(span.encode("utf-8")).hexdigest() == SOURCE
 
 
 def test_the_fixture_reproduces_the_central_finding() -> None:
@@ -165,13 +187,11 @@ def test_an_in_place_code_change_stops_the_waiver(tmp_path: Path) -> None:
     The provider fingerprint carries no source content (Semgrep OSS reports
     "requires login"), so only ``source_sha256`` notices this change.
     """
-    source = Path(PATH).read_text(encoding="utf-8").splitlines()
+    source = WAIVED_SOURCE.read_text(encoding="utf-8").splitlines()
     edited = list(source)
     edited[154] = edited[154].replace("cwd=", "cwd =")  # line 155, inside 153-161
     assert edited[154] != source[154]
-    root = tmp_path / "repo"
-    (root / PATH).parent.mkdir(parents=True)
-    (root / PATH).write_text("\n".join(edited) + "\n", encoding="utf-8")
+    root = _waived_tree(tmp_path / "edited", "\n".join(edited) + "\n")
     ledger = _ledger(tmp_path / "central", _entry())
     bundle = _run(tmp_path, ledger=ledger, root=root)
     (finding,) = bundle.findings
@@ -192,7 +212,7 @@ def test_a_consumer_cannot_supply_its_own_ledger(tmp_path: Path) -> None:
     ledger = _ledger(inside, _entry())
     try:
         with pytest.raises(ValueError, match="outside the repository"):
-            _run(tmp_path, ledger=ledger)
+            _run(tmp_path, ledger=ledger, root=Path("."))
     finally:
         ledger.unlink()
         inside.rmdir()

@@ -232,6 +232,32 @@ semgrep = [
 
 Do not make the Semgrep Python package a mandatory SDK dependency when import-only mode is used.
 
+## Execution argv
+
+`SemgrepProvider.execute` runs Semgrep as an argv list with no shell. The
+environment is an allowlist (PATH, HOME, TMPDIR, TEMP, TMP). The argv is:
+
+- the resolved executable, `scan` and `--json-output <path>`;
+- the caller's options;
+- the end-of-options marker `--`;
+- the targets (`.` or a required run's declared files).
+
+Target names can come from the repository under analysis.
+`ProviderExecutionRequest` refuses:
+
+- a NUL in any element;
+- an empty argument;
+- an argument equal to `--`;
+- an absolute, parent-relative or `-`-prefixed target.
+
+The declared scope rewrites `-x` to `./-x`. The marker keeps any target from
+being read as an option. Witnesses:
+
+- `tests/rulesets/test_semgrep_scan_scope.py`
+  (`test_provider_request_refuses_unsafe_argv_elements`);
+- `tests/commands/test_semgrep_required_scope_e2e.py`
+  (`test_dash_named_file_is_scanned_as_a_path_not_read_as_an_option`).
+
 ## Archived code is out of required scope
 
 Scan-scope policy 1.1.0 excludes every directory named `_archived` at any depth

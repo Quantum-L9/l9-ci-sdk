@@ -349,6 +349,7 @@ def test_provider_scans_explicit_targets_instead_of_the_root(tmp_path: Path) -> 
         )
     )
     assert plan[-1] == "src/a.py"
+    assert plan[-2] == "--"  # targets always follow the end-of-options marker
     assert "." not in plan
     default = provider.build_execution_plan(
         ProviderExecutionRequest(
@@ -358,7 +359,7 @@ def test_provider_scans_explicit_targets_instead_of_the_root(tmp_path: Path) -> 
             output_size_limit_bytes=1,
         )
     )
-    assert default[-1] == "."
+    assert default[-2:] == ("--", ".")
 
 
 @pytest.mark.parametrize("target", ["/etc/passwd", "../outside.py", "--config=x", ""])
@@ -372,6 +373,33 @@ def test_execution_request_rejects_non_repository_targets(
             timeout_seconds=1,
             output_size_limit_bytes=1,
             targets=(target,),
+        )
+
+
+@pytest.mark.parametrize(
+    ("arguments", "targets", "message"),
+    [
+        (("--config", "a\x00b"), (), "without NUL"),
+        (("--config", ""), (), "non-empty"),
+        (("--", "--config", "x"), (), "end-of-options"),
+        ((), ("src/a\x00.py",), "without NUL"),
+        ((), ("-rf",), "repository-relative"),
+        ((), ("/etc/passwd",), "repository-relative"),
+        ((), ("../outside.py",), "repository-relative"),
+    ],
+)
+def test_provider_request_refuses_unsafe_argv_elements(
+    tmp_path: Path, arguments: tuple[str, ...], targets: tuple[str, ...], message: str
+) -> None:
+    """Known-bad argv elements never reach the Semgrep subprocess."""
+    with pytest.raises(ValueError, match=message):
+        ProviderExecutionRequest(
+            repository_root=tmp_path,
+            output_path=tmp_path / "r.json",
+            timeout_seconds=1,
+            output_size_limit_bytes=1,
+            arguments=arguments,
+            targets=targets,
         )
 
 

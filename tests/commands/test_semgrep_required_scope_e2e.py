@@ -272,3 +272,18 @@ def test_typescript_instance_on_test_fixtures_only_cannot_complete(
     assert raw["paths"]["scanned"] == []
     assert bundle["coverage"][0]["status"] == "partial"
     assert gate == 6
+
+
+@_needs_semgrep
+def test_dash_named_file_is_scanned_as_a_path_not_read_as_an_option(
+    tmp_path: Path,
+) -> None:
+    """Known-bad name from the repository under analysis: ``-oops.py``.
+
+    A tracked file whose name looks like an option still reaches Semgrep as
+    a target (``./-oops.py`` after the end-of-options marker) and yields its
+    finding; it never alters how Semgrep runs.
+    """
+    root = _repository(tmp_path / "repo", {"-oops.py": _BAD, "src/clean.py": _CLEAN})
+    found = _findings(root, tmp_path / "required", required=True)
+    assert ("-oops.py", 1) in found

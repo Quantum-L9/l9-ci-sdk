@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 427
+Files: 431
 
 ## Contents
 
@@ -352,6 +352,8 @@ Files: 427
 - `tests/fixtures/semgrep/report-error-warn-parse.json`
 - `tests/fixtures/semgrep/report-error-warn.json`
 - `tests/fixtures/semgrep/report-errors.json`
+- `tests/fixtures/semgrep/report-policy-advisory-cg-44843122770.json`
+- `tests/fixtures/semgrep/report-policy-advisory-cg-44843122770.provenance.yaml`
 - `tests/fixtures/semgrep/report-sdk-provider-subprocess-injection.json`
 - `tests/fixtures/semgrep/report-sdk-provider-subprocess-injection.provenance.yaml`
 - `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.json`
@@ -375,6 +377,7 @@ Files: 427
 - `tests/fixtures/semgrep/runtime/results.json`
 - `tests/fixtures/semgrep/skipped-only.json`
 - `tests/fixtures/semgrep/source/src/example.py`
+- `tests/fixtures/semgrep/waived-provider-source.pyfixture`
 - `tests/fixtures/semgrep/zero-findings-empty-scanned.json`
 - `tests/fixtures/semgrep/zero-findings-no-paths.json`
 - `tests/gates/test_evaluator.py`
@@ -393,6 +396,7 @@ Files: 427
 - `tests/integration/test_sdk_validation_observation.py`
 - `tests/integration/test_versioning.py`
 - `tests/invariants/test_ci_provider_invariants.py`
+- `tests/pipeline/test_core_policy_advisory_end_to_end.py`
 - `tests/pipeline/test_lifecycle.py`
 - `tests/pipeline/test_runner.py`
 - `tests/pipeline/test_semgrep_execution_path.py`
