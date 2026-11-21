@@ -53,6 +53,30 @@ The SDK emitted count- or status-only reasons, for example:
    `artifacts`, no `reasons`, `errors` or `limitations` append and no provider
    failure message may be a literal without an interpolated subject.
 
+## Source snippets: rendered by the SDK, never stored (CTO decision A)
+
+An agent needs the offending line, not only its location. The canonical
+finding bundle still carries no source content (AGENTS.md; `.l9/release-policy.yaml`
+"no raw secret or source snippet leakage"; the redaction validator): a finding
+names its rule, path, line, end line and message only.
+
+6. `l9_ci.signal.render_snippet(root, path, line, end_line, *, sensitive)` reads
+   the offending lines from `root`, a checkout of the scanned revision, with two
+   lines of context, line-numbered and the offending lines marked (`>`). An
+   absolute or escaping path, a symlink, a missing, binary, non-UTF-8 or
+   oversized file, or a line outside the file yields `status: unavailable`
+   with the reason. A sensitive provider (`SENSITIVE_PROVIDERS`: gitleaks,
+   trufflehog, detect-secrets, secret-scan) yields `status: masked` without
+   the file being read, so no byte of a detected secret can leave this way.
+7. `report_findings(root, findings)` returns at most 20 located findings,
+   sorted by path and line, plus how many more, each as
+   `{rule_id, path, line, end_line, message, snippet}` with
+   `snippet = {path, line, end_line, status, lines: [{line, text, offending}], reason?}`.
+   A sensitive provider's message is masked too. `render_findings` renders the
+   same as text: `rule_id path:line` and the snippet per finding, then
+   `+N more`. Core builds its agent-review payload, CI log and step summary
+   from these; the field names are the payload contract agreed with Core.
+
 ## Compatibility and version decision
 
 - `reason_details` is a new property of the gate result: gate-result schema

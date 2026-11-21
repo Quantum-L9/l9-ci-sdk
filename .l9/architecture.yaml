@@ -76,6 +76,13 @@ layers:
       - technical gate evaluation only
     may_depend_on: [contracts]
     must_not_depend_on: [providers, policy, integration]
+  signal:
+    package: l9_ci.signal
+    responsibility:
+      - source snippets for failure reports from a checkout of the scanned revision (ADR 0025)
+      - full masking for sensitive providers
+    may_depend_on: [contracts]
+    must_not_depend_on: [providers, policy, gates, pipeline, integration]
   pipeline:
     package: l9_ci.pipeline
     responsibility:
@@ -131,6 +138,7 @@ public_surface:
     - l9_ci.execution
     - l9_ci.artifacts
     - l9_ci.gates
+    - l9_ci.signal
     - l9_ci.integration
     - l9_ci.cli
     - l9_ci.rulesets

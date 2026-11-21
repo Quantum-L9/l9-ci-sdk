@@ -110,6 +110,17 @@ packages:
     - validate_bundle_semantics
     - validate_raw_summary
     - write_bundle_atomic
+  l9_ci.signal:
+    - FindingReport
+    - MASK
+    - SENSITIVE_PROVIDERS
+    - SNIPPET_CONTEXT
+    - Snippet
+    - SnippetLine
+    - is_sensitive
+    - render_findings
+    - render_snippet
+    - report_findings
   l9_ci.gates:
     - GATE_RESULT_PROTOCOL
     - GATE_RESULT_SCHEMA_VERSION

@@ -18,6 +18,7 @@ from . import (
     providers,
     repository,
     rulesets,
+    signal,
 )
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "providers",
     "repository",
     "rulesets",
+    "signal",
 ]

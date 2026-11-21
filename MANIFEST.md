@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 444
+Files: 446
 
 ## Contents
 
@@ -283,6 +283,7 @@ Files: 444
 - `l9_ci/schemas/v1/semgrep-consumer-rulepack-evidence.schema.json`
 - `l9_ci/schemas/v1/semgrep-scan-scope.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
+- `l9_ci/signal/__init__.py`
 - `lint/check_action_pins.py`
 - `lint/check_governance_json.py`
 - `lint/yamllint-data.yml`
@@ -445,6 +446,7 @@ Files: 444
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/rulesets/test_semgrep_scan_scope.py`
 - `tests/rulesets/test_semgrep_target_suffixes.py`
+- `tests/signal/test_render_snippet.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`
 - `uv.lock`

@@ -160,7 +160,10 @@ CLI:
         ID with failure type and message, coverage status and limitations),
         sorted and capped at 20 with "(+N more)"; reason_details carries each
         reason as {code, subjects, omitted} (gate-result schema_version 1.1.0,
-        ADR 0025).
+        ADR 0025). Source snippets for a report are rendered from a checkout
+        of the scanned revision by l9_ci.signal (render_snippet,
+        report_findings, render_findings), never stored in the bundle;
+        sensitive providers are masked without the file being read.
     observation_build:
       syntax: >-
         l9-ci observation build --repository OWNER/NAME --revision SHA
