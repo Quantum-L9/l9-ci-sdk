@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -26,6 +27,7 @@ from l9_ci.policy import (
     apply_waivers,
     classify_findings,
 )
+from l9_ci.policy import source_sha256 as waiver_source_sha256
 from l9_ci.policy.remediation import RemediationMap, apply_remediation_classes
 from l9_ci.providers import ProviderExecutionRequest, ProviderNormalizationContext
 from l9_ci.providers.semgrep import require_supported_semgrep_version
@@ -197,6 +199,9 @@ def run_semgrep_pipeline(request: SemgrepPipelineRequest) -> SemgrepPipelineResu
             FindingWaiverLedger.load(request.waivers_path),
             repository=request.repository,
             on=request.waiver_date or datetime.now(tz=UTC).date(),
+            source_digest=functools.partial(
+                waiver_source_sha256, request.repository_root.resolve()
+            ),
         )
         classifications = application.classifications
         waiver_limitations = application.limitations

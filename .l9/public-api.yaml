@@ -81,6 +81,7 @@ packages:
     - WaiverApplication
     - apply_waivers
     - classify_findings
+    - source_sha256
   l9_ci.execution:
     - PROFILES
     - ExecutionProfile

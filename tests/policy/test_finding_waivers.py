@@ -31,6 +31,8 @@ RULE = (
 )
 PATH = "l9_ci/providers/semgrep/provider.py"
 FINGERPRINT = "f65ae3b056b2c34fdec05fa7b48591263a961da1b449dc86bd31491a14329b40"
+# SHA-256 of provider.py lines 153-161 (the subprocess.run(...) call) on main.
+SOURCE = "fa9045c80efeb3d4f6ff6a47d0c3414bbaa02ddbc456adc2c6bd619330f1b11a"
 
 
 def _entry(**overrides: Any) -> dict[str, Any]:
@@ -47,6 +49,7 @@ def _entry(**overrides: Any) -> dict[str, Any]:
             "path": PATH,
         },
         "fingerprint": FINGERPRINT,
+        "source_sha256": SOURCE,
     }
     entry.update(overrides)
     return entry
@@ -69,12 +72,13 @@ def _run(
     on: str = "2026-11-21",
     repository: str | None = REPOSITORY,
     policy: Path | None = POLICY,
+    root: Path | None = None,
 ):  # type: ignore[no-untyped-def]
     output = tmp_path / "out" / "bundle.json"
     run_semgrep_pipeline(
         SemgrepPipelineRequest(
             report_path=REPORT,
-            repository_root=Path(".").resolve(),
+            repository_root=(root or Path(".")).resolve(),
             snapshot_id="snapshot-1",
             SDK_version="2.0.0-test",
             output_path=output,
@@ -155,6 +159,27 @@ def test_a_waiver_matches_only_its_exact_finding(
     assert evaluate_gate(bundle).status is GateStatus.FAIL
 
 
+def test_an_in_place_code_change_stops_the_waiver(tmp_path: Path) -> None:
+    """Codex review on #138: same span, different code, the waiver must not hold.
+
+    The provider fingerprint carries no source content (Semgrep OSS reports
+    "requires login"), so only ``source_sha256`` notices this change.
+    """
+    source = Path(PATH).read_text(encoding="utf-8").splitlines()
+    edited = list(source)
+    edited[154] = edited[154].replace("cwd=", "cwd =")  # line 155, inside 153-161
+    assert edited[154] != source[154]
+    root = tmp_path / "repo"
+    (root / PATH).parent.mkdir(parents=True)
+    (root / PATH).write_text("\n".join(edited) + "\n", encoding="utf-8")
+    ledger = _ledger(tmp_path / "central", _entry())
+    bundle = _run(tmp_path, ledger=ledger, root=root)
+    (finding,) = bundle.findings
+    assert finding.fingerprint == FINGERPRINT  # the fingerprint did not move
+    assert evaluate_gate(bundle).status is GateStatus.FAIL
+    assert any("matched no finding" in item for item in bundle.limitations)
+
+
 def test_an_unmatched_waiver_is_reported(tmp_path: Path) -> None:
     ledger = _ledger(tmp_path / "central", _entry(fingerprint="0" * 64))
     bundle = _run(tmp_path, ledger=ledger)
@@ -190,6 +215,11 @@ def test_a_ledger_needs_a_policy_and_a_repository(tmp_path: Path) -> None:
             "must carry exactly",
         ),
         ({k: v for k, v in _entry().items() if k != "expires"}, "must carry exactly"),
+        (
+            {k: v for k, v in _entry().items() if k != "source_sha256"},
+            "must carry exactly",
+        ),
+        (_entry(source_sha256="abc"), "source_sha256 must be 64 lowercase hex"),
         (_entry(fingerprint="xyz"), "64 lowercase hex"),
         (_entry(expires="2026-01-01"), "expires is before created"),
         (_entry(expires="soon"), "ISO date"),

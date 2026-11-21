@@ -13,7 +13,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "owner", "reason", "created", "expires", "scope", "fingerprint"],
+        "required": ["id", "owner", "reason", "created", "expires", "scope", "fingerprint", "source_sha256"],
         "properties": {
           "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
           "owner": { "type": "string", "minLength": 1 },
@@ -40,6 +40,11 @@
           },
           "fingerprint": {
             "description": "Finding.fingerprint of the one waived finding.",
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "source_sha256": {
+            "description": "SHA-256 of the exact source lines (start_line..end_line, '\\n'-joined) of the waived finding; an in-place code change stops the waiver from matching.",
             "type": "string",
             "pattern": "^[0-9a-f]{64}$"
           }

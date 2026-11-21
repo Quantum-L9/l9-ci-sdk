@@ -6,10 +6,13 @@ command refuses a ledger that sits inside the repository under analysis, so a
 consumer cannot add entries.
 
 Every entry names the finding it waives by every coordinate the SDK records:
-repository, provider, provider rule ID, repository-relative path and the
-finding fingerprint (``Finding.fingerprint``: provider, rule, path, exact span
-and provider discriminator). A change to the waived code changes the
-fingerprint, so the waiver stops matching and the finding blocks again.
+repository, provider, provider rule ID, repository-relative path, the finding
+fingerprint (``Finding.fingerprint``: provider, rule, path, exact span and
+provider discriminator) and ``source_sha256``, the digest of the exact source
+lines of that span. The fingerprint alone can carry no source content (Semgrep
+OSS reports the discriminator ``requires login``), so the source digest is
+what makes any change to the waived code, moved or edited in place, stop the
+waiver from matching and the finding block again.
 
 An entry also carries an owner, a reason, a creation date and an expiry. On and
 after the day after ``expires`` the entry stops applying automatically: the
@@ -22,9 +25,10 @@ resolution status are kept, so the record still shows what the policy said.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
@@ -37,7 +41,16 @@ from l9_ci.contracts import Finding, FindingClassification, RuleMode
 FINDING_WAIVERS_SCHEMA = "l9.finding-waivers/v1"
 
 _ENTRY_KEYS = frozenset(
-    {"id", "owner", "reason", "created", "expires", "scope", "fingerprint"}
+    {
+        "id",
+        "owner",
+        "reason",
+        "created",
+        "expires",
+        "scope",
+        "fingerprint",
+        "source_sha256",
+    }
 )
 _SCOPE_KEYS = frozenset({"repository", "provider_id", "provider_rule_id", "path"})
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
@@ -61,11 +74,14 @@ class FindingWaiver:
     provider_rule_id: str
     path: str
     fingerprint: str
+    source_sha256: str
 
     def is_active(self, on: date) -> bool:
         return self.created <= on <= self.expires
 
-    def matches(self, finding: Finding, repository: str) -> bool:
+    def matches(
+        self, finding: Finding, repository: str, source_sha256: str | None
+    ) -> bool:
         primary = finding.locations[0].normalized_path if finding.locations else None
         return (
             repository == self.repository
@@ -73,6 +89,7 @@ class FindingWaiver:
             and finding.provider_rule_id == self.provider_rule_id
             and primary == self.path
             and finding.fingerprint == self.fingerprint
+            and source_sha256 == self.source_sha256
         )
 
 
@@ -163,6 +180,9 @@ def _entry(index: int, entry: object) -> FindingWaiver:
     fingerprint = _text(entry, "fingerprint", where)
     if not _FINGERPRINT.fullmatch(fingerprint):
         raise FindingWaiverError(f"{where}: fingerprint must be 64 lowercase hex")
+    source_sha256 = _text(entry, "source_sha256", where)
+    if not _FINGERPRINT.fullmatch(source_sha256):
+        raise FindingWaiverError(f"{where}: source_sha256 must be 64 lowercase hex")
     created = _date(entry, "created", where)
     expires = _date(entry, "expires", where)
     if expires < created:
@@ -178,7 +198,38 @@ def _entry(index: int, entry: object) -> FindingWaiver:
         provider_rule_id=_text(scope, "provider_rule_id", where),
         path=path,
         fingerprint=fingerprint,
+        source_sha256=source_sha256,
     )
+
+
+def source_sha256(root: Path, finding: Finding) -> str | None:
+    """SHA-256 of the exact source lines of ``finding``'s primary location.
+
+    The lines ``start_line`` through ``end_line`` of the file under ``root``,
+    with line endings normalized to ``\\n`` and joined by ``\\n``. ``None`` when
+    the file or the span cannot be read. A provider fingerprint may carry no
+    source content (Semgrep OSS reports ``requires login``), so this digest is
+    what ties a waiver to the code it waives: change the code in place and the
+    waiver stops matching.
+    """
+    if not finding.locations:
+        return None
+    location = finding.locations[0]
+    path = root / location.normalized_path
+    try:
+        if path.is_symlink() or not path.is_file():
+            return None
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return None
+    start = location.start_line
+    if start is None:
+        return None
+    end = location.end_line if location.end_line is not None else start
+    if start < 1 or end < start or end > len(lines):
+        return None
+    span = "\n".join(lines[start - 1 : end])
+    return hashlib.sha256(span.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,6 +246,7 @@ def apply_waivers(
     *,
     repository: str,
     on: date,
+    source_digest: Callable[[Finding], str | None],
 ) -> WaiverApplication:
     """Apply ``ledger`` to ``classifications`` for ``repository`` on day ``on``.
 
@@ -231,7 +283,8 @@ def apply_waivers(
             (
                 item
                 for item in active
-                if finding is not None and item.matches(finding, repository)
+                if finding is not None
+                and item.matches(finding, repository, source_digest(finding))
             ),
             None,
         )
@@ -268,4 +321,5 @@ __all__ = [
     "FindingWaiverLedger",
     "WaiverApplication",
     "apply_waivers",
+    "source_sha256",
 ]

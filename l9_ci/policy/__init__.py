@@ -9,6 +9,7 @@ from .waivers import (
     FindingWaiverLedger,
     WaiverApplication,
     apply_waivers,
+    source_sha256,
 )
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "FindingWaiverLedger",
     "WaiverApplication",
     "apply_waivers",
+    "source_sha256",
     "ClassificationResult",
     "FindingPolicy",
     "PolicyRule",

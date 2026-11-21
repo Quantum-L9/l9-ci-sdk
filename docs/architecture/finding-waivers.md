@@ -23,6 +23,7 @@ waivers:
       provider_rule_id: python.django.security.injection.command.subprocess-injection.subprocess-injection
       path: l9_ci/providers/semgrep/provider.py
     fingerprint: f65ae3b056b2c34fdec05fa7b48591263a961da1b449dc86bd31491a14329b40
+    source_sha256: fa9045c80efeb3d4f6ff6a47d0c3414bbaa02ddbc456adc2c6bd619330f1b11a
 ```
 
 Schema: [`finding-waivers.schema.json`](../../l9_ci/schemas/v1/finding-waivers.schema.json).
@@ -31,10 +32,14 @@ Loader and matcher: `l9_ci/policy/waivers.py`.
 ## Semantics
 
 - **One finding.** An entry matches only a finding whose repository, provider,
-  provider rule ID, primary path and `Finding.fingerprint` all equal the
-  entry's. The fingerprint covers the exact span and the provider
-  discriminator, so a change to the waived code makes a new finding and the
-  waiver stops matching it.
+  provider rule ID, primary path, `Finding.fingerprint` and `source_sha256`
+  all equal the entry's. The fingerprint covers the exact span and the
+  provider discriminator. Semgrep OSS reports that discriminator as
+  `requires login`, so the fingerprint carries no source content.
+  `source_sha256` is the SHA-256 of the span's source lines
+  (`start_line..end_line`, newline-normalized, `\n`-joined), read from the
+  repository under analysis (`l9_ci.policy.source_sha256`). Any change to the
+  waived code, moved or edited in place, stops the waiver from matching.
 - **Expiry.** An entry applies from `created` through `expires` inclusive.
   Outside that window it applies to nothing. The finding keeps its policy
   classification, and the bundle's `limitations` record the expired or
