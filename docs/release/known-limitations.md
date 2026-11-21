@@ -12,7 +12,7 @@ until Path B (shadow observation + release-policy promotion) completes.
 
 Enforced on the canonical path via `SemgrepVersionPolicy`:
 `>=1.100.0,<2.0.0` (`l9_ci/providers/semgrep/versioning.py`). Analysis callers
-pin `semgrep-version: "1.171.0"`. Unsupported versions fail closed in
+pin `semgrep-version: "1.186.0"`. Unsupported versions fail closed in
 `validate_configuration`.
 
 ## Coverage

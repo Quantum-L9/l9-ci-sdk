@@ -89,7 +89,7 @@ Path B = shadow observation → `supported` (out of Path A tag scope).
 - [x] SDK version is pinned.  
   Cite: triad `1.0.0` in `l9_ci.__version__` / `pyproject.toml` / integration-contract
 - [x] Semgrep version is pinned or constrained.  
-  Cite: `>=1.100.0,<2.0.0` + caller `semgrep-version: "1.171.0"`
+  Cite: `>=1.100.0,<2.0.0` + caller `semgrep-version: "1.186.0"`
 - [ ] Shadow artifact upload succeeds.  
   **Path B** — not required for Path A tag
 - [x] Strict mode behavior is understood.  
