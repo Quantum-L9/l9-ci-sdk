@@ -45,11 +45,14 @@ packages:
     - CapabilityInventory
     - CapabilityState
     - FrameworkCapability
+    - FrameworkDetection
     - LanguageCapability
     - ManifestEvidence
     - ProviderPrerequisite
     - RepositoryCapabilities
     - build_capability_inventory
+    - detect_django
+    - detect_frameworks
     - detect_repository_capabilities
     - validate_capability_inventory
   l9_ci.providers:
