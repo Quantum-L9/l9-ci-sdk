@@ -6,6 +6,7 @@ import argparse
 import importlib.metadata
 from pathlib import Path
 
+from l9_ci.capabilities import detect_frameworks
 from l9_ci.cli import ExitCode, OutputFormat, render_success
 from l9_ci.commands.errors import emit_error
 from l9_ci.pipeline import SemgrepPipelineRequest, run_semgrep_pipeline
@@ -334,7 +335,23 @@ def _request(
         ),
         execution_arguments=execution_arguments,
         execution_targets=execution_targets,
+        detected_frameworks=_detected_frameworks(args.root.resolve()),
     )
+
+
+def _detected_frameworks(root: Path) -> dict[str, bool | None] | None:
+    """Frameworks in use under ``root``; ``None`` when they cannot be read.
+
+    ``None`` keeps every framework-scoped finding: an unreadable repository
+    never withholds a finding.
+    """
+    try:
+        return {
+            name: detection.detected
+            for name, detection in detect_frameworks(root).items()
+        }
+    except (OSError, ValueError):
+        return None
 
 
 def _execute_request(

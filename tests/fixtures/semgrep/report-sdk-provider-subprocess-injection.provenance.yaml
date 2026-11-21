@@ -1,0 +1,27 @@
+schema: l9.fixture-provenance/v1
+fixture: report-sdk-provider-subprocess-injection.json
+provider_id: semgrep
+verification_status: runtime_captured
+Semgrep_version: "1.171.0"
+capture_timestamp: "2026-11-21T02:05:00Z"
+# The one required finding on the SDK's own code once required runs disable
+# nosemgrep (#128): python.django...subprocess-injection at
+# l9_ci/providers/semgrep/provider.py:153 on SDK main 0fa99e8b. Its fingerprint
+# f65ae3b056b2c34f... equals the one in Core's run 44843278484 on SDK #135.
+command:
+  - semgrep
+  - scan
+  - --metrics=off
+  - --config
+  - r/python.django.security.injection.command.subprocess-injection.subprocess-injection
+  - --disable-nosem
+  - --json
+  - --
+  - l9_ci/providers/semgrep/provider.py
+# Stored with only the version, results, errors and paths keys, re-serialized
+# with sorted keys and an indent of 2. sha256 of the stored file:
+output_checksum: "sha256:89148b417a49c79faf2811ed86f761bf5a6cf8a13ecc2b9cb51932e879050638"
+redaction_reviewed_by: "lane L1-CANARY-FIXES author; SDK source line and rule ID only, no secrets"
+# core-semgrep-policy-v4.json is a verbatim copy of Quantum-L9/l9-ci-core
+# .github/actions/resolve-governance/semgrep-policy.yaml at 5032702b (policy version 4,
+# sha256 cb02bb84f9565370fe7c0b9e0a6a01aff2c60cf30956003631b329a97b491084).
