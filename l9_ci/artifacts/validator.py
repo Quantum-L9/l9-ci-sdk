@@ -1,12 +1,16 @@
 """Canonical artifact schema and semantic validation."""
 
 from __future__ import annotations
+
+from collections import Counter
 import json
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping
 from jsonschema import Draft202012Validator
+
+from l9_ci.contracts.subjects import subject_reason
 from referencing import Registry, Resource
 from l9_ci.contracts import FindingBundle
 from .compatibility import check_bundle_compatibility
@@ -63,6 +67,12 @@ def validate_bundle_schema(
     return ValidationResult(valid=not errors, errors=errors)
 
 
+def _duplicates(values: list[str]) -> list[str]:
+    """Each value that occurs more than once, with its count."""
+    counts = Counter(values)
+    return [f"{value} (x{count})" for value, count in counts.items() if count > 1]
+
+
 def validate_bundle_semantics(bundle: FindingBundle) -> ValidationResult:
     errors: list[str] = []
     evidence_ids = [item.evidence_id for item in bundle.evidence]
@@ -71,15 +81,33 @@ def validate_bundle_semantics(bundle: FindingBundle) -> ValidationResult:
     provider_ids = [item.provider_id for item in bundle.providers]
     coverage_provider_ids = [item.provider_id for item in bundle.coverage]
     if len(evidence_ids) != len(set(evidence_ids)):
-        errors.append("evidence IDs must be unique")
+        errors.append(
+            subject_reason("evidence IDs must be unique", _duplicates(evidence_ids))
+        )
     if len(finding_ids) != len(set(finding_ids)):
-        errors.append("finding IDs must be unique")
+        errors.append(
+            subject_reason("finding IDs must be unique", _duplicates(finding_ids))
+        )
     if len(classification_ids) != len(set(classification_ids)):
-        errors.append("classifications must be unique by finding_id")
+        errors.append(
+            subject_reason(
+                "classifications must be unique by finding_id",
+                _duplicates(classification_ids),
+            )
+        )
     if len(provider_ids) != len(set(provider_ids)):
-        errors.append("provider runs must be unique by provider_id")
+        errors.append(
+            subject_reason(
+                "provider runs must be unique by provider_id", _duplicates(provider_ids)
+            )
+        )
     if len(coverage_provider_ids) != len(set(coverage_provider_ids)):
-        errors.append("coverage records must be unique by provider_id")
+        errors.append(
+            subject_reason(
+                "coverage records must be unique by provider_id",
+                _duplicates(coverage_provider_ids),
+            )
+        )
     evidence_id_set = set(evidence_ids)
     finding_id_set = set(finding_ids)
     provider_id_set = set(provider_ids)

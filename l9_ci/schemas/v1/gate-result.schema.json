@@ -41,6 +41,34 @@
     "reasons": {
       "$ref": "#/$defs/stringArray"
     },
+    "reason_details": {
+      "description": "One entry per reason in machine form (ADR 0025): its code and the subjects it names, sorted and capped at 20; omitted counts the rest. Added in schema_version 1.1.0.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "subjects", "omitted"],
+        "properties": {
+          "code": {
+            "enum": [
+              "missing_classifications",
+              "required_provider_failed",
+              "required_provider_nonfatal_failure",
+              "required_coverage_incomplete",
+              "blocking_findings",
+              "unresolved_findings"
+            ]
+          },
+          "subjects": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "omitted": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
     "summary": {
       "type": "object",
       "additionalProperties": false,

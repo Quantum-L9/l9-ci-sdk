@@ -35,7 +35,10 @@ def check_bundle_compatibility(
         )
     schema_version = payload.get("schema_version")
     if not isinstance(schema_version, str):
-        errors.append("schema_version must be a string")
+        errors.append(
+            "schema_version must be a string: got "
+            f"{type(schema_version).__name__} {schema_version!r}"
+        )
     else:
         try:
             current_major = _major(FINDING_BUNDLE_SCHEMA_VERSION)

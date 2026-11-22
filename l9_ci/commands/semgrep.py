@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import argparse
 import importlib.metadata
+from datetime import date
+from typing import Any
 from pathlib import Path
 
+from l9_ci.capabilities import detect_frameworks
 from l9_ci.cli import ExitCode, OutputFormat, render_success
 from l9_ci.commands.errors import emit_error
 from l9_ci.pipeline import SemgrepPipelineRequest, run_semgrep_pipeline
@@ -19,12 +22,30 @@ from l9_ci.rulesets.semgrep import (
     resolve_profile,
     ruleset_dir,
 )
+from l9_ci.rulesets.semgrep.consumer import (
+    CONSUMER_DECLARATION_PATH,
+    ConsumerRulepackError,
+    load_consumer_declaration,
+)
 from l9_ci.commands.semgrep_scope import (
+    consumer_evidence_path,
     resolve_scan_scope,
     scope_evidence_path,
+    write_evidence_record,
     write_scope_evidence,
 )
-from l9_ci.rulesets.semgrep.scope import ScanScope, packaged_scan_scope_policy
+from l9_ci.rulesets.semgrep.overlaps import (
+    RULE_OVERLAPS_SCHEMA,
+    RuleOverlap,
+    packaged_rule_overlaps,
+)
+from l9_ci.rulesets.semgrep.precision import packaged_rule_precisions
+from l9_ci.rulesets.semgrep.scope import (
+    REQUIRED_RULE_TIMEOUT_SECONDS,
+    REQUIRED_RULE_TIMEOUT_THRESHOLD,
+    ScanScope,
+    packaged_scan_scope_policy,
+)
 
 # One global registry ruleset per language, inherited by every downstream
 # consumer by default. A caller may opt out with --no-registry-config
@@ -62,6 +83,26 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         "--dirty",
         action=argparse.BooleanOptionalAction,
         default=None,
+    )
+    parser.add_argument(
+        "--waivers",
+        type=Path,
+        default=None,
+        help=(
+            "Central finding-waiver ledger (l9.finding-waivers/v1). It must "
+            "live outside --root: a consumer cannot waive its own findings"
+        ),
+    )
+    parser.add_argument(
+        "--repository",
+        default=None,
+        help="Repository identity <owner>/<name>, required with --waivers",
+    )
+    parser.add_argument(
+        "--waiver-date",
+        type=date.fromisoformat,
+        default=None,
+        help="Day (YYYY-MM-DD) waiver expiry is judged on (default: today, UTC)",
     )
     parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -148,7 +189,46 @@ def register_semgrep_commands(
         ),
     )
     _add_common_arguments(run)
+    run.add_argument(
+        "--baseline-commit",
+        default=None,
+        help=(
+            "Full commit ID of the baseline, normally the merge-base with the "
+            "target branch (ADR 0023). The scan runs again with Semgrep's "
+            "--baseline-commit; a finding present at the baseline is "
+            "pre_existing (blocking reported as advisory), one absent is new, "
+            "and an unresolvable or incomplete baseline fails closed. "
+            "Requires --policy"
+        ),
+    )
     run.set_defaults(handler=handle_run)
+
+    consumer = semgrep_subparsers.add_parser(
+        "consumer-run",
+        help=(
+            "Execute the repository's declared consumer rulepack "
+            "(.l9/semgrep-consumer-rules.yaml, ADR 0021) as its own run, "
+            "separate from every central run, and normalize the report"
+        ),
+    )
+    consumer.add_argument(
+        "--raw-output",
+        type=Path,
+        help=(
+            "Path where the raw Semgrep JSON report is written "
+            "(default: <output stem>.raw.json); the consumer record is "
+            "written beside it as <stem>.consumer.json"
+        ),
+    )
+    consumer.add_argument("--output", required=True, type=Path)
+    consumer.add_argument("--timeout-seconds", type=int, default=300)
+    consumer.add_argument(
+        "--output-size-limit-bytes",
+        type=int,
+        default=50_000_000,
+    )
+    _add_common_arguments(consumer)
+    consumer.set_defaults(handler=handle_consumer_run)
 
     compose = semgrep_subparsers.add_parser(
         "compose",
@@ -238,6 +318,41 @@ def _build_run_config_arguments(args: argparse.Namespace) -> tuple[str, ...]:
     return tuple(arguments)
 
 
+def _active_rule_overlaps(args: argparse.Namespace) -> tuple[RuleOverlap, ...]:
+    """Supersessions that apply to this run's composition.
+
+    Only a `semgrep run` that composes both the registry ruleset and the
+    packaged L9 ruleset for the language; see
+    l9_ci/rulesets/semgrep/rule-overlaps.yaml. Both rules still run: the
+    pipeline withdraws a registry finding only where the L9 rule reported the
+    same call.
+    """
+    if not hasattr(args, "profile") or not hasattr(args, "language"):
+        return ()
+    profile = resolve_profile(args.profile or default_profile_name())
+    if not (
+        profile.include_registry_ruleset
+        and profile.include_l9_ruleset
+        and not args.no_registry_config
+    ):
+        return ()
+    return packaged_rule_overlaps().for_language(args.language)
+
+
+def _rule_overlap_evidence(args: argparse.Namespace) -> dict[str, Any] | None:
+    active = _active_rule_overlaps(args)
+    if not active:
+        return None
+    overlaps = packaged_rule_overlaps()
+    return {
+        "schema": RULE_OVERLAPS_SCHEMA,
+        "version": overlaps.version,
+        "sha256": overlaps.sha256,
+        "applied": "covered_sites_only",
+        "superseded": [item.to_dict() for item in active],
+    }
+
+
 # The SDK provisions its own runtime -- a detached checkout plus a virtualenv of
 # third-party dependencies -- INTO the repository under analysis. Core's
 # `provision-sdk` defaults to `.l9/runtime/sdk` and refuses to place it outside
@@ -269,7 +384,18 @@ def _build_run_exclusion_arguments() -> tuple[str, ...]:
 # one on a line carrying an inline `nosemgrep` comment: an annotation in the
 # consumer's tree must not silence a central rule. Waiving a finding is a
 # policy decision recorded in the finding policy, never a source comment.
-_REQUIRED_RUN_ARGUMENTS = ("--disable-nosem",)
+# It also runs under the declared analysis budget (B5): 30 s per rule and
+# file, with no per-file timeout threshold, so Semgrep never drops the
+# remaining rules on a file after a few timeouts. A pair that still times out
+# is incomplete coverage, recorded by the provider; the budget is written into
+# the scope evidence.
+_REQUIRED_RUN_ARGUMENTS = (
+    "--disable-nosem",
+    "--timeout",
+    str(REQUIRED_RULE_TIMEOUT_SECONDS),
+    "--timeout-threshold",
+    str(REQUIRED_RULE_TIMEOUT_THRESHOLD),
+)
 
 
 def _resolve_required_scope(args: argparse.Namespace) -> ScanScope | None:
@@ -293,6 +419,7 @@ def _request(
     identity_map_path: Path | None,
     execution_arguments: tuple[str, ...] = (),
     execution_targets: tuple[str, ...] = (),
+    scan_scope: dict[str, Any] | None = None,
 ) -> SemgrepPipelineRequest:
     return SemgrepPipelineRequest(
         report_path=report_path,
@@ -318,7 +445,38 @@ def _request(
         ),
         execution_arguments=execution_arguments,
         execution_targets=execution_targets,
+        waivers_path=getattr(args, "waivers", None),
+        repository=getattr(args, "repository", None),
+        waiver_date=getattr(args, "waiver_date", None),
+        precision_keywords=(
+            packaged_rule_precisions().keywords(args.language)
+            if hasattr(args, "language")
+            else {}
+        ),
+        baseline_commit=getattr(args, "baseline_commit", None),
+        superseded_rules={
+            rule: item.rule_id
+            for item in _active_rule_overlaps(args)
+            for rule in item.supersedes
+        },
+        scan_scope=scan_scope,
+        detected_frameworks=_detected_frameworks(args.root.resolve()),
     )
+
+
+def _detected_frameworks(root: Path) -> dict[str, bool | None] | None:
+    """Frameworks in use under ``root``; ``None`` when they cannot be read.
+
+    ``None`` keeps every framework-scoped finding: an unreadable repository
+    never withholds a finding.
+    """
+    try:
+        return {
+            name: detection.detected
+            for name, detection in detect_frameworks(root).items()
+        }
+    except (OSError, ValueError):
+        return None
 
 
 def _execute_request(
@@ -361,6 +519,71 @@ def handle_normalize(args: argparse.Namespace) -> int:
     )
 
 
+def handle_consumer_run(args: argparse.Namespace) -> int:
+    """Run only the consumer-declared rules, as their own execution.
+
+    The central run, its bundle, scope and gate are untouched. The consumer
+    run loads nothing but the declared rule files, keeps the consumer's own
+    ``.semgrepignore`` and inline ``nosemgrep``, and runs under the same
+    analysis budget as a required central run. Its record
+    (``l9.semgrep-consumer-rulepack-evidence/v1``) names the owner, the
+    declaration and every rule file by SHA-256, and is written before Semgrep
+    starts. ``--required`` marks the provider required in the bundle; it does
+    not apply the central scan scope.
+    """
+    raw_output = args.raw_output or args.output.with_name(
+        f"{args.output.stem}.raw.json"
+    )
+    root = args.root.resolve()
+    try:
+        declaration = load_consumer_declaration(root)
+        if declaration is None:
+            raise ConsumerRulepackError(
+                f"{root} has no consumer rulepack declaration "
+                f"({CONSUMER_DECLARATION_PATH})"
+            )
+        record = declaration.to_evidence()
+        record["analysis_budget"] = {
+            "timeout_seconds": REQUIRED_RULE_TIMEOUT_SECONDS,
+            "timeout_threshold": REQUIRED_RULE_TIMEOUT_THRESHOLD,
+            "on_timeout": "incomplete",
+        }
+        write_evidence_record(record, consumer_evidence_path(raw_output))
+        execution_arguments: tuple[str, ...] = ()
+        for config in declaration.config_paths(root):
+            execution_arguments += ("--config", str(config))
+        execution_arguments += _build_run_exclusion_arguments() + (
+            "--timeout",
+            str(REQUIRED_RULE_TIMEOUT_SECONDS),
+            "--timeout-threshold",
+            str(REQUIRED_RULE_TIMEOUT_THRESHOLD),
+        )
+    except ConsumerRulepackError as exc:
+        return emit_error(
+            exc,
+            output_format=OutputFormat(args.format),
+            default=ExitCode.INVALID_ARGUMENTS,
+        )
+    except Exception as exc:
+        return emit_error(
+            exc,
+            output_format=OutputFormat(args.format),
+            default=ExitCode.PROVIDER_EXECUTION_FAILURE,
+        )
+    return _execute_request(
+        args,
+        _request(
+            args,
+            report_path=raw_output,
+            execute=True,
+            provider_version=None,
+            identity_map_path=args.identity_map or default_identity_map_path(),
+            execution_arguments=execution_arguments,
+        ),
+        default=ExitCode.PROVIDER_EXECUTION_FAILURE,
+    )
+
+
 def handle_run(args: argparse.Namespace) -> int:
     raw_output = args.raw_output or args.output.with_name(
         f"{args.output.stem}.raw.json"
@@ -369,14 +592,20 @@ def handle_run(args: argparse.Namespace) -> int:
         _build_run_config_arguments(args) + _build_run_exclusion_arguments()
     )
     execution_targets: tuple[str, ...] = ()
+    scan_scope: dict[str, Any] | None = None
     try:
         scope = _resolve_required_scope(args)
         if scope is not None:
             # Written before Semgrep runs, so a failed run still records the
             # scope it was given.
-            write_scope_evidence(scope, scope_evidence_path(raw_output))
+            write_scope_evidence(
+                scope,
+                scope_evidence_path(raw_output),
+                rule_overlaps=_rule_overlap_evidence(args),
+            )
             execution_arguments += _REQUIRED_RUN_ARGUMENTS
             execution_targets = scope.targets
+            scan_scope = scope.to_dict()
     except Exception as exc:
         return emit_error(
             exc,
@@ -393,6 +622,7 @@ def handle_run(args: argparse.Namespace) -> int:
             identity_map_path=args.identity_map or default_identity_map_path(),
             execution_arguments=execution_arguments,
             execution_targets=execution_targets,
+            scan_scope=scan_scope,
         ),
         default=ExitCode.PROVIDER_EXECUTION_FAILURE,
     )

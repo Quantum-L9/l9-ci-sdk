@@ -96,6 +96,34 @@ CLI:
         not, because they still hold an excluded rule. This command resolves;
         it does not scan, and it does not change what `l9-ci semgrep run`
         scans.
+    semgrep_run:
+      syntax: >-
+        l9-ci semgrep run --language LANG --output BUNDLE [--root ROOT]
+        [--profile PROFILE] [--no-registry-config] [--extra-config CONFIG]
+        [--policy PATH] [--identity-map PATH] [--required]
+        [--baseline-commit SHA] [--format json]
+      description: >-
+        Execute Semgrep and normalize its report into one canonical bundle. A
+        required run scans the declared scan scope and writes scan-scope
+        evidence beside the raw report (l9.semgrep-scan-scope/v1,
+        schema_version 1.3.0). When the run composes both the registry and the
+        packaged L9 ruleset, both run; a registry finding that a superseding
+        packaged rule covers at the same call is withdrawn after the scan, its
+        evidence and a limitation are kept, and the evidence records
+        `rule_overlaps` (ADR 0022). A registry finding no packaged finding
+        covers is never withdrawn. With --baseline-commit (a full
+        commit ID, normally the merge-base; requires --policy) the scan runs a
+        second time with Semgrep's own --baseline-commit and each
+        classification carries baseline_status (finding-bundle schema_version
+        1.2.0, ADR 0023): new keeps its policy mode, pre_existing reports a
+        blocking mode as advisory, and an unresolvable commit, tracked changes
+        or a failed or incomplete baseline scan make every finding unknown
+        with a required fatal provider failure, so the gate fails closed.
+        A finding of a registry rule
+        declared in rule-precision.yaml is withheld where its call passes the
+        declared keyword as the literal False (hashlib.sha1(...,
+        usedforsecurity=False), ADR 0024); its evidence and a limitation are
+        kept, and anything unprovable keeps the finding.
     semgrep_normalize:
       syntax: >-
         l9-ci semgrep normalize --input REPORT --output BUNDLE --root ROOT
@@ -127,7 +155,15 @@ CLI:
       description: >-
         Evaluate one validated canonical bundle and emit the SDK technical
         gate-result artifact. This result may be enforced by Core during the
-        pre-Assurance transition but is not an organization Assurance decision.
+        pre-Assurance transition but is not an organization Assurance decision. Every
+        reason names its subjects (rule ID at path:line per finding, provider
+        ID with failure type and message, coverage status and limitations),
+        sorted and capped at 20 with "(+N more)"; reason_details carries each
+        reason as {code, subjects, omitted} (gate-result schema_version 1.1.0,
+        ADR 0025). Source snippets for a report are rendered from a checkout
+        of the scanned revision by l9_ci.signal (render_snippet,
+        report_findings, render_findings), never stored in the bundle;
+        sensitive providers are masked without the file being read.
     observation_build:
       syntax: >-
         l9-ci observation build --repository OWNER/NAME --revision SHA

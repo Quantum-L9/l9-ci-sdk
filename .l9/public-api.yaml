@@ -8,6 +8,7 @@ metadata:
     versioned compatibility decisions.
 packages:
   l9_ci.contracts:
+    - BaselineStatus
     - Confidence
     - Coverage
     - CoverageStatus
@@ -26,7 +27,11 @@ packages:
     - Severity
     - SnapshotDescriptor
     - SourceLocation
+    - SUBJECT_CAP
+    - cap_subjects
+    - format_subjects
     - normalize_repository_path
+    - subject_reason
   l9_ci.repository:
     - DEFAULT_MANIFEST_PATH
     - GitRepositoryState
@@ -45,11 +50,14 @@ packages:
     - CapabilityInventory
     - CapabilityState
     - FrameworkCapability
+    - FrameworkDetection
     - LanguageCapability
     - ManifestEvidence
     - ProviderPrerequisite
     - RepositoryCapabilities
     - build_capability_inventory
+    - detect_django
+    - detect_frameworks
     - detect_repository_capabilities
     - validate_capability_inventory
   l9_ci.providers:
@@ -72,9 +80,16 @@ packages:
     - resolve_rule_identity
   l9_ci.policy:
     - ClassificationResult
+    - FINDING_WAIVERS_SCHEMA
     - FindingPolicy
+    - FindingWaiver
+    - FindingWaiverError
+    - FindingWaiverLedger
     - PolicyRule
+    - WaiverApplication
+    - apply_waivers
     - classify_findings
+    - source_sha256
   l9_ci.execution:
     - PROFILES
     - ExecutionProfile
@@ -95,11 +110,24 @@ packages:
     - validate_bundle_semantics
     - validate_raw_summary
     - write_bundle_atomic
+  l9_ci.signal:
+    - FindingReport
+    - MASK
+    - SENSITIVE_PROVIDERS
+    - SNIPPET_CONTEXT
+    - Snippet
+    - SnippetLine
+    - is_sensitive
+    - render_findings
+    - render_snippet
+    - report_findings
   l9_ci.gates:
     - GATE_RESULT_PROTOCOL
     - GATE_RESULT_SCHEMA_VERSION
     - GateResult
     - GateStatus
+    - ReasonCode
+    - ReasonDetail
     - evaluate_gate
   l9_ci.integration:
     - AGENT_REVIEW_PAYLOAD_PROTOCOL

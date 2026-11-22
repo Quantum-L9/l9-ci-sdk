@@ -1,0 +1,27 @@
+# SHA-1 call forms for the rule-precision witness (ADR 0024). Named .pyfixture
+# so bandit and CodeQL do not read it as product code; the test copies it to a
+# .py file for Semgrep. Line numbers are asserted by the test.
+import hashlib
+
+
+def git_blob_id(data: bytes) -> str:
+    header = f"blob {len(data)}\0".encode()
+    return hashlib.sha1(header + data, usedforsecurity=False).hexdigest()
+
+
+def incremental(data: bytes) -> str:
+    digest = hashlib.sha1(usedforsecurity=False)
+    digest.update(data)
+    return digest.hexdigest()
+
+
+def undeclared(data: bytes) -> str:
+    return hashlib.sha1(data).hexdigest()
+
+
+def declared_true(data: bytes) -> str:
+    return hashlib.sha1(data, usedforsecurity=True).hexdigest()
+
+
+def from_variable(data: bytes, flag: bool) -> str:
+    return hashlib.sha1(data, usedforsecurity=flag).hexdigest()

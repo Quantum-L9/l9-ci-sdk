@@ -12,6 +12,11 @@ from l9_ci.contracts import (
 )
 
 
+# Placed by a provider between its options and its scan targets, so that no
+# target, whatever its name, can be read as an option.
+END_OF_OPTIONS = "--"
+
+
 @dataclass(frozen=True, slots=True)
 class ProviderExecutionRequest:
     """Execution request passed to a provider adapter."""
@@ -39,7 +44,23 @@ class ProviderExecutionRequest:
             raise ValueError("output_size_limit_bytes must be positive")
         object.__setattr__(self, "arguments", tuple(self.arguments))
         object.__setattr__(self, "targets", tuple(self.targets))
+        # Every element reaches the provider's argv as one list item, with no
+        # shell. A NUL cannot be represented in argv, and an argument equal to
+        # the end-of-options marker would move the boundary the provider
+        # places before its targets, so both are refused here.
+        for argument in self.arguments:
+            if not isinstance(argument, str) or not argument or "\x00" in argument:
+                raise ValueError(
+                    f"arguments must be non-empty strings without NUL: {argument!r}"
+                )
+            if argument == END_OF_OPTIONS:
+                raise ValueError(
+                    f"arguments must not contain the end-of-options marker "
+                    f"{END_OF_OPTIONS!r}"
+                )
         for target in self.targets:
+            if not isinstance(target, str) or "\x00" in target:
+                raise ValueError(f"targets must be strings without NUL: {target!r}")
             if (
                 not target
                 or target.startswith(("/", "-"))

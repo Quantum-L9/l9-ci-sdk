@@ -1,6 +1,6 @@
 # Consolidated Manifest
 
-Files: 399
+Files: 446
 
 ## Contents
 
@@ -98,6 +98,11 @@ Files: 399
 - `docs/adr/0018-rule-precision-by-code-position-and-dispatch.md`
 - `docs/adr/0019-rule-precision-saas-and-usage-counts.md`
 - `docs/adr/0020-all-applicable-capabilities-and-lossless-provider-evidence.md`
+- `docs/adr/0021-scoped-consumer-rulepack-binding.md`
+- `docs/adr/0022-registry-rule-supersession-at-covered-sites.md`
+- `docs/adr/0023-findings-classified-against-a-baseline-commit.md`
+- `docs/adr/0024-registry-rule-precision-for-declared-non-security-use.md`
+- `docs/adr/0025-every-reason-names-its-subjects.md`
 - `docs/adr/README.md`
 - `docs/architecture/README.md`
 - `docs/architecture/agent-review-payload.md`
@@ -108,6 +113,7 @@ Files: 399
 - `docs/architecture/core-integration.md`
 - `docs/architecture/deterministic-serialization.md`
 - `docs/architecture/execution-profiles.md`
+- `docs/architecture/finding-waivers.md`
 - `docs/architecture/gate-evaluation.md`
 - `docs/architecture/governance-evidence-layer.md`
 - `docs/architecture/operational-controls.md`
@@ -155,6 +161,7 @@ Files: 399
 - `l9_ci/baseline/schemas.py`
 - `l9_ci/capabilities/__init__.py`
 - `l9_ci/capabilities/detector.py`
+- `l9_ci/capabilities/frameworks.py`
 - `l9_ci/capabilities/inventory.py`
 - `l9_ci/capabilities/model.py`
 - `l9_ci/cli/__init__.py`
@@ -180,6 +187,7 @@ Files: 399
 - `l9_ci/contracts/failure.py`
 - `l9_ci/contracts/finding.py`
 - `l9_ci/contracts/source.py`
+- `l9_ci/contracts/subjects.py`
 - `l9_ci/contracts/version.py`
 - `l9_ci/execution/__init__.py`
 - `l9_ci/execution/profiles.py`
@@ -206,13 +214,17 @@ Files: 399
 - `l9_ci/integration/sarif.py`
 - `l9_ci/integration/versioning.py`
 - `l9_ci/pipeline/__init__.py`
+- `l9_ci/pipeline/baseline.py`
 - `l9_ci/pipeline/lifecycle.py`
+- `l9_ci/pipeline/overlaps.py`
+- `l9_ci/pipeline/precision.py`
 - `l9_ci/pipeline/runner.py`
 - `l9_ci/pipeline/semgrep.py`
 - `l9_ci/policy/__init__.py`
 - `l9_ci/policy/classifier.py`
 - `l9_ci/policy/model.py`
 - `l9_ci/policy/remediation.py`
+- `l9_ci/policy/waivers.py`
 - `l9_ci/providers/__init__.py`
 - `l9_ci/providers/defaults.py`
 - `l9_ci/providers/metadata.py`
@@ -231,10 +243,13 @@ Files: 399
 - `l9_ci/rulesets/__init__.py`
 - `l9_ci/rulesets/semgrep/__init__.py`
 - `l9_ci/rulesets/semgrep/composition.py`
+- `l9_ci/rulesets/semgrep/consumer.py`
 - `l9_ci/rulesets/semgrep/harvest.py`
 - `l9_ci/rulesets/semgrep/identity-map.yaml`
+- `l9_ci/rulesets/semgrep/overlaps.py`
 - `l9_ci/rulesets/semgrep/packs.yaml`
 - `l9_ci/rulesets/semgrep/packs/python-portable/l9-python-portable.yml`
+- `l9_ci/rulesets/semgrep/precision.py`
 - `l9_ci/rulesets/semgrep/profiles.yaml`
 - `l9_ci/rulesets/semgrep/python/l9-baseline-security.yml`
 - `l9_ci/rulesets/semgrep/python/l9-file-permissions.yml`
@@ -242,6 +257,8 @@ Files: 399
 - `l9_ci/rulesets/semgrep/python/l9-logging.yml`
 - `l9_ci/rulesets/semgrep/python/l9-routing.yml`
 - `l9_ci/rulesets/semgrep/python/l9-transport.yml`
+- `l9_ci/rulesets/semgrep/rule-overlaps.yaml`
+- `l9_ci/rulesets/semgrep/rule-precision.yaml`
 - `l9_ci/rulesets/semgrep/scan-scope.yaml`
 - `l9_ci/rulesets/semgrep/scope.py`
 - `l9_ci/rulesets/semgrep/typescript/l9-baseline-security.yml`
@@ -253,6 +270,7 @@ Files: 399
 - `l9_ci/schemas/v1/evidence-report.schema.json`
 - `l9_ci/schemas/v1/finding-bundle.schema.json`
 - `l9_ci/schemas/v1/finding-classification.schema.json`
+- `l9_ci/schemas/v1/finding-waivers.schema.json`
 - `l9_ci/schemas/v1/finding.schema.json`
 - `l9_ci/schemas/v1/gate-result.schema.json`
 - `l9_ci/schemas/v1/observation.schema.json`
@@ -262,8 +280,10 @@ Files: 399
 - `l9_ci/schemas/v1/repository-snapshot.schema.json`
 - `l9_ci/schemas/v1/rulepack-composition.schema.json`
 - `l9_ci/schemas/v1/sarif-log.schema.json`
+- `l9_ci/schemas/v1/semgrep-consumer-rulepack-evidence.schema.json`
 - `l9_ci/schemas/v1/semgrep-scan-scope.schema.json`
 - `l9_ci/schemas/v1/source-location.schema.json`
+- `l9_ci/signal/__init__.py`
 - `lint/check_action_pins.py`
 - `lint/check_governance_json.py`
 - `lint/yamllint-data.yml`
@@ -289,7 +309,10 @@ Files: 399
 - `tests/biome/test_biome_scan.py`
 - `tests/capabilities/__init__.py`
 - `tests/capabilities/test_detector.py`
+- `tests/capabilities/test_framework_rule_applicability.py`
 - `tests/capabilities/test_inventory.py`
+- `tests/capabilities/test_inventory_consumer_target.py`
+- `tests/capabilities/test_inventory_scan_scope.py`
 - `tests/capabilities/trees.py`
 - `tests/cli/test_exit_codes.py`
 - `tests/cli/test_output.py`
@@ -298,7 +321,9 @@ Files: 399
 - `tests/commands/test_errors.py`
 - `tests/commands/test_manifest_cli.py`
 - `tests/commands/test_observation_cli.py`
+- `tests/commands/test_semgrep_baseline_e2e.py`
 - `tests/commands/test_semgrep_command.py`
+- `tests/commands/test_semgrep_consumer_run_e2e.py`
 - `tests/commands/test_semgrep_required_scope_e2e.py`
 - `tests/commands/test_semgrep_run_contract.py`
 - `tests/compatibility/fixtures/finding-bundle-v1-bad-summary.json`
@@ -313,6 +338,7 @@ Files: 399
 - `tests/contracts/test_schema_conformance.py`
 - `tests/execution/test_profiles.py`
 - `tests/execution/test_selection.py`
+- `tests/fixtures/semgrep/core-semgrep-policy-v4.json`
 - `tests/fixtures/semgrep/harvest/cursor/sample.pyfixture`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/data/bad_cron.xml`
 - `tests/fixtures/semgrep/harvest/odoo/other_addon/migrations/bad.py`
@@ -333,11 +359,22 @@ Files: 399
 - `tests/fixtures/semgrep/malformed.json`
 - `tests/fixtures/semgrep/provenance.yaml`
 - `tests/fixtures/semgrep/report-error-error.json`
+- `tests/fixtures/semgrep/report-error-warn-parse.json`
 - `tests/fixtures/semgrep/report-error-warn.json`
 - `tests/fixtures/semgrep/report-errors.json`
+- `tests/fixtures/semgrep/report-policy-advisory-cg-44843122770.json`
+- `tests/fixtures/semgrep/report-policy-advisory-cg-44843122770.provenance.yaml`
+- `tests/fixtures/semgrep/report-sdk-provider-subprocess-injection.json`
+- `tests/fixtures/semgrep/report-sdk-provider-subprocess-injection.provenance.yaml`
+- `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.json`
+- `tests/fixtures/semgrep/report-timeout-canary-cg-44840215113.provenance.yaml`
+- `tests/fixtures/semgrep/report-timeout-captured.json`
+- `tests/fixtures/semgrep/report-timeout-captured.provenance.yaml`
 - `tests/fixtures/semgrep/results.json`
 - `tests/fixtures/semgrep/rules.yaml`
+- `tests/fixtures/semgrep/rules/overlaps/shell_true_forms.pyfixture`
 - `tests/fixtures/semgrep/rules/packs/python-portable/l9-python-portable.py`
+- `tests/fixtures/semgrep/rules/precision/sha1_forms.pyfixture`
 - `tests/fixtures/semgrep/rules/python/l9-baseline-security.py`
 - `tests/fixtures/semgrep/rules/python/l9-file-permissions.pyfixture`
 - `tests/fixtures/semgrep/rules/python/l9-handler-signature.py`
@@ -351,10 +388,12 @@ Files: 399
 - `tests/fixtures/semgrep/runtime/results.json`
 - `tests/fixtures/semgrep/skipped-only.json`
 - `tests/fixtures/semgrep/source/src/example.py`
+- `tests/fixtures/semgrep/waived-provider-source.pyfixture`
 - `tests/fixtures/semgrep/zero-findings-empty-scanned.json`
 - `tests/fixtures/semgrep/zero-findings-no-paths.json`
 - `tests/gates/test_evaluator.py`
 - `tests/gates/test_gate_result_schema.py`
+- `tests/gates/test_reason_subjects.py`
 - `tests/governance/test_governance_layer.py`
 - `tests/governance/test_governance_schemas.py`
 - `tests/identity/test_diagnostics.py`
@@ -369,13 +408,17 @@ Files: 399
 - `tests/integration/test_sdk_validation_observation.py`
 - `tests/integration/test_versioning.py`
 - `tests/invariants/test_ci_provider_invariants.py`
+- `tests/pipeline/test_baseline_classification.py`
+- `tests/pipeline/test_core_policy_advisory_end_to_end.py`
 - `tests/pipeline/test_lifecycle.py`
 - `tests/pipeline/test_runner.py`
 - `tests/pipeline/test_semgrep_execution_path.py`
 - `tests/pipeline/test_semgrep_pipeline.py`
 - `tests/pipeline/test_semgrep_release_path.py`
+- `tests/pipeline/test_semgrep_scan_scope_in_bundle.py`
 - `tests/pipeline/test_semgrep_version_policy.py`
 - `tests/policy/test_classifier.py`
+- `tests/policy/test_finding_waivers.py`
 - `tests/policy/test_remediation.py`
 - `tests/providers/__init__.py`
 - `tests/providers/semgrep/__init__.py`
@@ -396,10 +439,14 @@ Files: 399
 - `tests/rulesets/test_packaged_rule_metadata_shape.py`
 - `tests/rulesets/test_packaging.py`
 - `tests/rulesets/test_rulepack_composition.py`
+- `tests/rulesets/test_semgrep_consumer_rulepack.py`
 - `tests/rulesets/test_semgrep_rule_fixtures.py`
+- `tests/rulesets/test_semgrep_rule_overlaps.py`
+- `tests/rulesets/test_semgrep_rule_precision.py`
 - `tests/rulesets/test_semgrep_ruleset_parity.py`
 - `tests/rulesets/test_semgrep_scan_scope.py`
 - `tests/rulesets/test_semgrep_target_suffixes.py`
+- `tests/signal/test_render_snippet.py`
 - `tests/yaml/__init__.py`
 - `tests/yaml/test_yaml_governance.py`
 - `uv.lock`

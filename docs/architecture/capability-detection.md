@@ -45,6 +45,42 @@ Rules the inventory holds:
   `l9-ci semgrep run --language typescript` analyzes `.js`, `.jsx`, `.mjs`
   and `.cjs`. There is no separate JavaScript target, so a repository with
   both languages is scanned once.
+- A Semgrep target counts only files inside the declared scan scope
+  (`l9_ci/rulesets/semgrep/scan-scope.yaml`), the same scope
+  `l9-ci semgrep run --required` passes to Semgrep. When every matching file
+  is out of scope, the target is `not_applicable` and its reason names each
+  excluding scope entry with a sample of the paths, so Core plans no instance
+  the scan could never complete. Out-of-scope files stay counted in their
+  language's `unanalyzed_file_count`; a language whose files are all out of
+  scope is `unsupported` and says so. This was found on Cursor-Governance
+  (2026-11-20), where every JavaScript file is a fixture under `tests/`:
+  a required `language:typescript` instance was planned, scanned nothing and
+  ended `incomplete`. Witness:
+  `tests/capabilities/test_inventory_scan_scope.py`.
+- A consumer rulepack declaration (`.l9/semgrep-consumer-rules.yaml`,
+  ADR 0021) is reported as `semgrep consumer:<owner>` only under
+  `l9-ci providers inventory --consumer-rules`, because Core's planner accepts
+  only `language:` and `framework:` targets today.
+  - It is `applicable` when at least one tracked file is admitted by a
+    declared rule's own `paths` and languages.
+  - It is `not_applicable` when no tracked file is.
+  - It is `failed` (`consumer:invalid-declaration`) when the declaration does
+    not validate.
+  - Without a declaration, no consumer target is reported.
+  - Consumer coverage never counts toward a language's central coverage.
+  - Witness: `tests/capabilities/test_inventory_consumer_target.py`.
+- Framework-scoped registry rules (`python.django.*`) apply only where their
+  framework is used (CTO, 2026-11-21). `l9_ci/capabilities/frameworks.py`
+  detects Django from a tracked dependency declaration naming the package
+  (`requirements*.txt`, `pyproject.toml`, `setup.cfg`, `setup.py`, `Pipfile`)
+  or a `manage.py` with Django's entry point.
+  - The Semgrep pipeline withholds a finding of a framework rule whose
+    framework is not detected.
+  - The evidence is kept, and the bundle's limitations name the rule, the
+    count and every location.
+  - When detection cannot run, nothing is withheld.
+  - This is applicability, not a waiver.
+  - Witness: `tests/capabilities/test_framework_rule_applicability.py`.
 - The executable is a fact about the machine, so it is `not_probed` unless
   the caller asks (`--probe-executables`).
 - The record carries no requiredness, enforcement mode or verdict. Core
@@ -71,3 +107,25 @@ schema and that `status` agrees with the entries.
   reported as not analyzed. `tests/rulesets/test_semgrep_target_suffixes.py`
   re-checks each target's declared suffixes against the real executable.
 - Odoo is the only framework with a detector.
+- The inventory applies the required-run scan scope to every Semgrep target,
+  because it is built before Core decides requiredness. A non-required
+  `l9-ci semgrep run` keeps Semgrep's own scope (a consumer `.semgrepignore`
+  or Semgrep's default list). So when a consumer `.semgrepignore` re-admits a
+  path the declared scope excludes, and that path holds the only matching
+  files, the target is reported `not_applicable` although an advisory scan
+  would have reached them (#130 review, Codex P1). This is recorded rather
+  than encoded in the schema (CTO decision 2026-11-20, option 3), because no
+  scope exclusion can hide a required finding without a record:
+  - a required instance scans exactly the declared scope the inventory
+    plans from, so plan and required scan agree by construction;
+  - every excluded file is counted, with its excluding entry and a path
+    sample, in the target's `not_applicable` reason and in the run's scope
+    record (`<stem>.scope.json` and, from finding bundle 1.1.0,
+    `coverage[].scan_scope.declared.excluded`);
+  - the only findings that can go unplanned belong to a non-required
+    instance, which carries no required finding.
+
+  If a future change lets a non-required instance carry a required finding,
+  or lets the inventory drop a target without naming the exclusion, this
+  stops holding, and the record needs the execution mode as a field
+  (option 2).

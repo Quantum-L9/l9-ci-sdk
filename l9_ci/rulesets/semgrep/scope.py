@@ -37,7 +37,17 @@ import yaml
 
 SCAN_SCOPE_POLICY_SCHEMA = "l9.semgrep-scan-scope-policy/v1"
 SCAN_SCOPE_EVIDENCE_SCHEMA = "l9.semgrep-scan-scope/v1"
-SCAN_SCOPE_EVIDENCE_SCHEMA_VERSION = "1.0.0"
+SCAN_SCOPE_EVIDENCE_SCHEMA_VERSION = "1.3.0"
+
+# Per-rule, per-file analysis budget of a required run (B5). Semgrep's defaults
+# are a 5 s timeout and a threshold of 3 timeouts per file, after which the
+# remaining rules on that file are skipped silently. A required run gives each
+# rule/file pair 30 s and never skips rules on a file because others timed out
+# (threshold 0 disables the cut-off). A pair that still times out under this
+# budget is not analysed, and the provider records it as incomplete coverage
+# (l9_ci/providers/semgrep/provider.py, ``_INCOMPLETE_ANALYSIS_ERROR_TYPES``).
+REQUIRED_RULE_TIMEOUT_SECONDS = 30
+REQUIRED_RULE_TIMEOUT_THRESHOLD = 0
 
 # The only include source the policy may declare: files tracked at the
 # analyzed snapshot. Untracked and ignored files are not product code.
@@ -75,6 +85,11 @@ class ScanScopePolicy:
     names: tuple[str, ...]
     file_globs: tuple[str, ...]
     sha256: str
+    # Declared reason per evidence label (``<kind>:<pattern>``).
+    reasons: tuple[tuple[str, str], ...] = ()
+
+    def reason_for(self, label: str) -> str | None:
+        return dict(self.reasons).get(label)
 
     def exclusion_for(self, path: str) -> str | None:
         """Return the first declared pattern excluding ``path``, else ``None``.
@@ -123,6 +138,11 @@ class ScanScope:
             },
             "source": self.policy.source,
             "nosem": "disabled",
+            "analysis_budget": {
+                "timeout_seconds": REQUIRED_RULE_TIMEOUT_SECONDS,
+                "timeout_threshold": REQUIRED_RULE_TIMEOUT_THRESHOLD,
+                "on_timeout": "incomplete",
+            },
             "consumer_semgrepignore": {
                 "files": list(self.consumer_semgrepignore_files),
                 "honored": False,
@@ -136,6 +156,11 @@ class ScanScope:
                     "count": len(paths),
                     "sample_paths": list(paths[:EVIDENCE_SAMPLE_LIMIT]),
                     "truncated": len(paths) > EVIDENCE_SAMPLE_LIMIT,
+                    **(
+                        {"reason": reason}
+                        if (reason := self.policy.reason_for(pattern))
+                        else {}
+                    ),
                 }
                 for pattern, paths in self.excluded
             ],
@@ -177,7 +202,9 @@ def load_scan_scope_policy(path: Path | None = None) -> ScanScopePolicy:
         raise ScanScopeError(
             f"scan-scope policy: schema must be {SCAN_SCOPE_POLICY_SCHEMA!r}"
         )
-    unknown = sorted(set(document) - {"schema", "version", "include", "exclude"})
+    unknown = sorted(
+        set(document) - {"schema", "version", "include", "exclude", "reasons"}
+    )
     if unknown:
         raise ScanScopeError(f"scan-scope policy: unknown keys {unknown}")
     version = document.get("version")
@@ -212,6 +239,17 @@ def load_scan_scope_policy(path: Path | None = None) -> ScanScopePolicy:
                     f"scan-scope policy: exclude.{kind} entry {name!r} "
                     "must be a single path component"
                 )
+    declared = {f"{kind}:{entry}" for kind in _EXCLUDE_KINDS for entry in lists[kind]}
+    reasons = document.get("reasons", {})
+    if not isinstance(reasons, dict):
+        raise ScanScopeError("scan-scope policy: reasons must be a mapping")
+    for label, text in reasons.items():
+        if label not in declared:
+            raise ScanScopeError(
+                f"scan-scope policy: reason for {label!r} names no declared entry"
+            )
+        if not isinstance(text, str) or not text.strip():
+            raise ScanScopeError(f"scan-scope policy: reason for {label!r} is empty")
     return ScanScopePolicy(
         version=version,
         source=_SOURCE_GIT_TRACKED,
@@ -220,6 +258,12 @@ def load_scan_scope_policy(path: Path | None = None) -> ScanScopePolicy:
         names=lists["names"],
         file_globs=lists["file_globs"],
         sha256=hashlib.sha256(raw).hexdigest(),
+        reasons=tuple(
+            sorted(
+                (str(label), " ".join(str(text).split()))
+                for label, text in reasons.items()
+            )
+        ),
     )
 
 
@@ -288,6 +332,8 @@ __all__ = [
     "NOT_A_REGULAR_FILE",
     "SCAN_SCOPE_EVIDENCE_SCHEMA",
     "SCAN_SCOPE_EVIDENCE_SCHEMA_VERSION",
+    "REQUIRED_RULE_TIMEOUT_SECONDS",
+    "REQUIRED_RULE_TIMEOUT_THRESHOLD",
     "SCAN_SCOPE_POLICY_SCHEMA",
     "ScanScope",
     "ScanScopeError",
