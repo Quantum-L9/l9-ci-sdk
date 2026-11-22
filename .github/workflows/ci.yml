@@ -6,6 +6,11 @@ on:
     branches: ["**"]
   pull_request:
   workflow_dispatch:
+  # The whole suite with branch coverage runs here (and on dispatch); pull
+  # requests and pushes run the bounded selection (Core's PR test-expense
+  # judge, make-v2).
+  schedule:
+    - cron: "41 5 * * *"
 
 permissions:
   contents: read
@@ -49,10 +54,26 @@ jobs:
         id: mypy
         continue-on-error: true
         run: python -m mypy l9_ci
-      - name: pytest + branch coverage
+      - name: pytest + branch coverage (bounded PR selection)
         id: pytest_cov
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         continue-on-error: true
-        run: python -m pytest --cov=l9_ci --cov-branch
+        # Every test folder except tests/commands and tests/rulesets (Repo.mk
+        # PYTEST_FAST_PATHS); their Semgrep witnesses run by name below. The
+        # bounded selection covers 77% of l9_ci, so it carries its own floor;
+        # the pyproject fail_under=80 binds the whole suite (nightly, dispatch).
+        run: >-
+          python -m pytest --cov=l9_ci --cov-branch --cov-fail-under=77
+          tests/architecture tests/baseline tests/biome tests/capabilities
+          tests/cli tests/compatibility tests/contracts tests/execution
+          tests/gates tests/governance tests/identity tests/integration
+          tests/invariants tests/pipeline tests/policy tests/providers
+          tests/repository tests/signal tests/yaml
+      - name: pytest + branch coverage (whole suite, nightly and dispatch)
+        id: pytest_cov_full
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        run: python -m pytest --cov=l9_ci --cov-branch tests
       - name: semgrep rule fixtures
         id: semgrep_rule_fixtures
         continue-on-error: true
@@ -140,6 +161,7 @@ jobs:
           R_RUFF_FORMAT: ${{ steps.ruff_format.outcome }}
           R_MYPY: ${{ steps.mypy.outcome }}
           R_PYTEST_COV: ${{ steps.pytest_cov.outcome }}
+          R_PYTEST_COV_FULL: ${{ steps.pytest_cov_full.outcome }}
           R_GATE_EVAL_COV: ${{ steps.gate_evaluator_cov.outcome }}
           R_SEMGREP_FIXTURES: ${{ steps.semgrep_rule_fixtures.outcome }}
           R_GEN_EVIDENCE: ${{ steps.gen_evidence.outcome }}
@@ -169,6 +191,7 @@ jobs:
           check "ruff format check" "$R_RUFF_FORMAT"
           check "mypy" "$R_MYPY"
           check "pytest + branch coverage" "$R_PYTEST_COV"
+          check "pytest + branch coverage (whole suite)" "$R_PYTEST_COV_FULL"
           check "semgrep rule fixtures" "$R_SEMGREP_FIXTURES"
           check "critical gate evaluator 100% branch coverage" "$R_GATE_EVAL_COV"
           check "generate commit-bound validation evidence" "$R_GEN_EVIDENCE"
