@@ -1,20 +1,26 @@
 # l9-ci-sdk repository-owned Make implementation.
 #
 # REPOSITORY-OWNED: hand-maintained, never generated. The root Makefile is the
-# Core-owned make-v1 facade (Quantum-L9/l9-ci-core
-# tools/l9_repo/facades/make-v1.mk), reproduced byte-for-byte and validated
+# Core-owned make-v2 facade (Quantum-L9/l9-ci-core
+# tools/l9_repo/facades/make-v2.mk), reproduced byte-for-byte and validated
 # byte-for-byte by Core's repository verification. Never edit the Makefile; it
-# owns help/setup/validate/check/test and includes this file. Do not define any
-# of those five targets here.
+# owns help/setup/validate/check/test-fast/test and includes this file. Do not
+# define any of those six targets here.
 #
 #   make setup     repo-setup     .venv + CI toolchain + pre-commit (= deps)
 #   make validate  repo-validate  governance JSON, action pins, yamllint,
 #                                 tracked MANIFEST.md currency
 #   make check     repo-check     ruff check, ruff format --check, mypy l9_ci
 #                                 (non-mutating)
-#   make test      repo-test      pytest -q $(PYTEST_ARGS)
+#   make test-fast repo-test-fast pytest -q $(PYTEST_FAST_PATHS): the bounded
+#                                 pull-request selection
+#   make test      repo-test      pytest -q $(PYTEST_ARGS): the whole suite
 #
-# Core runs setup -> validate -> check -> test in that order on a plain runner.
+# Core runs setup -> validate -> check -> test-fast on pull requests, merge
+# groups and pushes, and setup -> validate -> check -> test elsewhere (make-v2).
+# tests/commands (~115 s) and tests/rulesets (~40 s) are ~92% of the suite's
+# time; they run whole in `make test`, nightly in ci.yml, and their Semgrep
+# witnesses run by name in ci.yml's semgrep rule fixtures step on every PR.
 # The pre-V2 meanings of the facade names this file used to define:
 #
 #   make check-full   the old `make check` (hooks + clean tree + mypy + pytest);
@@ -45,19 +51,22 @@ else
   PRE_COMMIT_BIN = $(if $(wildcard $(VENV)/bin/pre-commit),$(VENV)/bin/pre-commit,pre-commit)
 endif
 PYTEST_ARGS ?=
+# The bounded pull-request selection: every test folder except tests/commands
+# and tests/rulesets. Literal paths, so Core's PR test-expense judge can read it.
+PYTEST_FAST_PATHS := tests/architecture tests/baseline tests/biome tests/capabilities tests/cli tests/compatibility tests/contracts tests/execution tests/gates tests/governance tests/identity tests/integration tests/invariants tests/pipeline tests/policy tests/providers tests/repository tests/signal tests/yaml
 PUSH_ARGS   ?=
 
 export PYTHONPATH := $(CURDIR)$(if $(PYTHONPATH),:$(PYTHONPATH),)
 
 PC_RUN = $(PRE_COMMIT_BIN) run --all-files
 
-.PHONY: repo-setup repo-validate repo-check repo-test \
+.PHONY: repo-setup repo-validate repo-check repo-test-fast repo-test \
 	deps install-hooks doctor bootstrap ensure-toolchain \
 	fmt hooks ensure-clean typecheck yaml-test compile manifest-check \
 	check-full ci push \
 	pre-commit lint gate
 
-# --- Core Repository Execution V2 phases (make-v1 ABI) ----------------------
+# --- Core Repository Execution V2 phases (make-v2 ABI) ----------------------
 
 repo-setup: deps ## Create .venv and install the CI toolchain + pre-commit (= deps)
 
@@ -71,7 +80,10 @@ repo-check: ## Non-mutating static gate: ruff check, ruff format --check, mypy l
 	$(PYTHON) -m ruff format --check .
 	$(PYTHON) -m mypy l9_ci
 
-repo-test: ## pytest (PYTHONPATH=.)
+repo-test-fast: ## Bounded PR selection (PYTHONPATH=.): every folder but commands/ and rulesets/
+	$(PYTHON) -m pytest -q $(PYTEST_FAST_PATHS) $(PYTEST_ARGS)
+
+repo-test: ## pytest, the whole suite (PYTHONPATH=.)
 	$(PYTHON) -m pytest -q $(PYTEST_ARGS)
 
 # --- Bootstrap --------------------------------------------------------------
