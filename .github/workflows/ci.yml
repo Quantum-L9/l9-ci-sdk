@@ -59,10 +59,16 @@ jobs:
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         continue-on-error: true
         # Every test folder except tests/commands and tests/rulesets (Repo.mk
-        # PYTEST_FAST_PATHS); their Semgrep witnesses run by name below.
+        # PYTEST_FAST_PATHS); their Semgrep witnesses run by name below. The
+        # bounded selection covers 77% of l9_ci, so it carries its own floor;
+        # the pyproject fail_under=80 binds the whole suite (nightly, dispatch).
         run: >-
-          python -m pytest --cov=l9_ci --cov-branch
-          tests/architecture tests/baseline tests/biome tests/capabilities tests/cli tests/compatibility tests/contracts tests/execution tests/gates tests/governance tests/identity tests/integration tests/invariants tests/pipeline tests/policy tests/providers tests/repository tests/signal tests/yaml
+          python -m pytest --cov=l9_ci --cov-branch --cov-fail-under=77
+          tests/architecture tests/baseline tests/biome tests/capabilities
+          tests/cli tests/compatibility tests/contracts tests/execution
+          tests/gates tests/governance tests/identity tests/integration
+          tests/invariants tests/pipeline tests/policy tests/providers
+          tests/repository tests/signal tests/yaml
       - name: pytest + branch coverage (whole suite, nightly and dispatch)
         id: pytest_cov_full
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
