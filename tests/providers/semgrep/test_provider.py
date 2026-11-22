@@ -173,8 +173,56 @@ def test_required_provider_zero_result_gates_incomplete(fixture_name: str) -> No
     assert _gate_status_for_required(normalization) is GateStatus.INCOMPLETE
 
 
-def test_required_warn_timeout_with_scanned_paths_gates_pass() -> None:
-    normalization = _normalize("report-error-warn.json", required=True)
+@pytest.mark.parametrize(
+    "fixture_name",
+    [
+        "report-error-warn.json",
+        # Real Semgrep 1.171.0 report; see report-timeout-captured.provenance.yaml.
+        "report-timeout-captured.json",
+    ],
+)
+def test_required_rule_timeout_gates_incomplete_not_pass(fixture_name: str) -> None:
+    """B5: a timed-out rule/file pair is incomplete coverage, never a pass.
+
+    Cursor-Governance run 44819081765 reported 5 rule timeouts on 4 files as
+    a complete pass with no incomplete provider.
+    """
+    normalization = _normalize(fixture_name, required=True)
+    assert normalization.failures == ()
+    assert normalization.coverage.status is CoverageStatus.PARTIAL
+    assert _gate_status_for_required(normalization) is GateStatus.INCOMPLETE
+
+
+def test_cursor_governance_canary_timeouts_are_incomplete_not_complete() -> None:
+    """Canary run 44840215113 (CTO REMEDIATE, B5): its bundle said "complete".
+
+    Two p/python taint rules timed out on one Cursor-Governance file. SDK
+    dc783c64, which that run provisioned, reported coverage "complete" and
+    a passing gate. From #131 on, the same report is partial, the file is not
+    counted as analyzed, both pairs are named, and the required gate is
+    incomplete.
+    """
+    normalization = _normalize(
+        "report-timeout-canary-cg-44840215113.json", required=True
+    )
+    coverage = normalization.coverage
+    assert normalization.failures == ()
+    assert coverage.status is CoverageStatus.PARTIAL
+    assert (coverage.files_considered, coverage.files_analyzed) == (3, 2)
+    pairs = [item for item in coverage.limitations if item.startswith("incomplete")]
+    template = (
+        "incomplete analysis: rule python.lang.security.audit.{0}.{0} did not "
+        "finish on environment/program-execution/scripts/run_campaign.py (Timeout)"
+    )
+    assert pairs == [
+        template.format("dangerous-subprocess-use-tainted-env-args"),
+        template.format("dangerous-system-call-tainted-env-args"),
+    ]
+    assert _gate_status_for_required(normalization) is GateStatus.INCOMPLETE
+
+
+def test_required_non_timeout_warn_with_scanned_paths_gates_pass() -> None:
+    normalization = _normalize("report-error-warn-parse.json", required=True)
     assert normalization.failures == ()
     assert normalization.coverage.status is CoverageStatus.COMPLETE
     assert _gate_status_for_required(normalization) is GateStatus.PASS

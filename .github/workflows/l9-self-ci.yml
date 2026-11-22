@@ -392,7 +392,7 @@ jobs:
       # (tests/architecture/test_toolchain_pin_alignment.py); organization
       # Semgrep selection is Core's (ADR 0017). Exact, so a semgrep bump that
       # adds or removes findings is a reviewed change, never incidental.
-      L9_SEMGREP_VERSION: '1.171.0'
+      L9_SEMGREP_VERSION: '1.186.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:

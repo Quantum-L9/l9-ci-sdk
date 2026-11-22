@@ -45,8 +45,21 @@ Errors
 
 Malformed report structure becomes report_malformed.
 
-Entries in the report’s top-level errors array become structured execution
-failures and partial coverage.
+Entries in the report’s top-level errors array follow Semgrep's own `level`:
+
+* `level: error`, or a missing or unknown level, becomes a structured execution
+  failure (fatal when the provider is required), and coverage is partial.
+* `level: warn` stays a limitation and is not a failure (SDK #83).
+* Except: a warn entry whose `type` is `Timeout`, `FixpointTimeout`,
+  `OutOfMemory` or `StackOverflow` means a rule started on a file and did not
+  finish. It is still not a failure, but coverage is partial: the file is not
+  counted as analyzed, and the limitation names the rule and the file
+  (`incomplete analysis: rule <id> did not finish on <path> (<type>)`). A
+  required provider's gate is therefore `incomplete`, never `pass`. Found on
+  Cursor-Governance run 44819081765, where 5 rule timeouts on 4 files were
+  reported as a complete pass (lane L1-CANARY-FIXES, B5). Witnesses:
+  `tests/providers/semgrep/test_provider.py`, including the real captured
+  report `tests/fixtures/semgrep/report-timeout-captured.json`.
 
 Strict mode
 
@@ -98,11 +111,37 @@ Identity resolution is unchanged by profile selection: L9-authored rules carry
 trusted `metadata.l9.canonical_rule_id`, and third-party registry rules resolve
 through the versioned SDK identity map.
 
+## Consumer rulepacks: `l9-ci semgrep consumer-run` (ADR 0021)
+
+A consumer opts its own rules into CI with `.l9/semgrep-consumer-rules.yaml`
+(`l9.semgrep-consumer-rulepack/v1`: `schema`, `owner`, `rule_files`, optional
+`rule_id_prefix`). `l9_ci/rulesets/semgrep/consumer.py` validates it before
+anything runs. Every rule must:
+
+- be namespaced under the prefix (default `l9.`) and not redefine a packaged
+  rule;
+- declare a non-empty `paths.include`;
+- carry `metadata.l9.canonical_rule_id` in `CONSUMER-<REPOSITORY>-<NAME>`;
+- use only allow-listed per-rule keys.
+
+A violation exits 2 before Semgrep starts and never touches a central run.
+
+`consumer-run` is a separate execution with its own bundle. It loads only the
+declared files, keeps the consumer's `.semgrepignore` and inline `nosemgrep`
+(consumer-owned rules keep consumer ignores), and runs under the required
+analysis budget. It writes `<stem>.consumer.json`
+(`l9.semgrep-consumer-rulepack-evidence/v1`) naming the owner, the declaration
+and every rule file by SHA-256. A Semgrep rule cannot suppress another rule's
+finding, so the central bundle, scope and gate are untouched. Witnesses:
+`tests/rulesets/test_semgrep_consumer_rulepack.py` and
+`tests/commands/test_semgrep_consumer_run_e2e.py` (real Semgrep, run by
+`.github/workflows/ci.yml`).
+
 ## Required central runs: `--disable-nosem` and the declared scan scope
 
 Core passes `--required` to `l9-ci semgrep run` when governance marks the
-provider required. A required run differs from any other run in two ways
-(lane L1f, 2026-11-20), and nothing else changes:
+provider required. A required run differs from any other run in three ways
+(lanes L1f and B5, 2026-11-20), and nothing else changes:
 
 1. **`--disable-nosem`.** Semgrep honours an inline `# nosemgrep` comment by
    default, so a consumer could silence a required central rule line by line.
@@ -123,18 +162,48 @@ provider required. A required run differs from any other run in two ways
    only while expanding a folder scan root, never to an explicit file, so
    neither a consumer `.semgrepignore` nor the built-in list applies.
 
-   `tests/`, `test/` and `testsuite/` stay out of required scope by an explicit
-   policy entry, matching the default that applied before. Bringing tests into
-   scope is an organization policy decision and an edit to that list.
+   Test paths are **in** required scope (policy 1.1.0; CTO decision
+   2026-11-20, B1+B2, CI_CONFIG_FINDINGS row 3: scope is declared, not a tool
+   default). Semgrep's default list drops `test/`, `tests/` and `testsuite/`;
+   the policy does not. A finding under a test path follows its rule's mode
+   like any other finding. It has no special exemption. Required rules accept
+   no inline `nosemgrep` and no consumer `.semgrepignore`. A required finding is
+   waived only in the central waiver/baseline ledger, with owner, reason and
+   expiry. A consumer cannot waive its own findings.
+3. **Declared analysis budget.** Semgrep's defaults give each rule 5 s per
+   file and, after 3 timeouts on one file, silently skip every remaining rule
+   on it. A required run passes `--timeout 30 --timeout-threshold 0`
+   (`REQUIRED_RULE_TIMEOUT_SECONDS`, `REQUIRED_RULE_TIMEOUT_THRESHOLD` in
+   `l9_ci/rulesets/semgrep/scope.py`): 30 s per rule and file, and no per-file
+   cut-off. A rule/file pair that still times out under that budget was not
+   analysed; the provider removes the file from the scanned paths, records
+   the pair as a limitation and reports coverage `partial`, so the gate ends
+   `incomplete`, never `pass` (#131).
 
 The effective scope is written beside the raw report as `<stem>.scope.json`
 (`l9.semgrep-scan-scope/v1`,
 [`semgrep-scan-scope.schema.json`](../../l9_ci/schemas/v1/semgrep-scan-scope.schema.json)):
 the policy version and digest, the tracked and in-scope file counts, a digest
 of the in-scope path list, every exclusion with its exact count and a bounded
-sample, any consumer `.semgrepignore` found (`honored: false`) and
-`nosem: disabled`. Core already uploads the raw-report directory, so the record
-reaches the analysis artifact set. It is written before Semgrep starts.
+sample, any consumer `.semgrepignore` found (`honored: false`), `nosem: disabled` and
+the `analysis_budget` (schema 1.1.0). Core already uploads the raw-report directory, so the record
+reaches the analysis artifact set. It is written before Semgrep starts, so a
+run that never produces a bundle still records what it was given.
+
+The same record also travels **inside the finding bundle** (finding bundle
+1.1.0), so a reader of the bundle can judge coverage without a side file.
+`coverage[].scan_scope` holds:
+
+- `declared`: the `l9.semgrep-scan-scope/v1` record above, byte-for-byte
+  equal to the side file;
+- `paths_scanned`: the count and SHA-256 of the provider's own `paths.scanned`
+  (sorted and repository-relative). It is `null` when the run produced no
+  readable report, so an unknown scanned inventory is never presented as an
+  empty one.
+
+The field is present only for a `--required` run. Coverage status is still
+decided by the provider. Witness:
+`tests/pipeline/test_semgrep_scan_scope_in_bundle.py`.
 
 A required run fails closed, before Semgrep starts, when the root is not a Git
 work tree, when the scope is empty, or when the explicit targets would exceed
@@ -162,3 +231,93 @@ semgrep = [
 ]
 
 Do not make the Semgrep Python package a mandatory SDK dependency when import-only mode is used.
+
+## Execution argv
+
+`SemgrepProvider.execute` runs Semgrep as an argv list with no shell. The
+environment is an allowlist (PATH, HOME, TMPDIR, TEMP, TMP). The argv is:
+
+- the resolved executable, `scan` and `--json-output <path>`;
+- the caller's options;
+- the end-of-options marker `--`;
+- the targets (`.` or a required run's declared files).
+
+Target names can come from the repository under analysis.
+`ProviderExecutionRequest` refuses:
+
+- a NUL in any element;
+- an empty argument;
+- an argument equal to `--`;
+- an absolute, parent-relative or `-`-prefixed target.
+
+The declared scope rewrites `-x` to `./-x`. The marker keeps any target from
+being read as an option. Witnesses:
+
+- `tests/rulesets/test_semgrep_scan_scope.py`
+  (`test_provider_request_refuses_unsafe_argv_elements`);
+- `tests/commands/test_semgrep_required_scope_e2e.py`
+  (`test_dash_named_file_is_scanned_as_a_path_not_read_as_an_option`).
+
+## Archived code is out of required scope
+
+Scan-scope policy 1.1.0 excludes every directory named `_archived` at any depth
+(`**/_archived/**`) from required runs. Archived code is kept for history and
+is never imported, executed or deployed. This is a central decision (CTO,
+2026-11-21), not a consumer ignore. It was taken after Cursor-Governance run
+44848823829 reported 9 of its 29 blocking findings under
+`commands/_archived/` and `execution-governance/_archived/`.
+
+The policy's `reasons` map names each exclusion that has a declared reason by
+its evidence label. The scope evidence copies that reason next to the
+exclusion's exact count (`excluded[].reason`, schema 1.2.0). A reason that
+names no declared entry, or an empty reason, fails the policy closed.
+Witnesses are in `tests/rulesets/test_semgrep_scan_scope.py` (archived code).
+
+## Superseded registry rules
+
+When a run composes both the community registry ruleset and the packaged L9
+ruleset (profile `l9-standard`), both rulesets run. After the scan, a finding
+of a registry rule that a packaged L9 rule supersedes is withdrawn only where
+the L9 rule reported the same call (same file, registry start line inside the
+L9 span); its evidence stays in the bundle and a limitation names every site
+(ADR 0022). The registry of supersessions is
+[`l9_ci/rulesets/semgrep/rule-overlaps.yaml`](../../l9_ci/rulesets/semgrep/rule-overlaps.yaml)
+(`l9.semgrep-rule-overlaps/v1`). The L9 rule stays canonical, so one site is
+reported once, under its L9 canonical ID. Nothing is excluded before the scan:
+`p/python` is unpinned, and a registry finding no L9 finding covers is kept. A
+required run records the supersessions in its scope evidence (`rule_overlaps`,
+`applied: covered_sites_only`, schema 1.3.0).
+
+An entry is admitted only when the L9 rule matches every site the registry
+rule matches. `tests/rulesets/test_semgrep_rule_overlaps.py` runs both rules
+with real Semgrep over every form. The first entry is
+`l9.baseline.python.subprocess-shell-true` superseding
+`python.lang.security.audit.subprocess-shell-true`. On Cursor-Governance run
+44848823829, 12 of 29 blocking findings were these duplicate pairs.
+
+## Findings against a baseline commit
+
+`l9-ci semgrep run --baseline-commit SHA` classifies every finding as `new`,
+`pre_existing` or `unknown` against that commit (ADR 0023). The scan runs a
+second time with Semgrep's own `--baseline-commit`, which re-scans the
+baseline in a git worktree; a finding that moved lines or whose file was
+renamed stays pre-existing. A pre-existing finding with a blocking policy mode
+is reported as advisory, a new one keeps its mode, and the bundle states the
+counts. An unresolvable commit, tracked changes in the working tree, or a
+failed or incomplete baseline scan make every finding `unknown` with a required
+fatal provider failure, so the gate fails closed. Witnesses:
+`tests/commands/test_semgrep_baseline_e2e.py` (real Semgrep) and
+`tests/pipeline/test_baseline_classification.py`.
+
+## Declared non-security use
+
+The registry SHA-1 rule flags every `hashlib.sha1(...)` call, including
+`usedforsecurity=False`, which the registry MD5 rule already excludes. The
+packaged
+[`l9_ci/rulesets/semgrep/rule-precision.yaml`](../../l9_ci/rulesets/semgrep/rule-precision.yaml)
+(`l9.semgrep-rule-precision/v1`) applies that exclusion centrally (ADR 0024).
+After the scan, such a finding is withheld only where the call on its line
+passes the keyword as the literal `False`, read from the Python syntax tree.
+The evidence is kept and the bundle names every withheld site; an unreadable
+file, a variable or `True` keeps the finding. Witnesses:
+`tests/rulesets/test_semgrep_rule_precision.py`.

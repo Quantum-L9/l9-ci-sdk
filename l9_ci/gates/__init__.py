@@ -6,6 +6,8 @@ from .model import (
     GATE_RESULT_SCHEMA_VERSION,
     GateResult,
     GateStatus,
+    ReasonCode,
+    ReasonDetail,
 )
 
 __all__ = [
@@ -13,5 +15,7 @@ __all__ = [
     "GATE_RESULT_SCHEMA_VERSION",
     "GateResult",
     "GateStatus",
+    "ReasonCode",
+    "ReasonDetail",
     "evaluate_gate",
 ]

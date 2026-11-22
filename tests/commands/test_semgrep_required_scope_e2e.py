@@ -22,6 +22,7 @@ gate scan tests/). Like the other real-Semgrep tests these skip without a
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -112,6 +113,7 @@ def repository(tmp_path: Path) -> Path:
             "src/suppressed.py": _BAD_SUPPRESSED,
             "src/clean.py": _CLEAN,
             "tests/test_bad.py": _BAD,
+            "vendor/bad.py": _BAD,
         },
     )
 
@@ -125,8 +127,10 @@ def test_required_run_reports_nosemgrep_lines_and_ignores_consumer_semgrepignore
     assert ("src/bad.py", 1) in found
     # Known-bad nosem: the annotated line still yields its finding.
     assert ("src/suppressed.py", 1) in found
+    # Known-bad test path: tests/ is in required scope and follows the rule.
+    assert ("tests/test_bad.py", 1) in found
     # Known-good: a clean line yields nothing; a declared exclusion stays out.
-    assert not any(path in {"src/clean.py", "tests/test_bad.py"} for path, _ in found)
+    assert not any(path in {"src/clean.py", "vendor/bad.py"} for path, _ in found)
 
 
 @_needs_semgrep
@@ -153,5 +157,133 @@ def test_required_run_writes_schema_valid_scope_evidence(
         "honored": False,
     }
     assert {item["pattern"]: item["count"] for item in evidence["excluded"]} == {
-        "directory_names:tests": 1
+        "directory_names:vendor": 1
     }
+    # The same record travels inside the finding bundle, with the provider's
+    # own paths.scanned (CTO decision 4: scope evidence lives in the bundle).
+    bundle = json.loads((out / "bundle.json").read_text("utf-8"))
+    assert bundle["schema_version"] == "1.2.0"
+    (coverage,) = bundle["coverage"]
+    assert coverage["scan_scope"]["declared"] == evidence
+    raw = json.loads((out / "raw" / "report.json").read_text("utf-8"))
+    scanned = sorted(raw["paths"]["scanned"])
+    assert "tests/test_bad.py" in scanned
+    assert coverage["scan_scope"]["paths_scanned"] == {
+        "count": len(scanned),
+        "sha256": hashlib.sha256("\n".join(scanned).encode("utf-8")).hexdigest(),
+    }
+
+
+@_needs_semgrep
+def test_non_required_bundle_carries_no_scan_scope(
+    repository: Path, tmp_path: Path
+) -> None:
+    out = tmp_path / "plain"
+    _findings(repository, out, required=False)
+    bundle = json.loads((out / "bundle.json").read_text("utf-8"))
+    assert "scan_scope" not in bundle["coverage"][0]
+
+
+# --- JavaScript planned through the TypeScript pack (Cursor-Governance P0) ----
+
+
+def _required_typescript_run(root: Path, out: Path) -> tuple[dict, dict, int]:
+    """Run the required TypeScript instance as Core does; return bundle, raw, gate."""
+    command = [
+        sys.executable,
+        "-m",
+        "l9_ci",
+        "semgrep",
+        "run",
+        "--language",
+        "typescript",
+        "--profile",
+        "l9-baseline",
+        "--root",
+        str(root),
+        "--snapshot-id",
+        "witness",
+        "--output",
+        str(out / "bundle.json"),
+        "--raw-output",
+        str(out / "raw" / "report.json"),
+        "--required",
+        "--format",
+        "json",
+    ]
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    gate = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "l9_ci",
+            "gate",
+            "evaluate",
+            "--bundle",
+            str(out / "bundle.json"),
+            "--output",
+            str(out / "gate.json"),
+            "--no-strict-unresolved",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    bundle = json.loads((out / "bundle.json").read_text(encoding="utf-8"))
+    raw = json.loads((out / "raw" / "report.json").read_text(encoding="utf-8"))
+    return bundle, raw, gate.returncode
+
+
+@_needs_semgrep
+def test_required_typescript_instance_completes_on_in_scope_javascript(
+    tmp_path: Path,
+) -> None:
+    """A repository that really has JavaScript gets a completed instance."""
+    root = _repository(
+        tmp_path / "repo",
+        {
+            "web/app.js": "module.exports = function add(a, b) { return a + b; };\n",
+            "web/util.ts": "export const y: number = 1;\n",
+            "vendor/lib.js": "module.exports = {};\n",
+        },
+    )
+    bundle, raw, gate = _required_typescript_run(root, tmp_path / "out")
+    assert sorted(raw["paths"]["scanned"]) == ["web/app.js", "web/util.ts"]
+    (coverage,) = bundle["coverage"]
+    assert coverage["status"] == "complete"
+    assert coverage["files_analyzed"] == 2
+    assert gate in (0, 1), "a completed instance concludes pass or fail"
+
+
+@_needs_semgrep
+def test_typescript_instance_on_test_fixtures_only_cannot_complete(
+    tmp_path: Path,
+) -> None:
+    """Why the inventory must not plan it: JS only under vendor/ scans nothing."""
+    root = _repository(
+        tmp_path / "repo",
+        {
+            "ops/app.py": "x = 1\n",
+            "ops/vendor/run_workflow.js": "module.exports = {};\n",
+        },
+    )
+    bundle, raw, gate = _required_typescript_run(root, tmp_path / "out")
+    assert raw["paths"]["scanned"] == []
+    assert bundle["coverage"][0]["status"] == "partial"
+    assert gate == 6
+
+
+@_needs_semgrep
+def test_dash_named_file_is_scanned_as_a_path_not_read_as_an_option(
+    tmp_path: Path,
+) -> None:
+    """Known-bad name from the repository under analysis: ``-oops.py``.
+
+    A tracked file whose name looks like an option still reaches Semgrep as
+    a target (``./-oops.py`` after the end-of-options marker) and yields its
+    finding; it never alters how Semgrep runs.
+    """
+    root = _repository(tmp_path / "repo", {"-oops.py": _BAD, "src/clean.py": _CLEAN})
+    found = _findings(root, tmp_path / "required", required=True)
+    assert ("-oops.py", 1) in found

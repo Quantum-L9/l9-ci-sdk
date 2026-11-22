@@ -1,0 +1,104 @@
+{
+  "errors": [],
+  "paths": {
+    "scanned": [
+      "commands/_archived/workflow-executors/gmp_executor.py",
+      "environment/program-execution/integrations/autonomy-control-plane/worker_effect_hook.py"
+    ]
+  },
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args",
+      "end": {
+        "col": 50,
+        "line": 175,
+        "offset": 7443
+      },
+      "extra": {
+        "engine_kind": "OSS",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "message": "Detected subprocess function 'run' with user controlled data. A malicious actor could leverage this to perform command injection. You may consider using 'shlex.quote()'.",
+        "metadata": {
+          "asvs": {
+            "control_id": "5.3.8 OS Command Injection",
+            "control_url": "https://github.com/OWASP/ASVS/blob/master/4.0/en/0x13-V5-Validation-Sanitization-Encoding.md#v53-output-encoding-and-injection-prevention-requirements",
+            "section": "V5: Validation, Sanitization and Encoding Verification Requirements",
+            "version": "4"
+          },
+          "category": "security",
+          "confidence": "MEDIUM",
+          "cwe": [
+            "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+          ],
+          "cwe2021-top25": true,
+          "cwe2022-top25": true,
+          "impact": "MEDIUM",
+          "license": "Semgrep Rules License v1.0. For more details, visit semgrep.dev/legal/rules-license",
+          "likelihood": "MEDIUM",
+          "owasp": [
+            "A01:2017 - Injection",
+            "A03:2021 - Injection",
+            "A05:2025 - Injection"
+          ],
+          "references": [
+            "https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess",
+            "https://docs.python.org/3/library/subprocess.html",
+            "https://docs.python.org/3/library/shlex.html",
+            "https://semgrep.dev/docs/cheat-sheets/python-command-injection/"
+          ],
+          "shortlink": "https://sg.run/pLGg",
+          "source": "https://semgrep.dev/r/python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args",
+          "subcategory": [
+            "vuln"
+          ],
+          "technology": [
+            "python"
+          ],
+          "vulnerability_class": [
+            "Command Injection"
+          ]
+        },
+        "severity": "ERROR",
+        "validation_state": "NO_VALIDATOR"
+      },
+      "path": "environment/program-execution/integrations/autonomy-control-plane/worker_effect_hook.py",
+      "start": {
+        "col": 13,
+        "line": 175,
+        "offset": 7406
+      }
+    },
+    {
+      "check_id": "l9.runtime.sdk.source.l9_ci.rulesets.semgrep.python.l9.baseline.python.subprocess-shell-true",
+      "end": {
+        "col": 10,
+        "line": 194,
+        "offset": 5685
+      },
+      "extra": {
+        "engine_kind": "OSS",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "message": "subprocess call with shell=True is forbidden; pass a command list without a shell.",
+        "metadata": {
+          "autofix_safe": false,
+          "category": "security",
+          "l9": {
+            "canonical_rule_id": "L9-PYTHON-SUBPROCESS-SHELL-TRUE"
+          },
+          "mode": "shadow"
+        },
+        "severity": "WARNING",
+        "validation_state": "NO_VALIDATOR"
+      },
+      "path": "commands/_archived/workflow-executors/gmp_executor.py",
+      "start": {
+        "col": 18,
+        "line": 188,
+        "offset": 5533
+      }
+    }
+  ],
+  "version": "1.171.0"
+}

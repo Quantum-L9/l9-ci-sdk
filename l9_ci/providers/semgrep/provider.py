@@ -18,6 +18,11 @@ from l9_ci.contracts import (
     Severity,
     SourceLocation,
 )
+from l9_ci.contracts.subjects import (
+    strip_absolute_paths,
+    subject_reason,
+    text_tail,
+)
 from l9_ci.identity import RuleIdentityMap, resolve_rule_identity
 from l9_ci.providers import (
     NetworkRequirement,
@@ -28,6 +33,8 @@ from l9_ci.providers import (
     ProviderNormalizationResult,
     ProviderState,
 )
+from l9_ci.providers.spi import END_OF_OPTIONS
+
 from .identities import (
     build_evidence_id,
     build_finding_fingerprint,
@@ -99,9 +106,15 @@ class SemgrepProvider:
     ) -> Sequence[str]:
         errors: list[str] = []
         if not repository_root.exists():
-            errors.append("repository root does not exist")
+            errors.append(
+                "repository root does not exist: "
+                + strip_absolute_paths(str(repository_root))
+            )
         elif not repository_root.is_dir():
-            errors.append("repository root is not a directory")
+            errors.append(
+                "repository root is not a directory: "
+                + strip_absolute_paths(str(repository_root))
+            )
         version = self.detect_version()
         if version is not None:
             try:
@@ -126,8 +139,12 @@ class SemgrepProvider:
             "--json-output",
             str(request.output_path),
             *request.arguments,
-            # Explicit file targets (a required run's declared scope) are never
+            # Every target follows the end-of-options marker, so a target
+            # name taken from the repository under analysis is always a path
+            # to Semgrep, never an option, whatever it starts with. Explicit
+            # file targets (a required run's declared scope) are never
             # filtered by .semgrepignore; "." is expanded through it.
+            END_OF_OPTIONS,
             *(request.targets or (".",)),
         )
 
@@ -144,12 +161,22 @@ class SemgrepProvider:
         }
         environment.update(request.environment)
         try:
-            # `command` is the argv sequence built by build_execution_plan: a
-            # resolved semgrep executable plus the caller's already-parsed
-            # argument list. It is passed as a list with no shell, so there is
-            # no shell metacharacter interpretation to inject through, and the
-            # environment is reduced to a fixed allowlist above.
-            # nosemgrep: python.django.security.injection.command.subprocess-injection.subprocess-injection
+            # `command` is the argv list built by build_execution_plan:
+            #   - the resolved semgrep executable, "scan" and --json-output;
+            #   - the caller's options (SDK-built --config, --exclude, budget
+            #     and nosem flags, plus any --extra-config the CLI caller
+            #     passed);
+            #   - END_OF_OPTIONS, then the scan targets.
+            # Targets may come from the repository under analysis (tracked
+            # file names). ProviderExecutionRequest refuses NUL, an absolute
+            # or parent-relative target, a leading "-" and a stray "--" in
+            # the options; the declared scope rewrites "-x" to "./-x"; and
+            # the end-of-options marker keeps any target from being read as
+            # an option. It runs as a list with no shell, and the
+            # environment is reduced to a fixed allowlist above. Required
+            # central runs disable inline suppressions, so none is used here
+            # (the waiver for the Django `request`-parameter heuristic that
+            # matches this method is a central decision).
             completed = subprocess.run(
                 command,
                 cwd=request.repository_root,
@@ -215,7 +242,7 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=provider_version,
                 failure_type=ProviderFailureType.TIMEOUT,
-                message="Semgrep execution timed out",
+                message=f"Semgrep execution timed out: {text_tail(result.stderr)}",
                 required=required,
                 fatal=required,
             )
@@ -224,7 +251,10 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=provider_version,
                 failure_type=ProviderFailureType.OUTPUT_LIMIT_EXCEEDED,
-                message="Semgrep output exceeded the configured limit",
+                message=(
+                    "Semgrep output exceeded the configured limit "
+                    f"(exit {result.exit_code}): {text_tail(result.stderr)}"
+                ),
                 required=required,
                 fatal=required,
                 exit_code=result.exit_code,
@@ -234,7 +264,10 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=provider_version,
                 failure_type=ProviderFailureType.REPORT_MISSING,
-                message="Semgrep did not produce a report",
+                message=(
+                    f"Semgrep did not produce a report (exit {result.exit_code}): "
+                    f"{text_tail(result.stderr)}"
+                ),
                 required=required,
                 fatal=required,
                 exit_code=result.exit_code,
@@ -244,7 +277,10 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=provider_version,
                 failure_type=ProviderFailureType.EXECUTION_ERROR,
-                message="Semgrep exited unsuccessfully",
+                message=(
+                    f"Semgrep exited unsuccessfully with code {result.exit_code}: "
+                    f"{text_tail(result.stderr)}"
+                ),
                 required=required,
                 fatal=required,
                 exit_code=result.exit_code,
@@ -258,11 +294,16 @@ class SemgrepProvider:
         try:
             payload = json.loads(report_path.read_text(encoding="utf-8"))
         except FileNotFoundError as exc:
-            raise ValueError(f"Semgrep report not found: {report_path}") from exc
+            raise ValueError(f"Semgrep report not found: …/{report_path.name}") from exc
         except json.JSONDecodeError as exc:
-            raise ValueError(f"Semgrep report is not valid JSON: {exc.msg}") from exc
+            raise ValueError(
+                f"Semgrep report is not valid JSON: …/{report_path.name}: {exc.msg}"
+            ) from exc
         if not isinstance(payload, Mapping):
-            raise ValueError("Semgrep report root must be an object")
+            raise ValueError(
+                f"Semgrep report root must be an object: …/{report_path.name} holds "
+                f"{type(payload).__name__}"
+            )
         return payload
 
     def validate_report_shape(
@@ -282,7 +323,9 @@ class SemgrepProvider:
                 provider_id="semgrep",
                 provider_version=context.provider_version,
                 failure_type=ProviderFailureType.REPORT_MALFORMED,
-                message="Semgrep report failed structural validation",
+                message=subject_reason(
+                    "Semgrep report failed structural validation", validation.errors
+                ),
                 required=context.required,
                 fatal=context.required,
                 diagnostics={"errors": list(validation.errors)},
@@ -401,6 +444,11 @@ class SemgrepProvider:
                     limitations=tuple(finding_limitations),
                 )
             )
+        # Rule/file pairs Semgrep started but did not finish (a timeout, out of
+        # memory, stack overflow). Semgrep reports them at level=warn, and they
+        # stay non-fatal, but that rule never evaluated that file: coverage is
+        # not complete, so a required provider's gate cannot pass on it.
+        incomplete_pairs: set[tuple[str, str, str]] = set()
         report_errors = report.get("errors", [])
         if isinstance(report_errors, Sequence) and not isinstance(
             report_errors,
@@ -409,6 +457,9 @@ class SemgrepProvider:
             for index, report_error in enumerate(report_errors):
                 message = _semgrep_error_message(report_error, index)
                 limitations.append(message)
+                pair = _incomplete_analysis_pair(report_error)
+                if pair is not None:
+                    incomplete_pairs.add(pair)
                 if not _semgrep_error_is_fatal(report_error):
                     continue
                 failures.append(
@@ -435,13 +486,21 @@ class SemgrepProvider:
             findings,
         )
         limitations.extend(coverage_limitations)
+        incomplete_paths = {path for _, path, _ in incomplete_pairs}
+        for rule_id, path, error_type in sorted(incomplete_pairs):
+            limitations.append(
+                f"incomplete analysis: rule {rule_id} did not finish on {path} "
+                f"({error_type})"
+            )
+        analyzed_paths = set(analyzed_paths) - incomplete_paths
         # Coverage is COMPLETE when the report exposed a verified scanned
-        # inventory and no fatal report errors occurred. Warn-level entries
-        # stay in limitations and do not force PARTIAL (honour semgrep
-        # level=warn). A zero-finding report with no verified paths.scanned
-        # must not silently present as COMPLETE, or a required provider
-        # could pass the gate on unproven coverage.
-        if failures or not coverage_verified:
+        # inventory, no fatal report error occurred and every rule finished
+        # on every file. Other warn-level entries stay limitations (honour
+        # semgrep level=warn). A rule/file pair that did not finish makes the
+        # file not fully analyzed and coverage PARTIAL, so a required
+        # provider's gate is INCOMPLETE, never a pass. A zero-finding report
+        # with no verified paths.scanned must not present as COMPLETE either.
+        if failures or not coverage_verified or incomplete_pairs:
             coverage_status = CoverageStatus.PARTIAL
         else:
             coverage_status = CoverageStatus.COMPLETE
@@ -508,7 +567,9 @@ def _coverage_paths(
         if not scanned:
             limitations.append(
                 "Semgrep report paths did not include a verified, non-empty "
-                "scanned inventory; coverage cannot be confirmed complete."
+                "scanned inventory; coverage cannot be confirmed complete: "
+                f"paths.scanned was a {type(scanned_raw).__name__} with no usable "
+                f"path, paths.skipped named {len(skipped)}"
             )
             return scanned | skipped, scanned, tuple(limitations), False
         return scanned | skipped, scanned, tuple(limitations), True
@@ -519,7 +580,8 @@ def _coverage_paths(
     }
     limitations.append(
         "Semgrep report did not expose verified paths.scanned coverage; "
-        "coverage was derived from finding paths only."
+        "coverage was derived from finding paths only: "
+        f"{len(finding_paths)} finding path(s)"
     )
     return finding_paths, finding_paths, tuple(limitations), False
 
@@ -609,6 +671,30 @@ def _semgrep_error_level(error: Any) -> str | None:
         if isinstance(level, str) and level.strip():
             return level.strip().lower()
     return None
+
+
+# Semgrep error types that mean a rule started on a file and did not finish.
+# Semgrep renders all of them at level=warn (semgrep Core_error.ml
+# severity_of_error); the JSON entry names the rule (`rule_id`) and the file
+# (`path`). Other warn-level types (parse errors, too many matches) are kept
+# as limitations without changing coverage.
+_INCOMPLETE_ANALYSIS_ERROR_TYPES = frozenset(
+    {"Timeout", "FixpointTimeout", "OutOfMemory", "StackOverflow"}
+)
+
+
+def _incomplete_analysis_pair(error: Any) -> tuple[str, str, str] | None:
+    """Return (rule_id, path, type) for a rule that did not finish on a file."""
+    if not isinstance(error, Mapping):
+        return None
+    error_type = error.get("type")
+    if not isinstance(error_type, str) or error_type not in (
+        _INCOMPLETE_ANALYSIS_ERROR_TYPES
+    ):
+        return None
+    rule_id = _optional_string(error.get("rule_id")) or "<unknown rule>"
+    path = _optional_string(error.get("path")) or "<unknown path>"
+    return rule_id, path, error_type
 
 
 def _semgrep_error_is_fatal(error: Any) -> bool:

@@ -11,6 +11,7 @@
     "policy",
     "source",
     "nosem",
+    "analysis_budget",
     "consumer_semgrepignore",
     "files_tracked",
     "files_in_scope",
@@ -38,6 +39,51 @@
     "nosem": {
       "description": "Inline `nosemgrep` comments do not suppress findings in a required run.",
       "const": "disabled"
+    },
+    "rule_overlaps": {
+      "description": "Registry rules a packaged L9 rule supersedes in this run; present only when both rulesets were composed. Both rules run; a registry finding is withdrawn only where the L9 rule reported the same call, and its evidence is kept.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "version", "sha256", "applied", "superseded"],
+      "properties": {
+        "schema": { "const": "l9.semgrep-rule-overlaps/v1" },
+        "applied": { "const": "covered_sites_only" },
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "superseded": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["language", "rule_id", "canonical_rule_id", "supersedes"],
+            "properties": {
+              "language": { "type": "string", "minLength": 1 },
+              "rule_id": { "type": "string", "minLength": 1 },
+              "canonical_rule_id": { "type": "string", "minLength": 1 },
+              "supersedes": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "analysis_budget": {
+      "description": "Per-rule, per-file Semgrep analysis budget of the required run. A rule/file pair that exceeds it is not analysed and counts as incomplete coverage, never as a pass.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeout_seconds", "timeout_threshold", "on_timeout"],
+      "properties": {
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "timeout_threshold": {
+          "description": "Semgrep --timeout-threshold; 0 disables skipping the remaining rules on a file after repeated timeouts.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "on_timeout": { "const": "incomplete" }
+      }
     },
     "consumer_semgrepignore": {
       "type": "object",
@@ -74,7 +120,12 @@
             "maxItems": 50,
             "items": { "type": "string", "minLength": 1 }
           },
-          "truncated": { "type": "boolean" }
+          "truncated": { "type": "boolean" },
+          "reason": {
+            "description": "The policy's declared reason for this exclusion, when it declares one.",
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     }
