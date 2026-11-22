@@ -45,7 +45,7 @@ GATE_COMMANDS = [
     "python -m ruff check l9_ci tests scripts",
     "python -m ruff format --check l9_ci tests scripts",
     "python -m mypy l9_ci",
-    "python -m pytest --cov=l9_ci --cov-branch",
+    "python -m pytest --cov=l9_ci --cov-branch tests/architecture tests/baseline tests/biome tests/capabilities tests/cli tests/compatibility tests/contracts tests/execution tests/gates tests/governance tests/identity tests/integration tests/invariants tests/pipeline tests/policy tests/providers tests/repository tests/signal tests/yaml",
 ]
 
 RUNTIME_DEPENDENCIES = ["jsonschema", "referencing", "PyYAML"]
